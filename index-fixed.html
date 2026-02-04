@@ -1,0 +1,967 @@
+﻿<!DOCTYPE html>
+<html lang="he" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="theme-color" content="#667eea">
+    <meta name="description" content="מערכת ניהול משמרות לעובדים - הזנת אילוצים ויצירת סידור אוטומטי">
+    <title>מערכת ניהול משמרות</title>
+    
+    <!-- PWA Manifest -->
+    <link rel="manifest" href="manifest.json">
+    
+    <!-- Apple Touch Icon -->
+    <link rel="apple-touch-icon" href="icon-192.png">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 900px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 20px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+            padding: 30px;
+        }
+
+        h1 {
+            text-align: center;
+            color: #667eea;
+            margin-bottom: 30px;
+            font-size: 2.5em;
+        }
+
+        .mode-selector {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 30px;
+            justify-content: center;
+        }
+
+        .mode-btn {
+            padding: 12px 30px;
+            border: 2px solid #667eea;
+            background: white;
+            color: #667eea;
+            border-radius: 10px;
+            cursor: pointer;
+            font-size: 16px;
+            font-weight: bold;
+            transition: all 0.3s;
+        }
+
+        .mode-btn.active {
+            background: #667eea;
+            color: white;
+        }
+
+        .mode-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(102, 126, 234, 0.3);
+        }
+
+        .section {
+            display: none;
+        }
+
+        .section.active {
+            display: block;
+        }
+
+        .employee-select {
+            margin-bottom: 20px;
+        }
+
+        select, input {
+            width: 100%;
+            padding: 12px;
+            border: 2px solid #e0e0e0;
+            border-radius: 8px;
+            font-size: 16px;
+            margin-top: 8px;
+        }
+
+        select:focus, input:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+
+        .constraint-form {
+            background: #f8f9fa;
+            padding: 20px;
+            border-radius: 12px;
+            margin-top: 20px;
+        }
+
+        .constraint-item {
+            background: white;
+            padding: 15px;
+            border-radius: 8px;
+            margin-bottom: 15px;
+            border: 2px solid #e0e0e0;
+        }
+
+        .constraint-item h3 {
+            color: #667eea;
+            margin-bottom: 10px;
+        }
+
+        .form-group {
+            margin-bottom: 15px;
+        }
+
+        label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: bold;
+            color: #555;
+        }
+
+        .btn {
+            width: 100%;
+            padding: 15px;
+            background: #667eea;
+            color: white;
+            border: none;
+            border-radius: 10px;
+            font-size: 18px;
+            font-weight: bold;
+            cursor: pointer;
+            transition: all 0.3s;
+            margin-top: 10px;
+        }
+
+        .btn:hover {
+            background: #5568d3;
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(102, 126, 234, 0.4);
+        }
+
+        .btn:disabled {
+            background: #ccc;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        .constraints-list {
+            margin-top: 20px;
+        }
+
+        .constraint-card {
+            background: #fff3cd;
+            padding: 15px;
+            border-radius: 8px;
+            margin-bottom: 10px;
+            border-right: 4px solid #ffc107;
+        }
+
+        .schedule-table {
+            width: 100%;
+            margin-top: 20px;
+            border-collapse: collapse;
+            background: white;
+            border-radius: 8px;
+            overflow: hidden;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        }
+
+        .schedule-table th {
+            background: #667eea;
+            color: white;
+            padding: 15px;
+            text-align: center;
+            font-weight: bold;
+        }
+
+        .schedule-table td {
+            padding: 12px;
+            text-align: center;
+            border-bottom: 1px solid #e0e0e0;
+        }
+
+        .schedule-table tr:hover {
+            background: #f8f9fa;
+        }
+
+        .shift-morning {
+            background: #fff3cd;
+            padding: 8px;
+            border-radius: 6px;
+            display: inline-block;
+            min-width: 100px;
+        }
+
+        .shift-evening {
+            background: #d1ecf1;
+            padding: 8px;
+            border-radius: 6px;
+            display: inline-block;
+            min-width: 100px;
+        }
+
+        .shift-friday {
+            background: #d4edda;
+            padding: 8px;
+            border-radius: 6px;
+            display: inline-block;
+            min-width: 100px;
+        }
+
+        .shift-saturday {
+            background: #e7d4f5;
+            padding: 8px;
+            border-radius: 6px;
+            display: inline-block;
+            min-width: 100px;
+        }
+
+        .message {
+            padding: 15px;
+            border-radius: 8px;
+            margin-top: 20px;
+            text-align: center;
+            font-weight: bold;
+        }
+
+        .message.success {
+            background: #d4edda;
+            color: #155724;
+            border: 2px solid #c3e6cb;
+        }
+
+        .message.error {
+            background: #f8d7da;
+            color: #721c24;
+            border: 2px solid #f5c6cb;
+        }
+
+        .manager-constraints {
+            background: #f8f9fa;
+            padding: 20px;
+            border-radius: 12px;
+            margin-bottom: 20px;
+        }
+
+        .manager-constraints h2 {
+            color: #667eea;
+            margin-bottom: 15px;
+        }
+
+        .employee-constraints {
+            background: white;
+            padding: 15px;
+            border-radius: 8px;
+            margin-bottom: 15px;
+            border-right: 4px solid #667eea;
+        }
+
+        .employee-constraints h3 {
+            color: #555;
+            margin-bottom: 10px;
+        }
+
+        .no-constraints {
+            color: #28a745;
+            font-style: italic;
+        }
+
+        .approval-status {
+            display: inline-block;
+            padding: 5px 12px;
+            border-radius: 20px;
+            font-size: 14px;
+            font-weight: bold;
+            margin-right: 10px;
+        }
+
+        .status-pending {
+            background: #fff3cd;
+            color: #856404;
+        }
+
+        .status-approved {
+            background: #d4edda;
+            color: #155724;
+        }
+
+        .status-rejected {
+            background: #f8d7da;
+            color: #721c24;
+        }
+
+        .approval-buttons {
+            display: inline-flex;
+            gap: 10px;
+            margin-right: 10px;
+        }
+
+        .approve-btn, .reject-btn {
+            padding: 8px 20px;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            font-weight: bold;
+            font-size: 14px;
+            transition: all 0.3s;
+        }
+
+        .approve-btn {
+            background: #28a745;
+            color: white;
+        }
+
+        .approve-btn:hover {
+            background: #218838;
+            transform: translateY(-2px);
+        }
+
+        .reject-btn {
+            background: #dc3545;
+            color: white;
+        }
+
+        .reject-btn:hover {
+            background: #c82333;
+            transform: translateY(-2px);
+        }
+
+        .day-off-request {
+            background: #fff9e6;
+            border-right: 4px solid #ffc107;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🗓️ מערכת ניהול משמרות</h1>
+
+        <div class="mode-selector">
+            <button class="mode-btn active" onclick="switchMode('employee')">עובד</button>
+            <button class="mode-btn" onclick="switchMode('manager')">מנהל</button>
+        </div>
+
+        <!-- Employee Section -->
+        <div id="employee-section" class="section active">
+            <div class="employee-select">
+                <label>בחר את שמך:</label>
+                <select id="employee-name" onchange="loadEmployeeConstraints()">
+                    <option value="">-- בחר עובד --</option>
+                    <option value="עובד 1">עובד 1</option>
+                    <option value="עובד 2">עובד 2</option>
+                </select>
+            </div>
+
+            <div id="employee-form" style="display: none;">
+                <div class="constraint-form">
+                    <h2>הגדרת אילוצים (עד 2)</h2>
+                    <p style="color: #666; margin-bottom: 10px;">בחר עד 2 אילוצים לשבוע הקרוב</p>
+                    <p style="color: #e74c3c; margin-bottom: 20px; font-weight: bold;">⚠️ לא ניתן לבחור שישי או מוצ"ש כאילוץ</p>
+
+                    <div class="constraint-item">
+                        <h3>אילוץ 1</h3>
+                        <div class="form-group">
+                            <label>תאריך:</label>
+                            <input type="date" id="constraint1-date">
+                        </div>
+                        <div class="form-group">
+                            <label>סוג אילוץ:</label>
+                            <select id="constraint1-type">
+                                <option value="">-- בחר --</option>
+                                <option value="no-morning">לא בוקר (9:00-16:00)</option>
+                                <option value="no-evening">לא ערב (15:00-21:30)</option>
+                                <option value="day-off">חופש מלא</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <div class="constraint-item">
+                        <h3>אילוץ 2</h3>
+                        <div class="form-group">
+                            <label>תאריך:</label>
+                            <input type="date" id="constraint2-date">
+                        </div>
+                        <div class="form-group">
+                            <label>סוג אילוץ:</label>
+                            <select id="constraint2-type">
+                                <option value="">-- בחר --</option>
+                                <option value="no-morning">לא בוקר (9:00-16:00)</option>
+                                <option value="no-evening">לא ערב (15:00-21:30)</option>
+                                <option value="day-off">חופש מלא</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <button class="btn" onclick="saveConstraints()">שמור אילוצים</button>
+                </div>
+
+                <div class="constraints-list" id="my-constraints"></div>
+            </div>
+        </div>
+
+        <!-- Manager Section -->
+        <div id="manager-section" class="section">
+            <div class="manager-constraints" id="all-constraints">
+                <h2>אילוצי העובדים</h2>
+                <p style="color: #666; margin-bottom: 15px;">סקירת כל האילוצים שהוזנו</p>
+            </div>
+
+            <button class="btn" onclick="generateSchedule()">צור סידור אוטומטי</button>
+
+            <div id="schedule-result"></div>
+        </div>
+
+        <div id="message"></div>
+    </div>
+
+    <script type="module">
+        import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js';
+        import { getDatabase, ref, set, get, onValue } from 'https://www.gstatic.com/firebasejs/10.8.0/firebase-database.js';
+
+        const firebaseConfig = {
+            apiKey: "AIzaSyD-uaQ2aO87kGxbcc-m8_9fzJ3uhPv2zvk",
+            authDomain: "shift-manager-c026e.firebaseapp.com",
+            databaseURL: "https://shift-manager-c026e-default-rtdb.europe-west1.firebasedatabase.app",
+            projectId: "shift-manager-c026e",
+            storageBucket: "shift-manager-c026e.firebasestorage.app",
+            messagingSenderId: "1091605398341",
+            appId: "1:1091605398341:web:cb6c14e7d832c3e8df342c"
+        };
+
+        const app = initializeApp(firebaseConfig);
+        const database = getDatabase(app);
+
+        window.currentEmployee = '';
+
+        window.switchMode = function(mode) {
+            document.querySelectorAll('.mode-btn').forEach(btn => btn.classList.remove('active'));
+            document.querySelectorAll('.section').forEach(section => section.classList.remove('active'));
+            
+            if (mode === 'employee') {
+                document.querySelector('.mode-btn:first-child').classList.add('active');
+                document.getElementById('employee-section').classList.add('active');
+            } else {
+                document.querySelector('.mode-btn:last-child').classList.add('active');
+                document.getElementById('manager-section').classList.add('active');
+                loadAllConstraints();
+            }
+            
+            document.getElementById('message').innerHTML = '';
+        };
+
+        window.loadEmployeeConstraints = async function() {
+            const employeeName = document.getElementById('employee-name').value;
+            window.currentEmployee = employeeName;
+
+            if (!employeeName) {
+                document.getElementById('employee-form').style.display = 'none';
+                return;
+            }
+
+            document.getElementById('employee-form').style.display = 'block';
+
+            // Load existing constraints
+            const constraintsRef = ref(database, `constraints/${employeeName}`);
+            const snapshot = await get(constraintsRef);
+            
+            if (snapshot.exists()) {
+                const data = snapshot.val();
+                if (data.constraint1) {
+                    document.getElementById('constraint1-date').value = data.constraint1.date || '';
+                    document.getElementById('constraint1-type').value = data.constraint1.type || '';
+                }
+                if (data.constraint2) {
+                    document.getElementById('constraint2-date').value = data.constraint2.date || '';
+                    document.getElementById('constraint2-type').value = data.constraint2.type || '';
+                }
+                displayMyConstraints(data);
+            } else {
+                document.getElementById('constraint1-date').value = '';
+                document.getElementById('constraint1-type').value = '';
+                document.getElementById('constraint2-date').value = '';
+                document.getElementById('constraint2-type').value = '';
+                document.getElementById('my-constraints').innerHTML = '';
+            }
+        };
+
+        window.saveConstraints = async function() {
+            const employeeName = window.currentEmployee;
+            if (!employeeName) {
+                showMessage('אנא בחר שם עובד', 'error');
+                return;
+            }
+
+            const constraint1Date = document.getElementById('constraint1-date').value;
+            const constraint1Type = document.getElementById('constraint1-type').value;
+            const constraint2Date = document.getElementById('constraint2-date').value;
+            const constraint2Type = document.getElementById('constraint2-type').value;
+
+            // Validate no Friday/Saturday selection
+            if (constraint1Date && !isValidWeekday(constraint1Date)) {
+                showMessage('❌ לא ניתן לבחור שישי או שבת כאילוץ', 'error');
+                return;
+            }
+
+            if (constraint2Date && !isValidWeekday(constraint2Date)) {
+                showMessage('❌ לא ניתן לבחור שישי או שבת כאילוץ', 'error');
+                return;
+            }
+
+            const constraints = {};
+            
+            if (constraint1Date && constraint1Type) {
+                constraints.constraint1 = {
+                    date: constraint1Date,
+                    type: constraint1Type,
+                    // Day-off requests need approval, others are auto-approved
+                    status: constraint1Type === 'day-off' ? 'pending' : 'approved'
+                };
+            }
+
+            if (constraint2Date && constraint2Type) {
+                constraints.constraint2 = {
+                    date: constraint2Date,
+                    type: constraint2Type,
+                    status: constraint2Type === 'day-off' ? 'pending' : 'approved'
+                };
+            }
+
+            try {
+                const constraintsRef = ref(database, `constraints/${employeeName}`);
+                await set(constraintsRef, constraints);
+                
+                const hasDayOff = (constraint1Type === 'day-off') || (constraint2Type === 'day-off');
+                if (hasDayOff) {
+                    showMessage('האילוצים נשמרו! ⏳ בקשות החופש ממתינות לאישור מנהל', 'success');
+                } else {
+                    showMessage('האילוצים נשמרו בהצלחה! ✅', 'success');
+                }
+                
+                displayMyConstraints(constraints);
+            } catch (error) {
+                showMessage('שגיאה בשמירת האילוצים: ' + error.message, 'error');
+            }
+        };
+
+        function isValidWeekday(dateStr) {
+            const date = new Date(dateStr + 'T00:00:00');
+            const dayOfWeek = date.getDay();
+            // 5 = Friday, 6 = Saturday
+            return dayOfWeek !== 5 && dayOfWeek !== 6;
+        }
+
+        function displayMyConstraints(constraints) {
+            const container = document.getElementById('my-constraints');
+            let html = '<h3 style="color: #667eea; margin-top: 20px;">האילוצים שלי:</h3>';
+
+            if (!constraints.constraint1 && !constraints.constraint2) {
+                html += '<p class="no-constraints">לא הוגדרו אילוצים</p>';
+            } else {
+                if (constraints.constraint1) {
+                    const statusBadge = getStatusBadge(constraints.constraint1);
+                    html += `<div class="constraint-card">
+                        <strong>אילוץ 1:</strong> ${formatDate(constraints.constraint1.date)} - ${formatConstraintType(constraints.constraint1.type)}
+                        ${statusBadge}
+                    </div>`;
+                }
+                if (constraints.constraint2) {
+                    const statusBadge = getStatusBadge(constraints.constraint2);
+                    html += `<div class="constraint-card">
+                        <strong>אילוץ 2:</strong> ${formatDate(constraints.constraint2.date)} - ${formatConstraintType(constraints.constraint2.type)}
+                        ${statusBadge}
+                    </div>`;
+                }
+            }
+
+            container.innerHTML = html;
+        }
+
+        function getStatusBadge(constraint) {
+            if (constraint.type !== 'day-off') return '';
+            
+            const statusText = {
+                'pending': '⏳ ממתין לאישור',
+                'approved': '✅ מאושר',
+                'rejected': '❌ נדחה'
+            };
+            
+            const statusClass = {
+                'pending': 'status-pending',
+                'approved': 'status-approved',
+                'rejected': 'status-rejected'
+            };
+            
+            const status = constraint.status || 'pending';
+            return `<span class="approval-status ${statusClass[status]}">${statusText[status]}</span>`;
+        }
+
+        window.loadAllConstraints = async function() {
+            const constraintsRef = ref(database, 'constraints');
+            const snapshot = await get(constraintsRef);
+            
+            const container = document.getElementById('all-constraints');
+            let html = '<h2>אילוצי העובדים</h2><p style="color: #666; margin-bottom: 15px;">סקירת כל האילוצים שהוזנו</p>';
+
+            if (snapshot.exists()) {
+                const allConstraints = snapshot.val();
+                
+                for (const [employee, constraints] of Object.entries(allConstraints)) {
+                    html += `<div class="employee-constraints">
+                        <h3>${employee}</h3>`;
+                    
+                    if (!constraints.constraint1 && !constraints.constraint2) {
+                        html += '<p class="no-constraints">✅ אין אילוצים</p>';
+                    } else {
+                        if (constraints.constraint1) {
+                            html += formatConstraintForManager(employee, 'constraint1', constraints.constraint1);
+                        }
+                        if (constraints.constraint2) {
+                            html += formatConstraintForManager(employee, 'constraint2', constraints.constraint2);
+                        }
+                    }
+                    
+                    html += '</div>';
+                }
+            } else {
+                html += '<p class="no-constraints">אין אילוצים מוגדרים</p>';
+            }
+
+            container.innerHTML = html;
+        };
+
+        function formatConstraintForManager(employee, constraintKey, constraint) {
+            let html = '<div style="margin: 10px 0; padding: 10px; background: #f8f9fa; border-radius: 6px;">';
+            html += `📌 ${formatDate(constraint.date)} - ${formatConstraintType(constraint.type)}`;
+            
+            // Only show approval buttons for day-off requests
+            if (constraint.type === 'day-off') {
+                const status = constraint.status || 'pending';
+                
+                if (status === 'pending') {
+                    html += `
+                        <div class="approval-buttons">
+                            <button class="approve-btn" onclick="updateApproval('${employee}', '${constraintKey}', 'approved')">
+                                ✅ אשר
+                            </button>
+                            <button class="reject-btn" onclick="updateApproval('${employee}', '${constraintKey}', 'rejected')">
+                                ❌ דחה
+                            </button>
+                        </div>
+                    `;
+                } else if (status === 'approved') {
+                    html += '<span class="approval-status status-approved">✅ מאושר</span>';
+                } else if (status === 'rejected') {
+                    html += '<span class="approval-status status-rejected">❌ נדחה</span>';
+                }
+            }
+            
+            html += '</div>';
+            return html;
+        }
+
+        window.updateApproval = async function(employee, constraintKey, newStatus) {
+            try {
+                const constraintRef = ref(database, `constraints/${employee}/${constraintKey}/status`);
+                await set(constraintRef, newStatus);
+                
+                showMessage(`בקשת החופש ${newStatus === 'approved' ? 'אושרה' : 'נדחתה'} בהצלחה! ✅`, 'success');
+                loadAllConstraints();
+            } catch (error) {
+                showMessage('שגיאה בעדכון הבקשה: ' + error.message, 'error');
+            }
+        };
+
+        window.generateSchedule = async function() {
+            const constraintsRef = ref(database, 'constraints');
+            const snapshot = await get(constraintsRef);
+            
+            const constraints = snapshot.exists() ? snapshot.val() : {};
+            
+            // Check for conflicts
+            const conflicts = checkConflicts(constraints);
+            
+            if (conflicts.length > 0) {
+                let conflictMessage = '⚠️ קונפליקטים באילוצים:\n\n';
+                conflicts.forEach(conflict => {
+                    conflictMessage += `📅 ${formatDate(conflict.date)}: ${conflict.employees.join(' ו-')} - ${conflict.description}\n`;
+                });
+                conflictMessage += '\nאנא דון עם העובדים לפני יצירת הסידור.';
+                
+                showMessage(conflictMessage, 'error');
+                document.getElementById('schedule-result').innerHTML = 
+                    `<div class="message error" style="text-align: right; white-space: pre-line;">${conflictMessage}</div>`;
+                return;
+            }
+            
+            try {
+                const schedule = createSchedule(constraints);
+                displaySchedule(schedule);
+                showMessage('הסידור נוצר בהצלחה! ✅', 'success');
+            } catch (error) {
+                showMessage('שגיאה ביצירת סידור: ' + error.message, 'error');
+            }
+        };
+
+        function checkConflicts(constraints) {
+            const conflicts = [];
+            const employees = Object.keys(constraints);
+            
+            if (employees.length < 2) return conflicts;
+            
+            const emp1 = employees[0];
+            const emp2 = employees[1];
+            const emp1Constraints = constraints[emp1];
+            const emp2Constraints = constraints[emp2];
+            
+            // Collect all APPROVED constraints from both employees
+            const emp1Dates = [];
+            if (emp1Constraints?.constraint1 && emp1Constraints.constraint1.status === 'approved') {
+                emp1Dates.push(emp1Constraints.constraint1);
+            }
+            if (emp1Constraints?.constraint2 && emp1Constraints.constraint2.status === 'approved') {
+                emp1Dates.push(emp1Constraints.constraint2);
+            }
+            
+            const emp2Dates = [];
+            if (emp2Constraints?.constraint1 && emp2Constraints.constraint1.status === 'approved') {
+                emp2Dates.push(emp2Constraints.constraint1);
+            }
+            if (emp2Constraints?.constraint2 && emp2Constraints.constraint2.status === 'approved') {
+                emp2Dates.push(emp2Constraints.constraint2);
+            }
+            
+            // Check for conflicts
+            emp1Dates.forEach(c1 => {
+                emp2Dates.forEach(c2 => {
+                    if (c1.date === c2.date) {
+                        // Both want full day off - CONFLICT
+                        if (c1.type === 'day-off' && c2.type === 'day-off') {
+                            conflicts.push({
+                                date: c1.date,
+                                employees: [emp1, emp2],
+                                description: 'שניהם ביקשו חופש מלא 🏖️'
+                            });
+                        }
+                        // Both can't do morning - CONFLICT
+                        else if ((c1.type === 'no-morning' || c1.type === 'day-off') && 
+                                 (c2.type === 'no-morning' || c2.type === 'day-off')) {
+                            conflicts.push({
+                                date: c1.date,
+                                employees: [emp1, emp2],
+                                description: 'שניהם לא יכולים משמרת בוקר ❌'
+                            });
+                        }
+                        // Both can't do evening - CONFLICT
+                        else if ((c1.type === 'no-evening' || c1.type === 'day-off') && 
+                                 (c2.type === 'no-evening' || c2.type === 'day-off')) {
+                            conflicts.push({
+                                date: c1.date,
+                                employees: [emp1, emp2],
+                                description: 'שניהם לא יכולים משמרת ערב ❌'
+                            });
+                        }
+                    }
+                });
+            });
+            
+            return conflicts;
+        }
+
+        function createSchedule(constraints) {
+            const employees = ['עובד 1', 'עובד 2'];
+            const today = new Date();
+            const schedule = [];
+
+            // Get next Sunday (start of week)
+            const nextSunday = new Date(today);
+            const dayOfWeek = today.getDay();
+            const daysUntilSunday = dayOfWeek === 0 ? 0 : 7 - dayOfWeek;
+            nextSunday.setDate(today.getDate() + daysUntilSunday);
+
+            const days = ['ראשון', 'שני', 'שלישי', 'רביעי', 'חמישי', 'שישי', 'שבת'];
+            
+            // Helper function to check if employee has approved constraint
+            const hasApprovedConstraint = (employee, date, type) => {
+                const empConstraints = constraints[employee];
+                if (!empConstraints) return false;
+                
+                const checkConstraint = (c) => {
+                    if (!c || c.status !== 'approved') return false;
+                    if (c.date !== date) return false;
+                    if (type === 'morning') {
+                        return c.type === 'no-morning' || c.type === 'day-off';
+                    } else if (type === 'evening') {
+                        return c.type === 'no-evening' || c.type === 'day-off';
+                    } else if (type === 'full-day') {
+                        return c.type === 'day-off';
+                    }
+                    return false;
+                };
+                
+                return checkConstraint(empConstraints.constraint1) || checkConstraint(empConstraints.constraint2);
+            };
+            
+            // Sunday to Thursday - both employees work (unless one has approved day-off)
+            for (let i = 0; i < 5; i++) {
+                const date = new Date(nextSunday);
+                date.setDate(nextSunday.getDate() + i);
+                const dateStr = date.toISOString().split('T')[0];
+
+                const daySchedule = {
+                    day: days[i],
+                    date: dateStr,
+                    morning: null,
+                    evening: null
+                };
+
+                // Check if either employee has approved full day off
+                const emp1HasDayOff = hasApprovedConstraint(employees[0], dateStr, 'full-day');
+                const emp2HasDayOff = hasApprovedConstraint(employees[1], dateStr, 'full-day');
+
+                if (emp1HasDayOff) {
+                    // Employee 1 has day off - Employee 2 works both shifts
+                    daySchedule.morning = employees[1];
+                    daySchedule.evening = employees[1];
+                    daySchedule.coveringFor = employees[0];
+                } else if (emp2HasDayOff) {
+                    // Employee 2 has day off - Employee 1 works both shifts
+                    daySchedule.morning = employees[0];
+                    daySchedule.evening = employees[0];
+                    daySchedule.coveringFor = employees[1];
+                } else {
+                    // Normal day - alternate shifts between employees
+                    const morningEmployee = i % 2 === 0 ? employees[0] : employees[1];
+                    const eveningEmployee = i % 2 === 0 ? employees[1] : employees[0];
+
+                    // Check specific shift constraints
+                    const morningCantDo = hasApprovedConstraint(morningEmployee, dateStr, 'morning');
+                    const eveningCantDo = hasApprovedConstraint(eveningEmployee, dateStr, 'evening');
+
+                    daySchedule.morning = morningCantDo ? eveningEmployee : morningEmployee;
+                    daySchedule.evening = eveningCantDo ? morningEmployee : eveningEmployee;
+                }
+
+                schedule.push(daySchedule);
+            }
+
+            // Friday
+            const friday = new Date(nextSunday);
+            friday.setDate(nextSunday.getDate() + 5);
+            const fridayDateStr = friday.toISOString().split('T')[0];
+
+            let fridayEmployee = employees[0];
+            
+            // Check approved constraints
+            const emp1FridayOff = hasApprovedConstraint(employees[0], fridayDateStr, 'full-day');
+            if (emp1FridayOff) {
+                fridayEmployee = employees[1];
+            }
+
+            schedule.push({
+                day: 'שישי',
+                date: fridayDateStr,
+                friday: fridayEmployee,
+                fridayHours: '8:30-14:30'
+            });
+
+            // Saturday (Motzash)
+            const saturday = new Date(nextSunday);
+            saturday.setDate(nextSunday.getDate() + 6);
+            const saturdayDateStr = saturday.toISOString().split('T')[0];
+
+            // The employee who doesn't work Friday works Saturday
+            const saturdayEmployee = fridayEmployee === employees[0] ? employees[1] : employees[0];
+
+            schedule.push({
+                day: 'מוצ"ש',
+                date: saturdayDateStr,
+                saturday: saturdayEmployee,
+                saturdayHours: 'מוצ"ש-22:30'
+            });
+
+            return schedule;
+        }
+
+        function displaySchedule(schedule) {
+            const container = document.getElementById('schedule-result');
+            
+            let html = '<h2 style="color: #667eea; margin-top: 30px;">📅 סידור השבוע</h2>';
+            html += '<table class="schedule-table">';
+            html += '<tr><th>יום</th><th>תאריך</th><th>בוקר</th><th>ערב</th></tr>';
+
+            schedule.forEach(day => {
+                html += '<tr>';
+                html += `<td><strong>${day.day}</strong></td>`;
+                html += `<td>${formatDate(day.date)}</td>`;
+
+                if (day.friday) {
+                    html += `<td colspan="2"><span class="shift-friday">${day.friday}<br>${day.fridayHours}</span></td>`;
+                } else if (day.saturday) {
+                    html += `<td colspan="2"><span class="shift-saturday">${day.saturday}<br>${day.saturdayHours}</span></td>`;
+                } else {
+                    // Check if someone is covering (both shifts)
+                    if (day.coveringFor) {
+                        html += `<td><span class="shift-morning">${day.morning}<br>9:00-16:00<br><small style="color: #e67e22;">מכסה עבור ${day.coveringFor}</small></span></td>`;
+                        html += `<td><span class="shift-evening">${day.evening}<br>15:00-21:30<br><small style="color: #e67e22;">מכסה עבור ${day.coveringFor}</small></span></td>`;
+                    } else {
+                        html += `<td><span class="shift-morning">${day.morning}<br>9:00-16:00</span></td>`;
+                        html += `<td><span class="shift-evening">${day.evening}<br>15:00-21:30</span></td>`;
+                    }
+                }
+
+                html += '</tr>';
+            });
+
+            html += '</table>';
+            container.innerHTML = html;
+        }
+
+        function formatDate(dateStr) {
+            const date = new Date(dateStr + 'T00:00:00');
+            const day = date.getDate().toString().padStart(2, '0');
+            const month = (date.getMonth() + 1).toString().padStart(2, '0');
+            return `${day}/${month}`;
+        }
+
+        function formatConstraintType(type) {
+            const types = {
+                'no-morning': '❌ לא בוקר',
+                'no-evening': '❌ לא ערב',
+                'day-off': '🏖️ חופש מלא'
+            };
+            return types[type] || type;
+        }
+
+        function showMessage(text, type) {
+            const messageDiv = document.getElementById('message');
+            messageDiv.className = `message ${type}`;
+            messageDiv.textContent = text;
+            
+            setTimeout(() => {
+                messageDiv.innerHTML = '';
+            }, 5000);
+        }
+
+        // Register Service Worker for PWA
+        if ('serviceWorker' in navigator) {
+            window.addEventListener('load', () => {
+                navigator.serviceWorker.register('service-worker.js')
+                    .then(reg => console.log('Service Worker registered'))
+                    .catch(err => console.log('Service Worker registration failed'));
+            });
+        }
+    </script>
+</body>
+</html>
