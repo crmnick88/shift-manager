@@ -1,336 +1,339 @@
 <!DOCTYPE html>
 <html lang="he" dir="rtl">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <meta name="theme-color" content="#667eea">
-    <title>מערכת ניהול משמרות</title>
-    
-    <!-- Firebase Compat -->
-    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-database-compat.js"></script>
-    
-    <!-- SheetJS -->
-    <script src="https://cdn.sheetjs.com/xlsx-0.20.0/package/dist/xlsx.full.min.js"></script>
-    
-    <style>
-        * { margin: 0; padding: 0; box-sizing: border-box; }
-        body {
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            min-height: 100vh;
-            padding: 20px;
-        }
-        .container {
-            max-width: 900px;
-            margin: 0 auto;
-            background: white;
-            border-radius: 20px;
-            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
-            padding: 30px;
-        }
-        h1 { text-align: center; color: #667eea; margin-bottom: 30px; font-size: 2.5em; }
-        .section { display: none; }
-        .section.active { display: block; }
-        .btn {
-            width: 100%;
-            padding: 15px;
-            background: #667eea;
-            color: white;
-            border: none;
-            border-radius: 10px;
-            font-size: 18px;
-            font-weight: bold;
-            cursor: pointer;
-            transition: all 0.3s;
-            margin-top: 10px;
-        }
-        .btn:hover { background: #5568d3; transform: translateY(-2px); }
-        .mode-btn {
-            padding: 20px 40px;
-            margin: 10px;
-            border: 2px solid #667eea;
-            background: white;
-            color: #667eea;
-            border-radius: 10px;
-            cursor: pointer;
-            font-size: 20px;
-            font-weight: bold;
-            transition: all 0.3s;
-        }
-        .mode-btn:hover { background: #667eea; color: white; }
-        input, select {
-            width: 100%;
-            padding: 12px;
-            border: 2px solid #e0e0e0;
-            border-radius: 8px;
-            font-size: 16px;
-            margin-top: 8px;
-        }
-        .form-group { margin-bottom: 15px; }
-        label { display: block; margin-bottom: 5px; font-weight: bold; color: #555; }
-        .constraint-item {
-            background: white;
-            padding: 15px;
-            border-radius: 8px;
-            margin-bottom: 15px;
-            border: 2px solid #e0e0e0;
-        }
-        .constraint-card {
-            background: #fff3cd;
-            padding: 15px;
-            border-radius: 8px;
-            margin-bottom: 10px;
-        }
-        .message {
-            padding: 15px;
-            border-radius: 8px;
-            margin-top: 20px;
-            text-align: center;
-            font-weight: bold;
-        }
-        .message.success { background: #d4edda; color: #155724; }
-        .message.error { background: #f8d7da; color: #721c24; }
-        .employee-constraints {
-            background: white;
-            padding: 15px;
-            border-radius: 8px;
-            margin-bottom: 15px;
-            border-right: 4px solid #667eea;
-        }
-        .schedule-table {
-            width: 100%;
-            margin-top: 20px;
-            border-collapse: collapse;
-            background: white;
-            border-radius: 8px;
-            overflow: hidden;
-        }
-        .schedule-table th {
-            background: #667eea;
-            color: white;
-            padding: 15px 10px;
-            text-align: center;
-            font-size: 14px;
-            min-width: 100px;
-        }
-        .schedule-table td {
-            padding: 15px 10px;
-            text-align: center;
-            border: 1px solid #e0e0e0;
-            vertical-align: middle;
-            min-width: 100px;
-        }
-        .shift-morning {
-            display: inline-block;
-            background: #fff3cd;
-            padding: 8px 12px;
-            border-radius: 6px;
-            font-size: 13px;
-            font-weight: bold;
-            line-height: 1.6;
-        }
-        .shift-middle {
-            display: inline-block;
-            background: #ffd4a3;
-            padding: 8px 12px;
-            border-radius: 6px;
-            font-size: 13px;
-            font-weight: bold;
-            line-height: 1.6;
-        }
-        .shift-evening {
-            display: inline-block;
-            background: #d1ecf1;
-            padding: 8px 12px;
-            border-radius: 6px;
-            font-size: 13px;
-            font-weight: bold;
-            line-height: 1.6;
-        }
-        .shift-friday {
-            display: inline-block;
-            background: #d4edda;
-            padding: 8px 12px;
-            border-radius: 6px;
-            font-size: 13px;
-            font-weight: bold;
-            line-height: 1.6;
-        }
-        .shift-saturday {
-            display: inline-block;
-            background: #e7d4f5;
-            padding: 8px 12px;
-            border-radius: 6px;
-            font-size: 13px;
-            font-weight: bold;
-            line-height: 1.6;
-        }
-        .approval-buttons {
-            display: inline-flex;
-            gap: 10px;
-            margin-right: 10px;
-        }
-        .approve-btn, .reject-btn {
-            padding: 8px 20px;
-            border: none;
-            border-radius: 6px;
-            cursor: pointer;
-            font-weight: bold;
-        }
-        .approve-btn { background: #28a745; color: white; }
-        .reject-btn { background: #dc3545; color: white; }
-        .status-pending {
-            background: #fff3cd;
-            color: #856404;
-            padding: 5px 12px;
-            border-radius: 20px;
-            font-size: 14px;
-        }
-        .status-approved {
-            background: #d4edda;
-            color: #155724;
-            padding: 5px 12px;
-            border-radius: 20px;
-            font-size: 14px;
-        }
-        .status-rejected {
-            background: #f8d7da;
-            color: #721c24;
-            padding: 5px 12px;
-            border-radius: 20px;
-            font-size: 14px;
-        }
-    </style>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="theme-color" content="#667eea" />
+  <title>מערכת ניהול משמרות</title>
+
+  <!-- Firebase Compat -->
+  <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-database-compat.js"></script>
+
+  <!-- SheetJS -->
+  <script src="https://cdn.sheetjs.com/xlsx-0.20.0/package/dist/xlsx.full.min.js"></script>
+
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      min-height: 100vh;
+      padding: 20px;
+    }
+    .container {
+      max-width: 900px;
+      margin: 0 auto;
+      background: white;
+      border-radius: 20px;
+      box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+      padding: 30px;
+    }
+    h1 { text-align: center; color: #667eea; margin-bottom: 30px; font-size: 2.5em; }
+    .section { display: none; }
+    .section.active { display: block; }
+    .btn {
+      width: 100%;
+      padding: 15px;
+      background: #667eea;
+      color: white;
+      border: none;
+      border-radius: 10px;
+      font-size: 18px;
+      font-weight: bold;
+      cursor: pointer;
+      transition: all 0.3s;
+      margin-top: 10px;
+    }
+    .btn:hover { background: #5568d3; transform: translateY(-2px); }
+    .mode-btn {
+      padding: 20px 40px;
+      margin: 10px;
+      border: 2px solid #667eea;
+      background: white;
+      color: #667eea;
+      border-radius: 10px;
+      cursor: pointer;
+      font-size: 20px;
+      font-weight: bold;
+      transition: all 0.3s;
+    }
+    .mode-btn:hover { background: #667eea; color: white; }
+    input, select {
+      width: 100%;
+      padding: 12px;
+      border: 2px solid #e0e0e0;
+      border-radius: 8px;
+      font-size: 16px;
+      margin-top: 8px;
+    }
+    .form-group { margin-bottom: 15px; }
+    label { display: block; margin-bottom: 5px; font-weight: bold; color: #555; }
+    .constraint-item {
+      background: white;
+      padding: 15px;
+      border-radius: 8px;
+      margin-bottom: 15px;
+      border: 2px solid #e0e0e0;
+    }
+    .constraint-card {
+      background: #fff3cd;
+      padding: 15px;
+      border-radius: 8px;
+      margin-bottom: 10px;
+    }
+    .message {
+      padding: 15px;
+      border-radius: 8px;
+      margin-top: 20px;
+      text-align: center;
+      font-weight: bold;
+      white-space: pre-line;
+    }
+    .message.success { background: #d4edda; color: #155724; }
+    .message.error { background: #f8d7da; color: #721c24; }
+    .employee-constraints {
+      background: white;
+      padding: 15px;
+      border-radius: 8px;
+      margin-bottom: 15px;
+      border-right: 4px solid #667eea;
+    }
+    .schedule-table {
+      width: 100%;
+      margin-top: 20px;
+      border-collapse: collapse;
+      background: white;
+      border-radius: 8px;
+      overflow: hidden;
+    }
+    .schedule-table th {
+      background: #667eea;
+      color: white;
+      padding: 15px 10px;
+      text-align: center;
+      font-size: 14px;
+      min-width: 100px;
+    }
+    .schedule-table td {
+      padding: 15px 10px;
+      text-align: center;
+      border: 1px solid #e0e0e0;
+      vertical-align: middle;
+      min-width: 100px;
+    }
+    .shift-morning {
+      display: inline-block;
+      background: #fff3cd;
+      padding: 8px 12px;
+      border-radius: 6px;
+      font-size: 13px;
+      font-weight: bold;
+      line-height: 1.6;
+    }
+    .shift-middle {
+      display: inline-block;
+      background: #ffd4a3;
+      padding: 8px 12px;
+      border-radius: 6px;
+      font-size: 13px;
+      font-weight: bold;
+      line-height: 1.6;
+    }
+    .shift-evening {
+      display: inline-block;
+      background: #d1ecf1;
+      padding: 8px 12px;
+      border-radius: 6px;
+      font-size: 13px;
+      font-weight: bold;
+      line-height: 1.6;
+    }
+    .shift-friday {
+      display: inline-block;
+      background: #d4edda;
+      padding: 8px 12px;
+      border-radius: 6px;
+      font-size: 13px;
+      font-weight: bold;
+      line-height: 1.6;
+    }
+    .shift-saturday {
+      display: inline-block;
+      background: #e7d4f5;
+      padding: 8px 12px;
+      border-radius: 6px;
+      font-size: 13px;
+      font-weight: bold;
+      line-height: 1.6;
+    }
+    .approval-buttons {
+      display: inline-flex;
+      gap: 10px;
+      margin-right: 10px;
+    }
+    .approve-btn, .reject-btn {
+      padding: 8px 20px;
+      border: none;
+      border-radius: 6px;
+      cursor: pointer;
+      font-weight: bold;
+    }
+    .approve-btn { background: #28a745; color: white; }
+    .reject-btn { background: #dc3545; color: white; }
+    .status-pending {
+      background: #fff3cd;
+      color: #856404;
+      padding: 5px 12px;
+      border-radius: 20px;
+      font-size: 14px;
+    }
+    .status-approved {
+      background: #d4edda;
+      color: #155724;
+      padding: 5px 12px;
+      border-radius: 20px;
+      font-size: 14px;
+    }
+    .status-rejected {
+      background: #f8d7da;
+      color: #721c24;
+      padding: 5px 12px;
+      border-radius: 20px;
+      font-size: 14px;
+    }
+  </style>
 </head>
+
 <body>
-<div class="container">
+  <div class="container">
     <!-- Login Screen -->
     <div id="login-screen" class="section active">
-        <h1>🗓️ מערכת ניהול משמרות</h1>
-        <div style="text-align: center; margin-top: 40px;">
-            <button class="mode-btn" onclick="showLoginForm('employee')">👤 כניסת עובד</button>
-            <button class="mode-btn" onclick="showLoginForm('manager')">👔 כניסת מנהל</button>
-        </div>
+      <h1>🗓️ מערכת ניהול משמרות</h1>
+      <div style="text-align: center; margin-top: 40px;">
+        <button class="mode-btn" onclick="showLoginForm('employee')">👤 כניסת עובד</button>
+        <button class="mode-btn" onclick="showLoginForm('manager')">👔 כניסת מנהל</button>
+      </div>
     </div>
 
     <!-- Employee Login -->
     <div id="employee-login" class="section">
-        <h1>🗓️ כניסת עובד</h1>
-        <div style="max-width: 400px; margin: 40px auto;">
-            <div class="form-group">
-                <label>שם משתמש:</label>
-                <input type="text" id="emp-username" placeholder="הזן שם משתמש">
-            </div>
-            <div class="form-group">
-                <label>סיסמה:</label>
-                <input type="password" id="emp-password" placeholder="הזן סיסמה">
-            </div>
-            <button class="btn" onclick="loginEmployee()">התחבר</button>
-            <button class="btn" onclick="backToLogin()" style="background: #6c757d;">חזור</button>
+      <h1>🗓️ כניסת עובד</h1>
+      <div style="max-width: 400px; margin: 40px auto;">
+        <div class="form-group">
+          <label>שם משתמש:</label>
+          <input type="text" id="emp-username" placeholder="הזן שם משתמש" />
         </div>
+        <div class="form-group">
+          <label>סיסמה:</label>
+          <input type="password" id="emp-password" placeholder="הזן סיסמה" />
+        </div>
+        <button class="btn" onclick="loginEmployee()">התחבר</button>
+        <button class="btn" onclick="backToLogin()" style="background: #6c757d;">חזור</button>
+      </div>
     </div>
 
     <!-- Manager Login -->
     <div id="manager-login" class="section">
-        <h1>🗓️ כניסת מנהל</h1>
-        <div style="max-width: 400px; margin: 40px auto;">
-            <div class="form-group">
-                <label>שם משתמש:</label>
-                <input type="text" id="mgr-username" placeholder="הזן שם משתמש">
-            </div>
-            <div class="form-group">
-                <label>סיסמה:</label>
-                <input type="password" id="mgr-password" placeholder="הזן סיסמה">
-            </div>
-            <button class="btn" onclick="loginManager()">התחבר</button>
-            <button class="btn" onclick="backToLogin()" style="background: #6c757d;">חזור</button>
+      <h1>🗓️ כניסת מנהל</h1>
+      <div style="max-width: 400px; margin: 40px auto;">
+        <div class="form-group">
+          <label>שם משתמש:</label>
+          <input type="text" id="mgr-username" placeholder="הזן שם משתמש" />
         </div>
+        <div class="form-group">
+          <label>סיסמה:</label>
+          <input type="password" id="mgr-password" placeholder="הזן סיסמה" />
+        </div>
+        <button class="btn" onclick="loginManager()">התחבר</button>
+        <button class="btn" onclick="backToLogin()" style="background: #6c757d;">חזור</button>
+      </div>
     </div>
 
     <!-- Employee Section -->
     <div id="employee-section" class="section">
-        <div style="display: flex; justify-content: space-between; margin-bottom: 20px;">
-            <h1>🗓️ משמרות</h1>
-            <button class="btn" onclick="logout()" style="width: auto; padding: 10px 20px; background: #dc3545;">התנתק</button>
-        </div>
-        <h2 id="employee-welcome" style="color: #667eea; text-align: center; margin-bottom: 30px;"></h2>
+      <div style="display: flex; justify-content: space-between; margin-bottom: 20px;">
+        <h1>🗓️ משמרות</h1>
+        <button class="btn" onclick="logout()" style="width: auto; padding: 10px 20px; background: #dc3545;">התנתק</button>
+      </div>
 
-        <div style="background: #f8f9fa; padding: 20px; border-radius: 12px;">
-            <h3>הגדרת אילוצים (עד 2)</h3>
-            <p style="color: #e74c3c; margin: 10px 0;">⚠️ לא ניתן לבחור שישי או מוצ"ש</p>
+      <h2 id="employee-welcome" style="color: #667eea; text-align: center; margin-bottom: 30px;"></h2>
 
-            <div class="constraint-item">
-                <h4>אילוץ 1</h4>
-                <div class="form-group">
-                    <label>תאריך:</label>
-                    <input type="date" id="c1-date">
-                </div>
-                <div class="form-group">
-                    <label>סוג:</label>
-                    <select id="c1-type">
-                        <option value="">-- בחר --</option>
-                        <option value="no-morning">לא בוקר</option>
-                        <option value="no-evening">לא ערב</option>
-                        <option value="day-off">חופש מלא</option>
-                    </select>
-                </div>
-            </div>
+      <div style="background: #f8f9fa; padding: 20px; border-radius: 12px;">
+        <h3>הגדרת אילוצים (עד 2)</h3>
+        <p style="color: #e74c3c; margin: 10px 0;">⚠️ לא ניתן לבחור שישי או מוצ"ש</p>
 
-            <div class="constraint-item">
-                <h4>אילוץ 2</h4>
-                <div class="form-group">
-                    <label>תאריך:</label>
-                    <input type="date" id="c2-date">
-                </div>
-                <div class="form-group">
-                    <label>סוג:</label>
-                    <select id="c2-type">
-                        <option value="">-- בחר --</option>
-                        <option value="no-morning">לא בוקר</option>
-                        <option value="no-evening">לא ערב</option>
-                        <option value="day-off">חופש מלא</option>
-                    </select>
-                </div>
-            </div>
-
-            <button class="btn" onclick="saveConstraints()">שמור אילוצים</button>
+        <div class="constraint-item">
+          <h4>אילוץ 1</h4>
+          <div class="form-group">
+            <label>תאריך:</label>
+            <input type="date" id="c1-date" />
+          </div>
+          <div class="form-group">
+            <label>סוג:</label>
+            <select id="c1-type">
+              <option value="">-- בחר --</option>
+              <option value="no-morning">לא בוקר</option>
+              <option value="no-evening">לא ערב</option>
+              <option value="day-off">חופש מלא</option>
+            </select>
+          </div>
         </div>
 
-        <div id="my-constraints" style="margin-top: 20px;"></div>
+        <div class="constraint-item">
+          <h4>אילוץ 2</h4>
+          <div class="form-group">
+            <label>תאריך:</label>
+            <input type="date" id="c2-date" />
+          </div>
+          <div class="form-group">
+            <label>סוג:</label>
+            <select id="c2-type">
+              <option value="">-- בחר --</option>
+              <option value="no-morning">לא בוקר</option>
+              <option value="no-evening">לא ערב</option>
+              <option value="day-off">חופש מלא</option>
+            </select>
+          </div>
+        </div>
+
+        <button class="btn" onclick="saveConstraints()">שמור אילוצים</button>
+      </div>
+
+      <div id="my-constraints" style="margin-top: 20px;"></div>
     </div>
 
     <!-- Manager Section -->
     <div id="manager-section" class="section">
-        <div style="display: flex; justify-content: space-between; margin-bottom: 20px;">
-            <h1>🗓️ פאנל מנהל</h1>
-            <button class="btn" onclick="logout()" style="width: auto; padding: 10px 20px; background: #dc3545;">התנתק</button>
-        </div>
+      <div style="display: flex; justify-content: space-between; margin-bottom: 20px;">
+        <h1>🗓️ פאנל מנהל</h1>
+        <button class="btn" onclick="logout()" style="width: auto; padding: 10px 20px; background: #dc3545;">התנתק</button>
+      </div>
 
-        <div id="all-constraints"></div>
+      <div id="all-constraints"></div>
 
-        <button class="btn" onclick="generateSchedule()">צור סידור אוטומטי</button>
+      <button class="btn" onclick="generateSchedule()">צור סידור אוטומטי</button>
 
-        <div id="export-section" style="display: none; margin-top: 10px;">
-            <button class="btn" onclick="exportToExcel()" style="background: #28a745;">📥 ייצא לאקסל</button>
-        </div>
+      <div id="export-section" style="display: none; margin-top: 10px;">
+        <button class="btn" onclick="exportToExcel()" style="background: #28a745;">📥 ייצא לאקסל</button>
+      </div>
 
-        <div id="schedule-result"></div>
+      <div id="schedule-result"></div>
     </div>
 
     <div id="message"></div>
-</div>
+  </div>
 
-<script>
+  <script>
     // Firebase Config
     const firebaseConfig = {
-        apiKey: "AIzaSyD-uaQ2aO87kGxbcc-m8_9fzJ3uhPv2zvk",
-        authDomain: "shift-manager-c026e.firebaseapp.com",
-        databaseURL: "https://shift-manager-c026e-default-rtdb.europe-west1.firebasedatabase.app",
-        projectId: "shift-manager-c026e",
-        storageBucket: "shift-manager-c026e.firebasestorage.app",
-        messagingSenderId: "1091605398341",
-        appId: "1:1091605398341:web:cb6c14e7d832c3e8df342c"
+      apiKey: "AIzaSyD-uaQ2aO87kGxbcc-m8_9fzJ3uhPv2zvk",
+      authDomain: "shift-manager-c026e.firebaseapp.com",
+      databaseURL: "https://shift-manager-c026e-default-rtdb.europe-west1.firebasedatabase.app",
+      projectId: "shift-manager-c026e",
+      storageBucket: "shift-manager-c026e.firebasestorage.app",
+      messagingSenderId: "1091605398341",
+      appId: "1:1091605398341:web:cb6c14e7d832c3e8df342c"
     };
 
     firebase.initializeApp(firebaseConfig);
@@ -340,696 +343,686 @@
     let currentSchedule = null;
 
     const USERS = {
-        'ILAY': 'ILAY',
-        'ROVEN': 'ROVEN',
-        'HAI': 'HAI',
-        'NATALI': 'NATALI',
-        'INNA': 'INNA',
-        'TAMIR': 'TAMIR',
-        'ELIYA': 'ELIYA',
-        'LIOR': 'LIOR',
-        'AMANI': 'AMANI',
-        'SHIROT': 'SHIROT'
+      'ILAY': 'ILAY',
+      'ROVEN': 'ROVEN',
+      'HAI': 'HAI',
+      'NATALI': 'NATALI',
+      'INNA': 'INNA',
+      'TAMIR': 'TAMIR',
+      'ELIYA': 'ELIYA',
+      'LIOR': 'LIOR',
+      'AMANI': 'AMANI',
+      'SHIROT': 'SHIROT'
     };
 
     const DEPARTMENTS = {
-        'מחלקת מיחשוב': ['ILAY', 'ROVEN'],
-        'מחלקת קטנים': ['HAI', 'NATALI'],
-        'מחלקת קו לבן': ['INNA', 'TAMIR', 'ELIYA'],
-        'נציגות שירות': ['LIOR', 'AMANI', 'SHIROT']
+      'מחלקת מיחשוב': ['ILAY', 'ROVEN'],
+      'מחלקת קטנים': ['HAI', 'NATALI'],
+      'מחלקת קו לבן': ['INNA', 'TAMIR', 'ELIYA'],
+      'נציגות שירות': ['LIOR', 'AMANI', 'SHIROT']
     };
 
     const MANAGER = { username: 'SAGI', password: '102' };
 
     function showLoginForm(type) {
-        hideAll();
-        document.getElementById(type + '-login').classList.add('active');
+      hideAll();
+      document.getElementById(type + '-login').classList.add('active');
     }
 
     function backToLogin() {
-        hideAll();
-        document.getElementById('login-screen').classList.add('active');
-        clearInputs();
+      hideAll();
+      document.getElementById('login-screen').classList.add('active');
+      clearInputs();
     }
 
     function logout() {
-        currentEmployee = '';
-        backToLogin();
-        showMessage('התנתקת בהצלחה', 'success');
+      currentEmployee = '';
+      backToLogin();
+      showMessage('התנתקת בהצלחה', 'success');
     }
 
     function loginEmployee() {
-        const username = document.getElementById('emp-username').value.trim().toUpperCase();
-        const password = document.getElementById('emp-password').value.trim();
+      const username = document.getElementById('emp-username').value.trim().toUpperCase();
+      const password = document.getElementById('emp-password').value.trim();
 
-        if (!username || !password) {
-            showMessage('אנא הזן שם משתמש וסיסמה', 'error');
-            return;
-        }
+      if (!username || !password) {
+        showMessage('אנא הזן שם משתמש וסיסמה', 'error');
+        return;
+      }
 
-        if (USERS[username] && USERS[username] === password) {
-            currentEmployee = username;
-            hideAll();
-            document.getElementById('employee-section').classList.add('active');
-            document.getElementById('employee-welcome').textContent = `שלום ${username}! 👋`;
-            loadEmployeeConstraints();
-            showMessage(`התחברת בהצלחה`, 'success');
-        } else {
-            showMessage('שם משתמש או סיסמה שגויים', 'error');
-        }
+      if (USERS[username] && USERS[username] === password) {
+        currentEmployee = username;
+        hideAll();
+        document.getElementById('employee-section').classList.add('active');
+        document.getElementById('employee-welcome').textContent = `שלום ${username}! 👋`;
+        loadEmployeeConstraints();
+        showMessage('התחברת בהצלחה', 'success');
+      } else {
+        showMessage('שם משתמש או סיסמה שגויים', 'error');
+      }
     }
 
     function loginManager() {
-        const username = document.getElementById('mgr-username').value.trim().toUpperCase();
-        const password = document.getElementById('mgr-password').value.trim();
+      const username = document.getElementById('mgr-username').value.trim().toUpperCase();
+      const password = document.getElementById('mgr-password').value.trim();
 
-        if (!username || !password) {
-            showMessage('אנא הזן שם משתמש וסיסמה', 'error');
-            return;
-        }
+      if (!username || !password) {
+        showMessage('אנא הזן שם משתמש וסיסמה', 'error');
+        return;
+      }
 
-        if (username === MANAGER.username && password === MANAGER.password) {
-            hideAll();
-            document.getElementById('manager-section').classList.add('active');
-            loadAllConstraints();
-            showMessage('התחברת בהצלחה', 'success');
-        } else {
-            showMessage('שם משתמש או סיסמה שגויים', 'error');
-        }
+      if (username === MANAGER.username && password === MANAGER.password) {
+        hideAll();
+        document.getElementById('manager-section').classList.add('active');
+        loadAllConstraints();
+        showMessage('התחברת בהצלחה', 'success');
+      } else {
+        showMessage('שם משתמש או סיסמה שגויים', 'error');
+      }
     }
 
     async function loadEmployeeConstraints() {
-        const snapshot = await db.ref('constraints/' + currentEmployee).once('value');
-        const data = snapshot.val();
+      const snapshot = await db.ref('constraints/' + currentEmployee).once('value');
+      const data = snapshot.val();
 
-        if (data) {
-            if (data.c1) {
-                document.getElementById('c1-date').value = data.c1.date || '';
-                document.getElementById('c1-type').value = data.c1.type || '';
-            }
-            if (data.c2) {
-                document.getElementById('c2-date').value = data.c2.date || '';
-                document.getElementById('c2-type').value = data.c2.type || '';
-            }
-            displayMyConstraints(data);
+      if (data) {
+        if (data.c1) {
+          document.getElementById('c1-date').value = data.c1.date || '';
+          document.getElementById('c1-type').value = data.c1.type || '';
         }
+        if (data.c2) {
+          document.getElementById('c2-date').value = data.c2.date || '';
+          document.getElementById('c2-type').value = data.c2.type || '';
+        }
+        displayMyConstraints(data);
+      } else {
+        displayMyConstraints({});
+      }
     }
 
     async function saveConstraints() {
-        if (!currentEmployee) return;
+      if (!currentEmployee) return;
 
-        const c1Date = document.getElementById('c1-date').value;
-        const c1Type = document.getElementById('c1-type').value;
-        const c2Date = document.getElementById('c2-date').value;
-        const c2Type = document.getElementById('c2-type').value;
+      const c1Date = document.getElementById('c1-date').value;
+      const c1Type = document.getElementById('c1-type').value;
+      const c2Date = document.getElementById('c2-date').value;
+      const c2Type = document.getElementById('c2-type').value;
 
-        // Validate no Friday/Saturday
-        if (c1Date && !isValidWeekday(c1Date)) {
-            showMessage('❌ לא ניתן לבחור שישי או שבת', 'error');
-            return;
-        }
-        if (c2Date && !isValidWeekday(c2Date)) {
-            showMessage('❌ לא ניתן לבחור שישי או שבת', 'error');
-            return;
-        }
+      // Validate no Friday/Saturday
+      if (c1Date && !isValidWeekday(c1Date)) {
+        showMessage('❌ לא ניתן לבחור שישי או שבת', 'error');
+        return;
+      }
+      if (c2Date && !isValidWeekday(c2Date)) {
+        showMessage('❌ לא ניתן לבחור שישי או שבת', 'error');
+        return;
+      }
 
-        const constraints = {};
-        if (c1Date && c1Type) {
-            constraints.c1 = {
-                date: c1Date,
-                type: c1Type,
-                status: c1Type === 'day-off' ? 'pending' : 'approved'
-            };
-        }
-        if (c2Date && c2Type) {
-            constraints.c2 = {
-                date: c2Date,
-                type: c2Type,
-                status: c2Type === 'day-off' ? 'pending' : 'approved'
-            };
-        }
+      const constraints = {};
+      if (c1Date && c1Type) {
+        constraints.c1 = {
+          date: c1Date,
+          type: c1Type,
+          status: c1Type === 'day-off' ? 'pending' : 'approved'
+        };
+      }
+      if (c2Date && c2Type) {
+        constraints.c2 = {
+          date: c2Date,
+          type: c2Type,
+          status: c2Type === 'day-off' ? 'pending' : 'approved'
+        };
+      }
 
-        await db.ref('constraints/' + currentEmployee).set(constraints);
+      await db.ref('constraints/' + currentEmployee).set(constraints);
 
-        const hasDayOff = c1Type === 'day-off' || c2Type === 'day-off';
-        showMessage(hasDayOff ? 'נשמר! בקשות חופש ממתינות לאישור' : 'נשמר בהצלחה!', 'success');
-        displayMyConstraints(constraints);
+      const hasDayOff = c1Type === 'day-off' || c2Type === 'day-off';
+      showMessage(hasDayOff ? 'נשמר! בקשות חופש ממתינות לאישור' : 'נשמר בהצלחה!', 'success');
+      displayMyConstraints(constraints);
     }
 
     function displayMyConstraints(data) {
-        const today = new Date();
-        today.setHours(0, 0, 0, 0);
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
 
-        let html = '<h3 style="color: #667eea;">האילוצים שלי:</h3>';
-        let hasValid = false;
+      let html = '<h3 style="color: #667eea;">האילוצים שלי:</h3>';
+      let hasValid = false;
 
-        if (data.c1 && new Date(data.c1.date + 'T00:00:00') >= today) {
-            html += `<div class="constraint-card">
-                <strong>אילוץ 1:</strong> ${formatDate(data.c1.date)} - ${formatType(data.c1.type)}
-                ${getStatusBadge(data.c1)}
-            </div>`;
-            hasValid = true;
-        }
+      if (data.c1 && new Date(data.c1.date + 'T00:00:00') >= today) {
+        html += `<div class="constraint-card">
+          <strong>אילוץ 1:</strong> ${formatDate(data.c1.date)} - ${formatType(data.c1.type)}
+          ${getStatusBadge(data.c1)}
+        </div>`;
+        hasValid = true;
+      }
 
-        if (data.c2 && new Date(data.c2.date + 'T00:00:00') >= today) {
-            html += `<div class="constraint-card">
-                <strong>אילוץ 2:</strong> ${formatDate(data.c2.date)} - ${formatType(data.c2.type)}
-                ${getStatusBadge(data.c2)}
-            </div>`;
-            hasValid = true;
-        }
+      if (data.c2 && new Date(data.c2.date + 'T00:00:00') >= today) {
+        html += `<div class="constraint-card">
+          <strong>אילוץ 2:</strong> ${formatDate(data.c2.date)} - ${formatType(data.c2.type)}
+          ${getStatusBadge(data.c2)}
+        </div>`;
+        hasValid = true;
+      }
 
-        if (!hasValid) {
-            html += '<p style="color: #28a745;">אין אילוצים עתידיים</p>';
-        }
+      if (!hasValid) html += '<p style="color: #28a745;">אין אילוצים עתידיים</p>';
 
-        document.getElementById('my-constraints').innerHTML = html;
+      document.getElementById('my-constraints').innerHTML = html;
     }
 
     async function loadAllConstraints() {
-        const snapshot = await db.ref('constraints').once('value');
-        const allData = snapshot.val() || {};
-        const today = new Date();
-        today.setHours(0, 0, 0, 0);
+      const snapshot = await db.ref('constraints').once('value');
+      const allData = snapshot.val() || {};
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
 
-        let html = '<h2>אילוצי העובדים</h2>';
+      let html = '<h2>אילוצי העובדים</h2>';
 
-        for (const [dept, employees] of Object.entries(DEPARTMENTS)) {
-            html += `<div style="background: #f0f0f0; padding: 15px; border-radius: 10px; margin-bottom: 20px;">
-                <h3 style="color: #667eea;">🏢 ${dept}</h3>`;
+      for (const [dept, employees] of Object.entries(DEPARTMENTS)) {
+        html += `<div style="background: #f0f0f0; padding: 15px; border-radius: 10px; margin-bottom: 20px;">
+          <h3 style="color: #667eea;">🏢 ${dept}</h3>`;
 
-            employees.forEach(emp => {
-                const data = allData[emp];
-                html += `<div class="employee-constraints"><h4>${emp}</h4>`;
+        employees.forEach(emp => {
+          const data = allData[emp];
+          html += `<div class="employee-constraints"><h4>${emp}</h4>`;
 
-                let hasValid = false;
+          let hasValid = false;
 
-                if (data?.c1 && new Date(data.c1.date + 'T00:00:00') >= today) {
-                    html += formatConstraintForManager(emp, 'c1', data.c1);
-                    hasValid = true;
-                }
-                if (data?.c2 && new Date(data.c2.date + 'T00:00:00') >= today) {
-                    html += formatConstraintForManager(emp, 'c2', data.c2);
-                    hasValid = true;
-                }
+          if (data?.c1 && new Date(data.c1.date + 'T00:00:00') >= today) {
+            html += formatConstraintForManager(emp, 'c1', data.c1);
+            hasValid = true;
+          }
+          if (data?.c2 && new Date(data.c2.date + 'T00:00:00') >= today) {
+            html += formatConstraintForManager(emp, 'c2', data.c2);
+            hasValid = true;
+          }
 
-                if (!hasValid) {
-                    html += '<p style="color: #28a745;">✅ אין אילוצים</p>';
-                }
+          if (!hasValid) html += '<p style="color: #28a745;">✅ אין אילוצים</p>';
+          html += '</div>';
+        });
 
-                html += '</div>';
-            });
+        html += '</div>';
+      }
 
-            html += '</div>';
-        }
-
-        document.getElementById('all-constraints').innerHTML = html;
+      document.getElementById('all-constraints').innerHTML = html;
     }
 
     function formatConstraintForManager(emp, key, c) {
-        let html = `<div style="margin: 10px 0; padding: 10px; background: #f8f9fa; border-radius: 6px;">
-            📌 ${formatDate(c.date)} - ${formatType(c.type)}`;
+      let html = `<div style="margin: 10px 0; padding: 10px; background: #f8f9fa; border-radius: 6px;">
+        📌 ${formatDate(c.date)} - ${formatType(c.type)}`;
 
-        if (c.type === 'day-off') {
-            const status = c.status || 'pending';
-            if (status === 'pending') {
-                html += `<div class="approval-buttons">
-                    <button class="approve-btn" onclick="updateApproval('${emp}', '${key}', 'approved')">✅ אשר</button>
-                    <button class="reject-btn" onclick="updateApproval('${emp}', '${key}', 'rejected')">❌ דחה</button>
-                </div>`;
-            } else if (status === 'approved') {
-                html += '<span class="status-approved">✅ מאושר</span>';
-            } else {
-                html += '<span class="status-rejected">❌ נדחה</span>';
-            }
+      if (c.type === 'day-off') {
+        const status = c.status || 'pending';
+        if (status === 'pending') {
+          html += `<div class="approval-buttons">
+            <button class="approve-btn" onclick="updateApproval('${emp}', '${key}', 'approved')">✅ אשר</button>
+            <button class="reject-btn" onclick="updateApproval('${emp}', '${key}', 'rejected')">❌ דחה</button>
+          </div>`;
+        } else if (status === 'approved') {
+          html += '<span class="status-approved">✅ מאושר</span>';
+        } else {
+          html += '<span class="status-rejected">❌ נדחה</span>';
         }
+      }
 
-        return html + '</div>';
+      return html + '</div>';
     }
 
     async function updateApproval(emp, key, status) {
-        if (status === 'rejected') {
-            await db.ref(`constraints/${emp}/${key}`).set(null);
-            showMessage('בקשת החופש נדחתה ונמחקה', 'success');
-        } else {
-            await db.ref(`constraints/${emp}/${key}/status`).set(status);
-            showMessage('בקשת החופש אושרה!', 'success');
-        }
+      if (status === 'rejected') {
+        await db.ref(`constraints/${emp}/${key}`).set(null);
+        showMessage('בקשת החופש נדחתה ונמחקה', 'success');
+      } else {
+        // ✅ NEW: "חותמת מנהל" לאישור
+        await db.ref(`constraints/${emp}/${key}`).update({
+          status: "approved",
+          approvedAt: firebase.database.ServerValue.TIMESTAMP,
+          approvedBy: MANAGER.username
+        });
+        showMessage('בקשת החופש אושרה!', 'success');
+      }
 
-        await loadAllConstraints();
+      await loadAllConstraints();
     }
 
     async function generateSchedule() {
-        try {
-            const snapshot = await db.ref('constraints').once('value');
-            const constraints = snapshot.val() || {};
+      try {
+        const snapshot = await db.ref('constraints').once('value');
+        const constraints = snapshot.val() || {};
+        console.log('📊 Loaded constraints from Firebase:', constraints);
 
-            console.log('📊 Loaded constraints from Firebase:', constraints);
-
-            const conflicts = checkConflicts(constraints);
-            if (conflicts.length > 0) {
-                let msg = '⚠️ קונפליקטים:\n\n';
-                conflicts.forEach(c => {
-                    msg += `🏢 ${c.dept}\n📅 ${formatDate(c.date)}: ${c.emps.join(' ו-')} - ${c.desc}\n\n`;
-                });
-                showMessage(msg, 'error');
-                document.getElementById('schedule-result').innerHTML =
-                    `<div class="message error" style="white-space: pre-line;">${msg}</div>`;
-                document.getElementById('export-section').style.display = 'none';
-                return;
-            }
-
-            const schedule = createSchedule(constraints);
-            currentSchedule = schedule;
-            displaySchedule(schedule);
-            document.getElementById('export-section').style.display = 'block';
-            showMessage('הסידור נוצר בהצלחה!', 'success');
-
-        } catch (error) {
-            console.error('Error generating schedule:', error);
-            showMessage('שגיאה ביצירת הסידור: ' + error.message, 'error');
-            document.getElementById('export-section').style.display = 'none';
+        const conflicts = checkConflicts(constraints);
+        if (conflicts.length > 0) {
+          let msg = '⚠️ קונפליקטים:\n\n';
+          conflicts.forEach(c => {
+            msg += `🏢 ${c.dept}\n📅 ${formatDate(c.date)}: ${c.emps.join(' ו-')} - ${c.desc}\n\n`;
+          });
+          showMessage(msg, 'error');
+          document.getElementById('schedule-result').innerHTML =
+            `<div class="message error">${msg}</div>`;
+          document.getElementById('export-section').style.display = 'none';
+          return;
         }
+
+        const schedule = createSchedule(constraints);
+        currentSchedule = schedule;
+        displaySchedule(schedule);
+        document.getElementById('export-section').style.display = 'block';
+        showMessage('הסידור נוצר בהצלחה!', 'success');
+      } catch (error) {
+        console.error('Error generating schedule:', error);
+        showMessage('שגיאה ביצירת הסידור: ' + error.message, 'error');
+        document.getElementById('export-section').style.display = 'none';
+      }
     }
 
     function checkConflicts(constraints) {
-        const conflicts = [];
-        const today = new Date();
-        today.setHours(0, 0, 0, 0);
+      const conflicts = [];
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
 
-        for (const [dept, emps] of Object.entries(DEPARTMENTS)) {
-            const empData = emps.map(emp => ({ name: emp, constraints: constraints[emp] }));
+      for (const [dept, emps] of Object.entries(DEPARTMENTS)) {
+        const empData = emps.map(emp => ({ name: emp, constraints: constraints[emp] }));
 
-            const allDates = [];
-            empData.forEach(({ name, constraints: data }) => {
-                if (!data) return;
-                if (data.c1?.status === 'approved' && new Date(data.c1.date + 'T00:00:00') >= today) {
-                    allDates.push({ emp: name, ...data.c1 });
-                }
-                if (data.c2?.status === 'approved' && new Date(data.c2.date + 'T00:00:00') >= today) {
-                    allDates.push({ emp: name, ...data.c2 });
-                }
-            });
+        const allDates = [];
+        empData.forEach(({ name, constraints: data }) => {
+          if (!data) return;
+          if (data.c1?.status === 'approved' && new Date(data.c1.date + 'T00:00:00') >= today) {
+            allDates.push({ emp: name, ...data.c1 });
+          }
+          if (data.c2?.status === 'approved' && new Date(data.c2.date + 'T00:00:00') >= today) {
+            allDates.push({ emp: name, ...data.c2 });
+          }
+        });
 
-            const byDate = {};
-            allDates.forEach(c => {
-                if (!byDate[c.date]) byDate[c.date] = [];
-                byDate[c.date].push(c);
-            });
+        const byDate = {};
+        allDates.forEach(c => {
+          if (!byDate[c.date]) byDate[c.date] = [];
+          byDate[c.date].push(c);
+        });
 
-            Object.entries(byDate).forEach(([date, dateConstraints]) => {
-                const dayOffCount = dateConstraints.filter(c => c.type === 'day-off').length;
-                const noMorningCount = dateConstraints.filter(c => c.type === 'no-morning' || c.type === 'day-off').length;
-                const noEveningCount = dateConstraints.filter(c => c.type === 'no-evening' || c.type === 'day-off').length;
+        Object.entries(byDate).forEach(([date, dateConstraints]) => {
+          const dayOffCount = dateConstraints.filter(c => c.type === 'day-off').length;
+          const noMorningCount = dateConstraints.filter(c => c.type === 'no-morning' || c.type === 'day-off').length;
+          const noEveningCount = dateConstraints.filter(c => c.type === 'no-evening' || c.type === 'day-off').length;
 
-                if (emps.length === 3) {
-                    if (dayOffCount >= 2) {
-                        conflicts.push({
-                            dept,
-                            date,
-                            emps: dateConstraints.filter(c => c.type === 'day-off').map(c => c.emp),
-                            desc: 'יותר מעובד אחד ביקש חופש'
-                        });
-                    }
-                } else {
-                    if (dayOffCount === 2) {
-                        conflicts.push({ dept, date, emps: dateConstraints.map(c => c.emp), desc: 'שניהם ביקשו חופש' });
-                    } else if (noMorningCount === 2) {
-                        conflicts.push({
-                            dept, date,
-                            emps: dateConstraints.filter(c => c.type !== 'no-evening').map(c => c.emp),
-                            desc: 'שניהם לא יכולים בוקר'
-                        });
-                    } else if (noEveningCount === 2) {
-                        conflicts.push({
-                            dept, date,
-                            emps: dateConstraints.filter(c => c.type !== 'no-morning').map(c => c.emp),
-                            desc: 'שניהם לא יכולים ערב'
-                        });
-                    }
-                }
-            });
-        }
+          if (emps.length === 3) {
+            if (dayOffCount >= 2) {
+              conflicts.push({
+                dept,
+                date,
+                emps: dateConstraints.filter(c => c.type === 'day-off').map(c => c.emp),
+                desc: 'יותר מעובד אחד ביקש חופש'
+              });
+            }
+          } else {
+            if (dayOffCount === 2) {
+              conflicts.push({ dept, date, emps: dateConstraints.map(c => c.emp), desc: 'שניהם ביקשו חופש' });
+            } else if (noMorningCount === 2) {
+              conflicts.push({
+                dept, date,
+                emps: dateConstraints.filter(c => c.type !== 'no-evening').map(c => c.emp),
+                desc: 'שניהם לא יכולים בוקר'
+              });
+            } else if (noEveningCount === 2) {
+              conflicts.push({
+                dept, date,
+                emps: dateConstraints.filter(c => c.type !== 'no-morning').map(c => c.emp),
+                desc: 'שניהם לא יכולים ערב'
+              });
+            }
+          }
+        });
+      }
 
-        return conflicts;
+      return conflicts;
     }
 
     function createSchedule(constraints) {
-        // ✅ FIX #2: normalize today to midnight
-        const today = new Date();
-        today.setHours(0, 0, 0, 0);
+      // ✅ FIX: normalize today to midnight
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
 
-        const nextSunday = new Date(today);
-        const dayOfWeek = today.getDay();
-        nextSunday.setDate(today.getDate() + (dayOfWeek === 0 ? 0 : 7 - dayOfWeek));
+      const nextSunday = new Date(today);
+      const dayOfWeek = today.getDay();
+      nextSunday.setDate(today.getDate() + (dayOfWeek === 0 ? 0 : 7 - dayOfWeek));
 
-        const allSchedules = {};
+      const allSchedules = {};
 
-        for (const [dept, emps] of Object.entries(DEPARTMENTS)) {
-            const schedule = [];
-            const days = ['ראשון', 'שני', 'שלישי', 'רביעי', 'חמישי', 'שישי', 'שבת'];
-            const isThreeEmp = emps.length === 3;
-            const isKavLavan = dept === 'מחלקת קו לבן';
-            const isNetzigut = dept === 'נציגות שירות';
+      for (const [dept, emps] of Object.entries(DEPARTMENTS)) {
+        const schedule = [];
+        const days = ['ראשון', 'שני', 'שלישי', 'רביעי', 'חמישי', 'שישי', 'שבת'];
+        const isThreeEmp = emps.length === 3;
+        const isKavLavan = dept === 'מחלקת קו לבן';
+        const isNetzigut = dept === 'נציגות שירות';
 
-            const hasConstraint = (emp, dateStr, type) => {
-                const data = constraints[emp];
-                if (!data) return false;
+        const hasConstraint = (emp, dateStr, type) => {
+          const data = constraints[emp];
+          if (!data) return false;
 
-                const check = (c) => {
-                    if (!c || c.status !== 'approved') return false;
-                    // ✅ FIX #2: compare with midnight-safe parsing
-                    if (new Date(c.date + 'T00:00:00') < today) return false;
-                    if (c.date !== dateStr) return false;
+          const check = (c) => {
+            if (!c) return false;
 
-                    if (type === 'morning') return c.type === 'no-morning' || c.type === 'day-off';
-                    // no-middle currently not used by UI; left here harmlessly
-                    if (type === 'middle') return c.type === 'no-middle' || c.type === 'day-off';
-                    if (type === 'evening') return c.type === 'no-evening' || c.type === 'day-off';
-                    if (type === 'full') return c.type === 'day-off';
-                    return false;
-                };
-
-                return check(data.c1) || check(data.c2);
-            };
-
-            // Sunday-Thursday
-            for (let i = 0; i < 5; i++) {
-                const date = new Date(nextSunday);
-                date.setDate(nextSunday.getDate() + i);
-                const dateStr = date.toISOString().split('T')[0];
-
-                if (isThreeEmp) {
-                    const dayOffs = emps.filter(emp => hasConstraint(emp, dateStr, 'full'));
-
-                    if (dayOffs.length === 1) {
-                        const working = emps.filter(emp => !dayOffs.includes(emp));
-                        schedule.push({
-                            day: days[i],
-                            date: dateStr,
-                            morning: working[0],
-                            evening: working[1],
-                            middleCancelled: true,
-                            covering: dayOffs[0],
-                            isKavLavan,
-                            isNetzigut
-                        });
-                    } else {
-                        const rotation = i % 3;
-                        schedule.push({
-                            day: days[i],
-                            date: dateStr,
-                            morning: emps[rotation],
-                            middle: emps[(rotation + 1) % 3],
-                            evening: emps[(rotation + 2) % 3],
-                            isKavLavan,
-                            isNetzigut
-                        });
-                    }
-                } else {
-                    const e1DayOff = hasConstraint(emps[0], dateStr, 'full');
-                    const e2DayOff = hasConstraint(emps[1], dateStr, 'full');
-
-                    if (e1DayOff) {
-                        schedule.push({ day: days[i], date: dateStr, morning: emps[1], evening: emps[1], covering: emps[0] });
-                    } else if (e2DayOff) {
-                        schedule.push({ day: days[i], date: dateStr, morning: emps[0], evening: emps[0], covering: emps[1] });
-                    } else {
-                        const mEmp = i % 2 === 0 ? emps[0] : emps[1];
-                        const eEmp = i % 2 === 0 ? emps[1] : emps[0];
-                        const mCant = hasConstraint(mEmp, dateStr, 'morning');
-                        const eCant = hasConstraint(eEmp, dateStr, 'evening');
-                        schedule.push({ day: days[i], date: dateStr, morning: mCant ? eEmp : mEmp, evening: eCant ? mEmp : eEmp });
-                    }
-                }
-            }
-
-            // Friday
-            const fri = new Date(nextSunday);
-            fri.setDate(nextSunday.getDate() + 5);
-            const friStr = fri.toISOString().split('T')[0];
-
-            if (isThreeEmp) {
-                const friOff = emps.find(emp => hasConstraint(emp, friStr, 'full'));
-                const friWorking = friOff ? emps.filter(e => e !== friOff) : [emps[0], emps[1]];
-                schedule.push({
-                    day: 'שישי',
-                    date: friStr,
-                    friday: friWorking,
-                    isKavLavan,
-                    isNetzigut
-                });
+            // ✅ NEW: חופש מלא חייב "חותמת מנהל" (approvedAt)
+            if (c.type === 'day-off') {
+              if (c.status !== 'approved') return false;
+              if (!c.approvedAt) return false;
             } else {
-                const friEmp = hasConstraint(emps[0], friStr, 'full') ? emps[1] : emps[0];
-                schedule.push({ day: 'שישי', date: friStr, friday: friEmp });
+              // אילוצים רגילים: אם יש status והוא לא approved - אל תחשיב
+              if (c.status && c.status !== 'approved') return false;
             }
 
-            // Saturday
-            const sat = new Date(nextSunday);
-            sat.setDate(nextSunday.getDate() + 6);
-            const satStr = sat.toISOString().split('T')[0];
+            if (new Date(c.date + 'T00:00:00') < today) return false;
+            if (c.date !== dateStr) return false;
 
-            if (isThreeEmp) {
-                const friWorking = schedule[schedule.length - 1].friday;
-                const satWorking = emps.find(e => !friWorking.includes(e)) || emps[2];
-                schedule.push({
-                    day: 'מוצ"ש',
-                    date: satStr,
-                    saturday: satWorking,
-                    isKavLavan,
-                    isNetzigut
-                });
+            if (type === 'morning') return c.type === 'no-morning' || c.type === 'day-off';
+            if (type === 'middle') return c.type === 'no-middle' || c.type === 'day-off';
+            if (type === 'evening') return c.type === 'no-evening' || c.type === 'day-off';
+            if (type === 'full') return c.type === 'day-off';
+            return false;
+          };
+
+          return check(data.c1) || check(data.c2);
+        };
+
+        // Sunday-Thursday
+        for (let i = 0; i < 5; i++) {
+          const date = new Date(nextSunday);
+          date.setDate(nextSunday.getDate() + i);
+          const dateStr = date.toISOString().split('T')[0];
+
+          if (isThreeEmp) {
+            const dayOffs = emps.filter(emp => hasConstraint(emp, dateStr, 'full'));
+
+            if (dayOffs.length === 1) {
+              const working = emps.filter(emp => !dayOffs.includes(emp));
+              schedule.push({
+                day: days[i],
+                date: dateStr,
+                morning: working[0],
+                evening: working[1],
+                middleCancelled: true,
+                covering: dayOffs[0],
+                isKavLavan,
+                isNetzigut
+              });
             } else {
-                const friEmp = schedule[schedule.length - 1].friday;
-                const satEmp = friEmp === emps[0] ? emps[1] : emps[0];
-                schedule.push({ day: 'מוצ"ש', date: satStr, saturday: satEmp });
+              const rotation = i % 3;
+              schedule.push({
+                day: days[i],
+                date: dateStr,
+                morning: emps[rotation],
+                middle: emps[(rotation + 1) % 3],
+                evening: emps[(rotation + 2) % 3],
+                isKavLavan,
+                isNetzigut
+              });
             }
+          } else {
+            const e1DayOff = hasConstraint(emps[0], dateStr, 'full');
+            const e2DayOff = hasConstraint(emps[1], dateStr, 'full');
 
-            allSchedules[dept] = schedule;
+            if (e1DayOff) {
+              schedule.push({ day: days[i], date: dateStr, morning: emps[1], evening: emps[1], covering: emps[0] });
+            } else if (e2DayOff) {
+              schedule.push({ day: days[i], date: dateStr, morning: emps[0], evening: emps[0], covering: emps[1] });
+            } else {
+              const mEmp = i % 2 === 0 ? emps[0] : emps[1];
+              const eEmp = i % 2 === 0 ? emps[1] : emps[0];
+              const mCant = hasConstraint(mEmp, dateStr, 'morning');
+              const eCant = hasConstraint(eEmp, dateStr, 'evening');
+              schedule.push({ day: days[i], date: dateStr, morning: mCant ? eEmp : mEmp, evening: eCant ? mEmp : eEmp });
+            }
+          }
         }
 
-        return allSchedules;
+        // Friday
+        const fri = new Date(nextSunday);
+        fri.setDate(nextSunday.getDate() + 5);
+        const friStr = fri.toISOString().split('T')[0];
+
+        if (isThreeEmp) {
+          const friOff = emps.find(emp => hasConstraint(emp, friStr, 'full'));
+          const friWorking = friOff ? emps.filter(e => e !== friOff) : [emps[0], emps[1]];
+          schedule.push({
+            day: 'שישי',
+            date: friStr,
+            friday: friWorking,
+            isKavLavan,
+            isNetzigut
+          });
+        } else {
+          const friEmp = hasConstraint(emps[0], friStr, 'full') ? emps[1] : emps[0];
+          schedule.push({ day: 'שישי', date: friStr, friday: friEmp });
+        }
+
+        // Saturday
+        const sat = new Date(nextSunday);
+        sat.setDate(nextSunday.getDate() + 6);
+        const satStr = sat.toISOString().split('T')[0];
+
+        if (isThreeEmp) {
+          const friWorking = schedule[schedule.length - 1].friday;
+          const satWorking = emps.find(e => !friWorking.includes(e)) || emps[2];
+          schedule.push({
+            day: 'מוצ"ש',
+            date: satStr,
+            saturday: satWorking,
+            isKavLavan,
+            isNetzigut
+          });
+        } else {
+          const friEmp = schedule[schedule.length - 1].friday;
+          const satEmp = friEmp === emps[0] ? emps[1] : emps[0];
+          schedule.push({ day: 'מוצ"ש', date: satStr, saturday: satEmp });
+        }
+
+        allSchedules[dept] = schedule;
+      }
+
+      return allSchedules;
     }
 
     function displaySchedule(allSchedules) {
-        let html = '<h2 style="color: #667eea; margin-top: 30px;">📅 סידור השבוע</h2>';
+      let html = '<h2 style="color: #667eea; margin-top: 30px;">📅 סידור השבוע</h2>';
 
-        for (const [dept, schedule] of Object.entries(allSchedules)) {
-            html += `<div style="background: #f8f9fa; padding: 20px; border-radius: 12px; margin-bottom: 20px;">
-                <h3 style="color: #667eea;">🏢 ${dept}</h3>
-                <table class="schedule-table">
-                    <tr>
-                        <th>עובד</th>`;
+      for (const [dept, schedule] of Object.entries(allSchedules)) {
+        html += `<div style="background: #f8f9fa; padding: 20px; border-radius: 12px; margin-bottom: 20px;">
+          <h3 style="color: #667eea;">🏢 ${dept}</h3>
+          <table class="schedule-table">
+            <tr>
+              <th>עובד</th>`;
 
-            schedule.forEach(day => {
-                html += `<th>${day.day}<br>${formatDate(day.date)}</th>`;
-            });
+        schedule.forEach(day => {
+          html += `<th>${day.day}<br>${formatDate(day.date)}</th>`;
+        });
 
-            html += '</tr>';
+        html += '</tr>';
 
-            // ✅ FIX #1: employees resolved directly by department
-            const employees = DEPARTMENTS[dept] || [];
-            const isThreeEmp = employees.length === 3;
-            const isKavLavan = dept === 'מחלקת קו לבן';
-            const isNetzigut = dept === 'נציגות שירות';
+        // ✅ FIX #1: employees by dept (no guessing)
+        const employees = DEPARTMENTS[dept] || [];
+        const isThreeEmp = employees.length === 3;
+        const isKavLavan = dept === 'מחלקת קו לבן';
 
-            employees.forEach(emp => {
-                html += `<tr><td style="background: #667eea; color: white; font-weight: bold;">${emp}</td>`;
+        employees.forEach(emp => {
+          html += `<tr><td style="background: #667eea; color: white; font-weight: bold;">${emp}</td>`;
 
-                schedule.forEach(day => {
-                    if (day.friday) {
-                        if (isThreeEmp) {
-                            if (day.friday.includes(emp)) {
-                                if (isKavLavan) {
-                                    html += `<td><span class="shift-friday">עובד בשישי</span></td>`;
-                                } else {
-                                    html += `<td><span class="shift-friday">שישי<br>8:30-14:30</span></td>`;
-                                }
-                            } else {
-                                html += `<td style="background: #f0f0f0;">-</td>`;
-                            }
-                        } else {
-                            if (day.friday === emp) {
-                                html += `<td><span class="shift-friday">בוקר<br>8:30-14:30</span></td>`;
-                            } else {
-                                html += `<td style="background: #f0f0f0;">-</td>`;
-                            }
-                        }
-                    } else if (day.saturday) {
-                        if (isThreeEmp) {
-                            if (day.saturday === emp) {
-                                if (isKavLavan) {
-                                    html += `<td><span class="shift-saturday">עובד במוצ"ש</span></td>`;
-                                } else {
-                                    html += `<td><span class="shift-saturday">מוצ"ש<br>מוצ"ש-22:30</span></td>`;
-                                }
-                            } else {
-                                html += `<td style="background: #f0f0f0;">-</td>`;
-                            }
-                        } else {
-                            if (day.saturday === emp) {
-                                html += `<td><span class="shift-saturday">ערב<br>מוצ"ש-22:30</span></td>`;
-                            } else {
-                                html += `<td style="background: #f0f0f0;">-</td>`;
-                            }
-                        }
-                    } else {
-                        let shifts = [];
+          schedule.forEach(day => {
+            if (day.friday) {
+              if (isThreeEmp) {
+                if (day.friday.includes(emp)) {
+                  html += isKavLavan
+                    ? `<td><span class="shift-friday">עובד בשישי</span></td>`
+                    : `<td><span class="shift-friday">שישי<br>8:30-14:30</span></td>`;
+                } else {
+                  html += `<td style="background: #f0f0f0;">-</td>`;
+                }
+              } else {
+                if (day.friday === emp) {
+                  html += `<td><span class="shift-friday">בוקר<br>8:30-14:30</span></td>`;
+                } else {
+                  html += `<td style="background: #f0f0f0;">-</td>`;
+                }
+              }
+            } else if (day.saturday) {
+              if (isThreeEmp) {
+                if (day.saturday === emp) {
+                  html += isKavLavan
+                    ? `<td><span class="shift-saturday">עובד במוצ"ש</span></td>`
+                    : `<td><span class="shift-saturday">מוצ"ש<br>מוצ"ש-22:30</span></td>`;
+                } else {
+                  html += `<td style="background: #f0f0f0;">-</td>`;
+                }
+              } else {
+                if (day.saturday === emp) {
+                  html += `<td><span class="shift-saturday">ערב<br>מוצ"ש-22:30</span></td>`;
+                } else {
+                  html += `<td style="background: #f0f0f0;">-</td>`;
+                }
+              }
+            } else {
+              let shifts = [];
 
-                        if (day.morning === emp) {
-                            shifts.push(isKavLavan
-                                ? '<span class="shift-morning">בוקר</span>'
-                                : '<span class="shift-morning">בוקר<br>9:00-16:00</span>');
-                        }
+              if (day.morning === emp) {
+                shifts.push(isKavLavan
+                  ? '<span class="shift-morning">בוקר</span>'
+                  : '<span class="shift-morning">בוקר<br>9:00-16:00</span>');
+              }
 
-                        if (day.middle === emp) {
-                            shifts.push(isKavLavan
-                                ? '<span class="shift-middle">אמצע</span>'
-                                : '<span class="shift-middle">אמצע<br>11:00-19:00</span>');
-                        }
+              if (day.middle === emp) {
+                shifts.push(isKavLavan
+                  ? '<span class="shift-middle">אמצע</span>'
+                  : '<span class="shift-middle">אמצע<br>11:00-19:00</span>');
+              }
 
-                        if (day.evening === emp) {
-                            shifts.push(isKavLavan
-                                ? '<span class="shift-evening">ערב</span>'
-                                : '<span class="shift-evening">ערב<br>15:00-21:30</span>');
-                        }
+              if (day.evening === emp) {
+                shifts.push(isKavLavan
+                  ? '<span class="shift-evening">ערב</span>'
+                  : '<span class="shift-evening">ערב<br>15:00-21:30</span>');
+              }
 
-                        if (shifts.length === 0) {
-                            html += `<td style="background: #f0f0f0;">-</td>`;
-                        } else {
-                            const coverNote = day.covering && !day.middleCancelled ? '<br><small style="color: #e67e22;">מכסה</small>' : '';
-                            html += `<td>${shifts.join('<br>')}${coverNote}</td>`;
-                        }
-                    }
-                });
+              if (shifts.length === 0) {
+                html += `<td style="background: #f0f0f0;">-</td>`;
+              } else {
+                const coverNote = day.covering && !day.middleCancelled ? '<br><small style="color: #e67e22;">מכסה</small>' : '';
+                html += `<td>${shifts.join('<br>')}${coverNote}</td>`;
+              }
+            }
+          });
 
-                html += '</tr>';
-            });
+          html += '</tr>';
+        });
 
-            html += '</table></div>';
-        }
+        html += '</table></div>';
+      }
 
-        document.getElementById('schedule-result').innerHTML = html;
+      document.getElementById('schedule-result').innerHTML = html;
     }
 
     function exportToExcel() {
-        if (!currentSchedule) return;
+      if (!currentSchedule) return;
 
-        const wb = XLSX.utils.book_new();
+      const wb = XLSX.utils.book_new();
 
-        for (const [dept, schedule] of Object.entries(currentSchedule)) {
-            // ✅ FIX #1: employees resolved directly by department
-            const employees = DEPARTMENTS[dept] || [];
-            const isThreeEmp = employees.length === 3;
-            const isKavLavan = dept === 'מחלקת קו לבן';
+      for (const [dept, schedule] of Object.entries(currentSchedule)) {
+        // ✅ FIX #1: employees by dept (no guessing)
+        const employees = DEPARTMENTS[dept] || [];
+        const isThreeEmp = employees.length === 3;
+        const isKavLavan = dept === 'מחלקת קו לבן';
 
-            const data = [[dept]];
+        const data = [[dept]];
+        const headerRow = ['עובד'];
+        schedule.forEach(day => headerRow.push(`${day.day} ${formatDate(day.date)}`));
+        data.push(headerRow);
 
-            const headerRow = ['עובד'];
-            schedule.forEach(day => {
-                headerRow.push(`${day.day} ${formatDate(day.date)}`);
-            });
-            data.push(headerRow);
+        employees.forEach(emp => {
+          const row = [emp];
 
-            employees.forEach(emp => {
-                const row = [emp];
+          schedule.forEach(day => {
+            if (day.friday) {
+              if (isThreeEmp) {
+                row.push(day.friday.includes(emp)
+                  ? (isKavLavan ? 'עובד בשישי' : 'שישי 8:30-14:30')
+                  : '-');
+              } else {
+                row.push(day.friday === emp ? 'בוקר 8:30-14:30' : '-');
+              }
+            } else if (day.saturday) {
+              if (isThreeEmp) {
+                row.push(day.saturday === emp
+                  ? (isKavLavan ? 'עובד במוצ"ש' : 'מוצ"ש מוצ"ש-22:30')
+                  : '-');
+              } else {
+                row.push(day.saturday === emp ? 'ערב מוצ"ש-22:30' : '-');
+              }
+            } else {
+              const shifts = [];
+              if (day.morning === emp) shifts.push(isKavLavan ? 'בוקר' : 'בוקר 9:00-16:00');
+              if (day.middle === emp) shifts.push(isKavLavan ? 'אמצע' : 'אמצע 11:00-19:00');
+              if (day.evening === emp) shifts.push(isKavLavan ? 'ערב' : 'ערב 15:00-21:30');
 
-                schedule.forEach(day => {
-                    if (day.friday) {
-                        if (isThreeEmp) {
-                            if (isKavLavan) {
-                                row.push(day.friday.includes(emp) ? 'עובד בשישי' : '-');
-                            } else {
-                                row.push(day.friday.includes(emp) ? 'שישי 8:30-14:30' : '-');
-                            }
-                        } else {
-                            row.push(day.friday === emp ? 'בוקר 8:30-14:30' : '-');
-                        }
-                    } else if (day.saturday) {
-                        if (isThreeEmp) {
-                            if (isKavLavan) {
-                                row.push(day.saturday === emp ? 'עובד במוצ"ש' : '-');
-                            } else {
-                                row.push(day.saturday === emp ? 'מוצ"ש מוצ"ש-22:30' : '-');
-                            }
-                        } else {
-                            row.push(day.saturday === emp ? 'ערב מוצ"ש-22:30' : '-');
-                        }
-                    } else {
-                        const shifts = [];
-                        if (day.morning === emp) shifts.push(isKavLavan ? 'בוקר' : 'בוקר 9:00-16:00');
-                        if (day.middle === emp) shifts.push(isKavLavan ? 'אמצע' : 'אמצע 11:00-19:00');
-                        if (day.evening === emp) shifts.push(isKavLavan ? 'ערב' : 'ערב 15:00-21:30');
+              row.push(shifts.length ? shifts.join(', ') : '-');
+            }
+          });
 
-                        if (shifts.length === 0) {
-                            row.push('-');
-                        } else {
-                            const coverNote = (day.covering && shifts.length === 2 && !day.middleCancelled) ? ' (מכסה)' : '';
-                            row.push(shifts.join(', ') + coverNote);
-                        }
-                    }
-                });
+          data.push(row);
+        });
 
-                data.push(row);
-            });
+        const ws = XLSX.utils.aoa_to_sheet(data);
+        const colWidths = [{ wch: 15 }];
+        schedule.forEach(() => colWidths.push({ wch: 22 }));
+        ws['!cols'] = colWidths;
 
-            const ws = XLSX.utils.aoa_to_sheet(data);
+        XLSX.utils.book_append_sheet(wb, ws, dept);
+      }
 
-            const colWidths = [{ wch: 15 }];
-            schedule.forEach(() => colWidths.push({ wch: 22 }));
-            ws['!cols'] = colWidths;
-
-            XLSX.utils.book_append_sheet(wb, ws, dept);
-        }
-
-        const today = new Date();
-        XLSX.writeFile(wb, `סידור_${today.getDate()}-${today.getMonth()+1}-${today.getFullYear()}.xlsx`);
-        showMessage('הקובץ יוצא!', 'success');
+      const today = new Date();
+      XLSX.writeFile(wb, `סידור_${today.getDate()}-${today.getMonth()+1}-${today.getFullYear()}.xlsx`);
+      showMessage('הקובץ יוצא!', 'success');
     }
 
     // Helpers
     function hideAll() {
-        document.querySelectorAll('.section').forEach(s => s.classList.remove('active'));
-        document.getElementById('message').innerHTML = '';
+      document.querySelectorAll('.section').forEach(s => s.classList.remove('active'));
+      document.getElementById('message').innerHTML = '';
     }
 
     function clearInputs() {
-        document.getElementById('emp-username').value = '';
-        document.getElementById('emp-password').value = '';
-        document.getElementById('mgr-username').value = '';
-        document.getElementById('mgr-password').value = '';
+      document.getElementById('emp-username').value = '';
+      document.getElementById('emp-password').value = '';
+      document.getElementById('mgr-username').value = '';
+      document.getElementById('mgr-password').value = '';
     }
 
     function showMessage(text, type) {
-        const div = document.getElementById('message');
-        div.className = `message ${type}`;
-        div.textContent = text;
-        setTimeout(() => div.innerHTML = '', 5000);
+      const div = document.getElementById('message');
+      div.className = `message ${type}`;
+      div.textContent = text;
+      setTimeout(() => div.innerHTML = '', 5000);
     }
 
     function formatDate(dateStr) {
-        const d = new Date(dateStr + 'T00:00:00');
-        return `${d.getDate().toString().padStart(2, '0')}/${(d.getMonth()+1).toString().padStart(2, '0')}`;
+      const d = new Date(dateStr + 'T00:00:00');
+      return `${d.getDate().toString().padStart(2, '0')}/${(d.getMonth()+1).toString().padStart(2, '0')}`;
     }
 
     function formatType(type) {
-        const types = { 'no-morning': '❌ לא בוקר', 'no-evening': '❌ לא ערב', 'day-off': '🏖️ חופש מלא' };
-        return types[type] || type;
+      const types = { 'no-morning': '❌ לא בוקר', 'no-evening': '❌ לא ערב', 'day-off': '🏖️ חופש מלא' };
+      return types[type] || type;
     }
 
     function isValidWeekday(dateStr) {
-        const d = new Date(dateStr + 'T00:00:00');
-        const day = d.getDay();
-        return day !== 5 && day !== 6;
+      const d = new Date(dateStr + 'T00:00:00');
+      const day = d.getDay();
+      return day !== 5 && day !== 6;
     }
 
     function getStatusBadge(c) {
-        if (c.type !== 'day-off') return '';
-        const statuses = { 'pending': '⏳ ממתין', 'approved': '✅ מאושר', 'rejected': '❌ נדחה' };
-        const classes = { 'pending': 'status-pending', 'approved': 'status-approved', 'rejected': 'status-rejected' };
-        const status = c.status || 'pending';
-        return `<span class="${classes[status]}">${statuses[status]}</span>`;
+      if (c.type !== 'day-off') return '';
+      const statuses = { 'pending': '⏳ ממתין', 'approved': '✅ מאושר', 'rejected': '❌ נדחה' };
+      const classes = { 'pending': 'status-pending', 'approved': 'status-approved', 'rejected': 'status-rejected' };
+      const status = c.status || 'pending';
+      return `<span class="${classes[status]}">${statuses[status]}</span>`;
     }
-</script>
+  </script>
 </body>
 </html>
