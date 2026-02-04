@@ -4,8 +4,8 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="theme-color" content="#667eea">
-    <meta name="description" content="מערכת ניהול משמרות לעובדים - הזנת אילוצים ויצירת סידור אוטומטי">
-    <title>מערכת ניהול משמרות</title>
+    <meta name="description" content="׳׳¢׳¨׳›׳× ׳ ׳™׳”׳•׳ ׳׳©׳׳¨׳•׳× ׳׳¢׳•׳‘׳“׳™׳ - ׳”׳–׳ ׳× ׳׳™׳׳•׳¦׳™׳ ׳•׳™׳¦׳™׳¨׳× ׳¡׳™׳“׳•׳¨ ׳׳•׳˜׳•׳׳˜׳™">
+    <title>׳׳¢׳¨׳›׳× ׳ ׳™׳”׳•׳ ׳׳©׳׳¨׳•׳×</title>
     
     <!-- PWA Manifest -->
     <link rel="manifest" href="manifest.json">
@@ -346,65 +346,65 @@
 </head>
 <body>
     <div class="container">
-        <h1>🗓️ מערכת ניהול משמרות</h1>
+        <h1>נ—“ן¸ ׳׳¢׳¨׳›׳× ׳ ׳™׳”׳•׳ ׳׳©׳׳¨׳•׳×</h1>
 
         <div class="mode-selector">
-            <button class="mode-btn active" onclick="switchMode('employee')">עובד</button>
-            <button class="mode-btn" onclick="switchMode('manager')">מנהל</button>
+            <button class="mode-btn active" onclick="switchMode('employee')">׳¢׳•׳‘׳“</button>
+            <button class="mode-btn" onclick="switchMode('manager')">׳׳ ׳”׳</button>
         </div>
 
         <!-- Employee Section -->
         <div id="employee-section" class="section active">
             <div class="employee-select">
-                <label>בחר את שמך:</label>
+                <label>׳‘׳—׳¨ ׳׳× ׳©׳׳:</label>
                 <select id="employee-name" onchange="loadEmployeeConstraints()">
-                    <option value="">-- בחר עובד --</option>
-                    <option value="עובד 1">עובד 1</option>
-                    <option value="עובד 2">עובד 2</option>
+                    <option value="">-- ׳‘׳—׳¨ ׳¢׳•׳‘׳“ --</option>
+                    <option value="׳¢׳•׳‘׳“ 1">׳¢׳•׳‘׳“ 1</option>
+                    <option value="׳¢׳•׳‘׳“ 2">׳¢׳•׳‘׳“ 2</option>
                 </select>
             </div>
 
             <div id="employee-form" style="display: none;">
                 <div class="constraint-form">
-                    <h2>הגדרת אילוצים (עד 2)</h2>
-                    <p style="color: #666; margin-bottom: 10px;">בחר עד 2 אילוצים לשבוע הקרוב</p>
-                    <p style="color: #e74c3c; margin-bottom: 20px; font-weight: bold;">⚠️ לא ניתן לבחור שישי או מוצ"ש כאילוץ</p>
+                    <h2>׳”׳’׳“׳¨׳× ׳׳™׳׳•׳¦׳™׳ (׳¢׳“ 2)</h2>
+                    <p style="color: #666; margin-bottom: 10px;">׳‘׳—׳¨ ׳¢׳“ 2 ׳׳™׳׳•׳¦׳™׳ ׳׳©׳‘׳•׳¢ ׳”׳§׳¨׳•׳‘</p>
+                    <p style="color: #e74c3c; margin-bottom: 20px; font-weight: bold;">ג ן¸ ׳׳ ׳ ׳™׳×׳ ׳׳‘׳—׳•׳¨ ׳©׳™׳©׳™ ׳׳• ׳׳•׳¦"׳© ׳›׳׳™׳׳•׳¥</p>
 
                     <div class="constraint-item">
-                        <h3>אילוץ 1</h3>
+                        <h3>׳׳™׳׳•׳¥ 1</h3>
                         <div class="form-group">
-                            <label>תאריך:</label>
+                            <label>׳×׳׳¨׳™׳:</label>
                             <input type="date" id="constraint1-date">
                         </div>
                         <div class="form-group">
-                            <label>סוג אילוץ:</label>
+                            <label>׳¡׳•׳’ ׳׳™׳׳•׳¥:</label>
                             <select id="constraint1-type">
-                                <option value="">-- בחר --</option>
-                                <option value="no-morning">לא בוקר (9:00-16:00)</option>
-                                <option value="no-evening">לא ערב (15:00-21:30)</option>
-                                <option value="day-off">חופש מלא</option>
+                                <option value="">-- ׳‘׳—׳¨ --</option>
+                                <option value="no-morning">׳׳ ׳‘׳•׳§׳¨ (9:00-16:00)</option>
+                                <option value="no-evening">׳׳ ׳¢׳¨׳‘ (15:00-21:30)</option>
+                                <option value="day-off">׳—׳•׳₪׳© ׳׳׳</option>
                             </select>
                         </div>
                     </div>
 
                     <div class="constraint-item">
-                        <h3>אילוץ 2</h3>
+                        <h3>׳׳™׳׳•׳¥ 2</h3>
                         <div class="form-group">
-                            <label>תאריך:</label>
+                            <label>׳×׳׳¨׳™׳:</label>
                             <input type="date" id="constraint2-date">
                         </div>
                         <div class="form-group">
-                            <label>סוג אילוץ:</label>
+                            <label>׳¡׳•׳’ ׳׳™׳׳•׳¥:</label>
                             <select id="constraint2-type">
-                                <option value="">-- בחר --</option>
-                                <option value="no-morning">לא בוקר (9:00-16:00)</option>
-                                <option value="no-evening">לא ערב (15:00-21:30)</option>
-                                <option value="day-off">חופש מלא</option>
+                                <option value="">-- ׳‘׳—׳¨ --</option>
+                                <option value="no-morning">׳׳ ׳‘׳•׳§׳¨ (9:00-16:00)</option>
+                                <option value="no-evening">׳׳ ׳¢׳¨׳‘ (15:00-21:30)</option>
+                                <option value="day-off">׳—׳•׳₪׳© ׳׳׳</option>
                             </select>
                         </div>
                     </div>
 
-                    <button class="btn" onclick="saveConstraints()">שמור אילוצים</button>
+                    <button class="btn" onclick="saveConstraints()">׳©׳׳•׳¨ ׳׳™׳׳•׳¦׳™׳</button>
                 </div>
 
                 <div class="constraints-list" id="my-constraints"></div>
@@ -414,11 +414,11 @@
         <!-- Manager Section -->
         <div id="manager-section" class="section">
             <div class="manager-constraints" id="all-constraints">
-                <h2>אילוצי העובדים</h2>
-                <p style="color: #666; margin-bottom: 15px;">סקירת כל האילוצים שהוזנו</p>
+                <h2>׳׳™׳׳•׳¦׳™ ׳”׳¢׳•׳‘׳“׳™׳</h2>
+                <p style="color: #666; margin-bottom: 15px;">׳¡׳§׳™׳¨׳× ׳›׳ ׳”׳׳™׳׳•׳¦׳™׳ ׳©׳”׳•׳–׳ ׳•</p>
             </div>
 
-            <button class="btn" onclick="generateSchedule()">צור סידור אוטומטי</button>
+            <button class="btn" onclick="generateSchedule()">׳¦׳•׳¨ ׳¡׳™׳“׳•׳¨ ׳׳•׳˜׳•׳׳˜׳™</button>
 
             <div id="schedule-result"></div>
         </div>
@@ -431,13 +431,13 @@
         import { getDatabase, ref, set, get, onValue } from 'https://www.gstatic.com/firebasejs/10.8.0/firebase-database.js';
 
         const firebaseConfig = {
-            apiKey: "AIzaSyDNC70Wmp-Ovhramba7pLOP5CCiXo17-Os",
-            authDomain: "tictactoe-8b2e2.firebaseapp.com",
-            databaseURL: "https://tictactoe-8b2e2-default-rtdb.firebaseio.com",
-            projectId: "tictactoe-8b2e2",
-            storageBucket: "tictactoe-8b2e2.firebasestorage.app",
-            messagingSenderId: "529990497035",
-            appId: "1:529990497035:web:1c2ac07ebf1e8c19f77c8d"
+            apiKey: "AIzaSyD-uaQ2aO87kGxbcc-m8_9fzJ3uhPv2zvk",
+            authDomain: "shift-manager-c026e.firebaseapp.com",
+            databaseURL: "https://shift-manager-c026e-default-rtdb.europe-west1.firebasedatabase.app",
+            projectId: "shift-manager-c026e",
+            storageBucket: "shift-manager-c026e.firebasestorage.app",
+            messagingSenderId: "1091605398341",
+            appId: "1:1091605398341:web:cb6c14e7d832c3e8df342c"
         };
 
         const app = initializeApp(firebaseConfig);
@@ -499,7 +499,7 @@
         window.saveConstraints = async function() {
             const employeeName = window.currentEmployee;
             if (!employeeName) {
-                showMessage('אנא בחר שם עובד', 'error');
+                showMessage('׳׳ ׳ ׳‘׳—׳¨ ׳©׳ ׳¢׳•׳‘׳“', 'error');
                 return;
             }
 
@@ -510,12 +510,12 @@
 
             // Validate no Friday/Saturday selection
             if (constraint1Date && !isValidWeekday(constraint1Date)) {
-                showMessage('❌ לא ניתן לבחור שישי או שבת כאילוץ', 'error');
+                showMessage('ג ׳׳ ׳ ׳™׳×׳ ׳׳‘׳—׳•׳¨ ׳©׳™׳©׳™ ׳׳• ׳©׳‘׳× ׳›׳׳™׳׳•׳¥', 'error');
                 return;
             }
 
             if (constraint2Date && !isValidWeekday(constraint2Date)) {
-                showMessage('❌ לא ניתן לבחור שישי או שבת כאילוץ', 'error');
+                showMessage('ג ׳׳ ׳ ׳™׳×׳ ׳׳‘׳—׳•׳¨ ׳©׳™׳©׳™ ׳׳• ׳©׳‘׳× ׳›׳׳™׳׳•׳¥', 'error');
                 return;
             }
 
@@ -544,14 +544,14 @@
                 
                 const hasDayOff = (constraint1Type === 'day-off') || (constraint2Type === 'day-off');
                 if (hasDayOff) {
-                    showMessage('האילוצים נשמרו! ⏳ בקשות החופש ממתינות לאישור מנהל', 'success');
+                    showMessage('׳”׳׳™׳׳•׳¦׳™׳ ׳ ׳©׳׳¨׳•! ג³ ׳‘׳§׳©׳•׳× ׳”׳—׳•׳₪׳© ׳׳׳×׳™׳ ׳•׳× ׳׳׳™׳©׳•׳¨ ׳׳ ׳”׳', 'success');
                 } else {
-                    showMessage('האילוצים נשמרו בהצלחה! ✅', 'success');
+                    showMessage('׳”׳׳™׳׳•׳¦׳™׳ ׳ ׳©׳׳¨׳• ׳‘׳”׳¦׳׳—׳”! ג…', 'success');
                 }
                 
                 displayMyConstraints(constraints);
             } catch (error) {
-                showMessage('שגיאה בשמירת האילוצים: ' + error.message, 'error');
+                showMessage('׳©׳’׳™׳׳” ׳‘׳©׳׳™׳¨׳× ׳”׳׳™׳׳•׳¦׳™׳: ' + error.message, 'error');
             }
         };
 
@@ -564,22 +564,22 @@
 
         function displayMyConstraints(constraints) {
             const container = document.getElementById('my-constraints');
-            let html = '<h3 style="color: #667eea; margin-top: 20px;">האילוצים שלי:</h3>';
+            let html = '<h3 style="color: #667eea; margin-top: 20px;">׳”׳׳™׳׳•׳¦׳™׳ ׳©׳׳™:</h3>';
 
             if (!constraints.constraint1 && !constraints.constraint2) {
-                html += '<p class="no-constraints">לא הוגדרו אילוצים</p>';
+                html += '<p class="no-constraints">׳׳ ׳”׳•׳’׳“׳¨׳• ׳׳™׳׳•׳¦׳™׳</p>';
             } else {
                 if (constraints.constraint1) {
                     const statusBadge = getStatusBadge(constraints.constraint1);
                     html += `<div class="constraint-card">
-                        <strong>אילוץ 1:</strong> ${formatDate(constraints.constraint1.date)} - ${formatConstraintType(constraints.constraint1.type)}
+                        <strong>׳׳™׳׳•׳¥ 1:</strong> ${formatDate(constraints.constraint1.date)} - ${formatConstraintType(constraints.constraint1.type)}
                         ${statusBadge}
                     </div>`;
                 }
                 if (constraints.constraint2) {
                     const statusBadge = getStatusBadge(constraints.constraint2);
                     html += `<div class="constraint-card">
-                        <strong>אילוץ 2:</strong> ${formatDate(constraints.constraint2.date)} - ${formatConstraintType(constraints.constraint2.type)}
+                        <strong>׳׳™׳׳•׳¥ 2:</strong> ${formatDate(constraints.constraint2.date)} - ${formatConstraintType(constraints.constraint2.type)}
                         ${statusBadge}
                     </div>`;
                 }
@@ -592,9 +592,9 @@
             if (constraint.type !== 'day-off') return '';
             
             const statusText = {
-                'pending': '⏳ ממתין לאישור',
-                'approved': '✅ מאושר',
-                'rejected': '❌ נדחה'
+                'pending': 'ג³ ׳׳׳×׳™׳ ׳׳׳™׳©׳•׳¨',
+                'approved': 'ג… ׳׳׳•׳©׳¨',
+                'rejected': 'ג ׳ ׳“׳—׳”'
             };
             
             const statusClass = {
@@ -612,7 +612,7 @@
             const snapshot = await get(constraintsRef);
             
             const container = document.getElementById('all-constraints');
-            let html = '<h2>אילוצי העובדים</h2><p style="color: #666; margin-bottom: 15px;">סקירת כל האילוצים שהוזנו</p>';
+            let html = '<h2>׳׳™׳׳•׳¦׳™ ׳”׳¢׳•׳‘׳“׳™׳</h2><p style="color: #666; margin-bottom: 15px;">׳¡׳§׳™׳¨׳× ׳›׳ ׳”׳׳™׳׳•׳¦׳™׳ ׳©׳”׳•׳–׳ ׳•</p>';
 
             if (snapshot.exists()) {
                 const allConstraints = snapshot.val();
@@ -622,7 +622,7 @@
                         <h3>${employee}</h3>`;
                     
                     if (!constraints.constraint1 && !constraints.constraint2) {
-                        html += '<p class="no-constraints">✅ אין אילוצים</p>';
+                        html += '<p class="no-constraints">ג… ׳׳™׳ ׳׳™׳׳•׳¦׳™׳</p>';
                     } else {
                         if (constraints.constraint1) {
                             html += formatConstraintForManager(employee, 'constraint1', constraints.constraint1);
@@ -635,7 +635,7 @@
                     html += '</div>';
                 }
             } else {
-                html += '<p class="no-constraints">אין אילוצים מוגדרים</p>';
+                html += '<p class="no-constraints">׳׳™׳ ׳׳™׳׳•׳¦׳™׳ ׳׳•׳’׳“׳¨׳™׳</p>';
             }
 
             container.innerHTML = html;
@@ -643,7 +643,7 @@
 
         function formatConstraintForManager(employee, constraintKey, constraint) {
             let html = '<div style="margin: 10px 0; padding: 10px; background: #f8f9fa; border-radius: 6px;">';
-            html += `📌 ${formatDate(constraint.date)} - ${formatConstraintType(constraint.type)}`;
+            html += `נ“ ${formatDate(constraint.date)} - ${formatConstraintType(constraint.type)}`;
             
             // Only show approval buttons for day-off requests
             if (constraint.type === 'day-off') {
@@ -653,17 +653,17 @@
                     html += `
                         <div class="approval-buttons">
                             <button class="approve-btn" onclick="updateApproval('${employee}', '${constraintKey}', 'approved')">
-                                ✅ אשר
+                                ג… ׳׳©׳¨
                             </button>
                             <button class="reject-btn" onclick="updateApproval('${employee}', '${constraintKey}', 'rejected')">
-                                ❌ דחה
+                                ג ׳“׳—׳”
                             </button>
                         </div>
                     `;
                 } else if (status === 'approved') {
-                    html += '<span class="approval-status status-approved">✅ מאושר</span>';
+                    html += '<span class="approval-status status-approved">ג… ׳׳׳•׳©׳¨</span>';
                 } else if (status === 'rejected') {
-                    html += '<span class="approval-status status-rejected">❌ נדחה</span>';
+                    html += '<span class="approval-status status-rejected">ג ׳ ׳“׳—׳”</span>';
                 }
             }
             
@@ -676,10 +676,10 @@
                 const constraintRef = ref(database, `constraints/${employee}/${constraintKey}/status`);
                 await set(constraintRef, newStatus);
                 
-                showMessage(`בקשת החופש ${newStatus === 'approved' ? 'אושרה' : 'נדחתה'} בהצלחה! ✅`, 'success');
+                showMessage(`׳‘׳§׳©׳× ׳”׳—׳•׳₪׳© ${newStatus === 'approved' ? '׳׳•׳©׳¨׳”' : '׳ ׳“׳—׳×׳”'} ׳‘׳”׳¦׳׳—׳”! ג…`, 'success');
                 loadAllConstraints();
             } catch (error) {
-                showMessage('שגיאה בעדכון הבקשה: ' + error.message, 'error');
+                showMessage('׳©׳’׳™׳׳” ׳‘׳¢׳“׳›׳•׳ ׳”׳‘׳§׳©׳”: ' + error.message, 'error');
             }
         };
 
@@ -693,11 +693,11 @@
             const conflicts = checkConflicts(constraints);
             
             if (conflicts.length > 0) {
-                let conflictMessage = '⚠️ קונפליקטים באילוצים:\n\n';
+                let conflictMessage = 'ג ן¸ ׳§׳•׳ ׳₪׳׳™׳§׳˜׳™׳ ׳‘׳׳™׳׳•׳¦׳™׳:\n\n';
                 conflicts.forEach(conflict => {
-                    conflictMessage += `📅 ${formatDate(conflict.date)}: ${conflict.employees.join(' ו-')} - ${conflict.description}\n`;
+                    conflictMessage += `נ“… ${formatDate(conflict.date)}: ${conflict.employees.join(' ׳•-')} - ${conflict.description}\n`;
                 });
-                conflictMessage += '\nאנא דון עם העובדים לפני יצירת הסידור.';
+                conflictMessage += '\n׳׳ ׳ ׳“׳•׳ ׳¢׳ ׳”׳¢׳•׳‘׳“׳™׳ ׳׳₪׳ ׳™ ׳™׳¦׳™׳¨׳× ׳”׳¡׳™׳“׳•׳¨.';
                 
                 showMessage(conflictMessage, 'error');
                 document.getElementById('schedule-result').innerHTML = 
@@ -708,9 +708,9 @@
             try {
                 const schedule = createSchedule(constraints);
                 displaySchedule(schedule);
-                showMessage('הסידור נוצר בהצלחה! ✅', 'success');
+                showMessage('׳”׳¡׳™׳“׳•׳¨ ׳ ׳•׳¦׳¨ ׳‘׳”׳¦׳׳—׳”! ג…', 'success');
             } catch (error) {
-                showMessage('שגיאה ביצירת סידור: ' + error.message, 'error');
+                showMessage('׳©׳’׳™׳׳” ׳‘׳™׳¦׳™׳¨׳× ׳¡׳™׳“׳•׳¨: ' + error.message, 'error');
             }
         };
 
@@ -751,7 +751,7 @@
                             conflicts.push({
                                 date: c1.date,
                                 employees: [emp1, emp2],
-                                description: 'שניהם ביקשו חופש מלא 🏖️'
+                                description: '׳©׳ ׳™׳”׳ ׳‘׳™׳§׳©׳• ׳—׳•׳₪׳© ׳׳׳ נ–ן¸'
                             });
                         }
                         // Both can't do morning - CONFLICT
@@ -760,7 +760,7 @@
                             conflicts.push({
                                 date: c1.date,
                                 employees: [emp1, emp2],
-                                description: 'שניהם לא יכולים משמרת בוקר ❌'
+                                description: '׳©׳ ׳™׳”׳ ׳׳ ׳™׳›׳•׳׳™׳ ׳׳©׳׳¨׳× ׳‘׳•׳§׳¨ ג'
                             });
                         }
                         // Both can't do evening - CONFLICT
@@ -769,7 +769,7 @@
                             conflicts.push({
                                 date: c1.date,
                                 employees: [emp1, emp2],
-                                description: 'שניהם לא יכולים משמרת ערב ❌'
+                                description: '׳©׳ ׳™׳”׳ ׳׳ ׳™׳›׳•׳׳™׳ ׳׳©׳׳¨׳× ׳¢׳¨׳‘ ג'
                             });
                         }
                     }
@@ -780,7 +780,7 @@
         }
 
         function createSchedule(constraints) {
-            const employees = ['עובד 1', 'עובד 2'];
+            const employees = ['׳¢׳•׳‘׳“ 1', '׳¢׳•׳‘׳“ 2'];
             const today = new Date();
             const schedule = [];
 
@@ -790,7 +790,7 @@
             const daysUntilSunday = dayOfWeek === 0 ? 0 : 7 - dayOfWeek;
             nextSunday.setDate(today.getDate() + daysUntilSunday);
 
-            const days = ['ראשון', 'שני', 'שלישי', 'רביעי', 'חמישי', 'שישי', 'שבת'];
+            const days = ['׳¨׳׳©׳•׳', '׳©׳ ׳™', '׳©׳׳™׳©׳™', '׳¨׳‘׳™׳¢׳™', '׳—׳׳™׳©׳™', '׳©׳™׳©׳™', '׳©׳‘׳×'];
             
             // Helper function to check if employee has approved constraint
             const hasApprovedConstraint = (employee, date, type) => {
@@ -870,7 +870,7 @@
             }
 
             schedule.push({
-                day: 'שישי',
+                day: '׳©׳™׳©׳™',
                 date: fridayDateStr,
                 friday: fridayEmployee,
                 fridayHours: '8:30-14:30'
@@ -885,10 +885,10 @@
             const saturdayEmployee = fridayEmployee === employees[0] ? employees[1] : employees[0];
 
             schedule.push({
-                day: 'מוצ"ש',
+                day: '׳׳•׳¦"׳©',
                 date: saturdayDateStr,
                 saturday: saturdayEmployee,
-                saturdayHours: 'מוצ"ש-22:30'
+                saturdayHours: '׳׳•׳¦"׳©-22:30'
             });
 
             return schedule;
@@ -897,9 +897,9 @@
         function displaySchedule(schedule) {
             const container = document.getElementById('schedule-result');
             
-            let html = '<h2 style="color: #667eea; margin-top: 30px;">📅 סידור השבוע</h2>';
+            let html = '<h2 style="color: #667eea; margin-top: 30px;">נ“… ׳¡׳™׳“׳•׳¨ ׳”׳©׳‘׳•׳¢</h2>';
             html += '<table class="schedule-table">';
-            html += '<tr><th>יום</th><th>תאריך</th><th>בוקר</th><th>ערב</th></tr>';
+            html += '<tr><th>׳™׳•׳</th><th>׳×׳׳¨׳™׳</th><th>׳‘׳•׳§׳¨</th><th>׳¢׳¨׳‘</th></tr>';
 
             schedule.forEach(day => {
                 html += '<tr>';
@@ -913,8 +913,8 @@
                 } else {
                     // Check if someone is covering (both shifts)
                     if (day.coveringFor) {
-                        html += `<td><span class="shift-morning">${day.morning}<br>9:00-16:00<br><small style="color: #e67e22;">מכסה עבור ${day.coveringFor}</small></span></td>`;
-                        html += `<td><span class="shift-evening">${day.evening}<br>15:00-21:30<br><small style="color: #e67e22;">מכסה עבור ${day.coveringFor}</small></span></td>`;
+                        html += `<td><span class="shift-morning">${day.morning}<br>9:00-16:00<br><small style="color: #e67e22;">׳׳›׳¡׳” ׳¢׳‘׳•׳¨ ${day.coveringFor}</small></span></td>`;
+                        html += `<td><span class="shift-evening">${day.evening}<br>15:00-21:30<br><small style="color: #e67e22;">׳׳›׳¡׳” ׳¢׳‘׳•׳¨ ${day.coveringFor}</small></span></td>`;
                     } else {
                         html += `<td><span class="shift-morning">${day.morning}<br>9:00-16:00</span></td>`;
                         html += `<td><span class="shift-evening">${day.evening}<br>15:00-21:30</span></td>`;
@@ -937,9 +937,9 @@
 
         function formatConstraintType(type) {
             const types = {
-                'no-morning': '❌ לא בוקר',
-                'no-evening': '❌ לא ערב',
-                'day-off': '🏖️ חופש מלא'
+                'no-morning': 'ג ׳׳ ׳‘׳•׳§׳¨',
+                'no-evening': 'ג ׳׳ ׳¢׳¨׳‘',
+                'day-off': 'נ–ן¸ ׳—׳•׳₪׳© ׳׳׳'
             };
             return types[type] || type;
         }
