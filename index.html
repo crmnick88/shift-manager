@@ -335,7 +335,7 @@
 
   const MANAGER = { username: 'SAGI', password: '102' };
 
-  // ======== NEW: התאמת אפשרויות אילוץ לפי מחלקה (2 עובדים vs 3 עובדים) ========
+  // ======== התאמת אפשרויות אילוץ לפי מחלקה ========
   function getDeptOfEmp(emp) {
     for (const [dept, list] of Object.entries(DEPARTMENTS)) {
       if (list.includes(emp)) return dept;
@@ -347,7 +347,6 @@
     const dept = getDeptOfEmp(emp);
     const size = dept ? (DEPARTMENTS[dept]?.length || 0) : 0;
 
-    // 3 עובדים -> העובד בוחר משמרת שהוא כן רוצה
     if (size === 3) {
       return [
         { value: "", label: "-- בחר --" },
@@ -358,7 +357,6 @@
       ];
     }
 
-    // 2 עובדים -> כמו שהיה
     return [
       { value: "", label: "-- בחר --" },
       { value: "no-morning", label: "❌ לא בוקר" },
@@ -377,7 +375,6 @@
       if (options.some(o => o.value === current)) sel.value = current;
     });
   }
-  // ============================================================================
 
   function showLoginForm(type) {
     hideAll();
@@ -409,7 +406,6 @@
       document.getElementById('employee-section').classList.add('active');
       document.getElementById('employee-welcome').textContent = `שלום ${username}! 👋`;
 
-      // NEW: להתאים את האופציות לפי מחלקה לפני טעינת הערכים
       applyConstraintOptions(currentEmployee);
 
       loadEmployeeConstraints();
@@ -436,7 +432,6 @@
   }
 
   async function loadEmployeeConstraints() {
-    // NEW: גם פה, כדי לוודא שה-selectים תמיד מותאמים למחלקה
     if (currentEmployee) applyConstraintOptions(currentEmployee);
 
     const snapshot = await db.ref('constraints/' + currentEmployee).once('value');
@@ -664,9 +659,6 @@
       return !c.status || c.status === 'approved';
     };
 
-    // הוגנות (B): מונים לפי מחלקה לעובדים עם 3 משמרות
-    const fairCounts = {};
-
     for (const [dept, emps] of Object.entries(DEPARTMENTS)) {
       const allDates = [];
 
@@ -701,7 +693,6 @@
             });
           }
 
-          // NEW: התנגשות בבחירת "רוצה משמרת"
           const wantMorning = dateConstraints.filter(c => c.type === 'want-morning').map(c => c.emp);
           const wantMiddle  = dateConstraints.filter(c => c.type === 'want-middle').map(c => c.emp);
           const wantEvening = dateConstraints.filter(c => c.type === 'want-evening').map(c => c.emp);
@@ -739,10 +730,6 @@
       return !c.status || c.status === 'approved';
     };
 
-    // ✅ FIX 1: fairCounts היה חסר כאן
-    const fairCounts = {};
-
-    // NEW: קבלת אילוץ מאושר לאותו תאריך (אם יש)
     const getApprovedConstraintOnDate = (emp, dateStr) => {
       const data = constraints[emp];
       if (!data) return null;
@@ -765,15 +752,6 @@
       return null;
     };
 
-    const WEEKLY_ROTATION_3_EMP = [
-      ['morning','middle','evening'],
-      ['middle','evening','morning'],
-      ['evening','morning','middle'],
-      ['morning','evening','middle'],
-      ['evening','middle','morning']
-    ];
-
-    // עבור 2 עובדים: "לא יכול" בוקר/ערב
     const cannotMorning = (emp, dateStr) => {
       const c = getApprovedConstraintOnDate(emp, dateStr);
       return !!c && (c.type === 'no-morning' || c.type === 'day-off');
@@ -788,137 +766,92 @@
       const days = ['ראשון','שני','שלישי','רביעי','חמישי','שישי','שבת'];
       const isThreeEmp = emps.length === 3;
 
+      // ✅ NEW: מונה משמרות לכל עובד למען הוגנות
+      const shiftCounts = {};
+      emps.forEach(emp => { shiftCounts[emp] = { morning: 0, middle: 0, evening: 0 }; });
+
+      // פונקציה לבחירת עובד עם הכי פחות משמרות מסוג מסוים
+      const pickLeastBurdenedEmp = (availableEmps, shift) => {
+        if (!availableEmps || availableEmps.length === 0) return null;
+        
+        // מיון לפי מספר משמרות מסוג זה
+        const sorted = availableEmps.slice().sort((a, b) => {
+          const countA = shiftCounts[a][shift];
+          const countB = shiftCounts[b][shift];
+          if (countA !== countB) return countA - countB;
+          // שובר שוויון - מי שיש לו פחות משמרות בכלל
+          const totalA = shiftCounts[a].morning + shiftCounts[a].middle + shiftCounts[a].evening;
+          const totalB = shiftCounts[b].morning + shiftCounts[b].middle + shiftCounts[b].evening;
+          return totalA - totalB;
+        });
+        
+        return sorted[0];
+      };
+
       for (let i=0;i<5;i++) {
         const date = new Date(nextSunday);
         date.setDate(nextSunday.getDate() + i);
         const dateStr = toLocalDateStr(date);
 
         if (isThreeEmp) {
-          // הוגנות (B): ניסיון לאזן כמה שיותר את כמות הבוקר/אמצע/ערב לכל עובד במהלך השבוע
-          if (!fairCounts[dept]) {
-            fairCounts[dept] = {};
-            emps.forEach(e => { fairCounts[dept][e] = { morning: 0, middle: 0, evening: 0 }; });
-          }
-          const counts = fairCounts[dept];
-
-          const inc = (emp, shift) => {
-            if (emp && counts[emp] && counts[emp][shift] != null) counts[emp][shift] += 1;
-          };
-
-          const pickLeast = (candidates, shift) => {
-            if (!candidates || candidates.length === 0) return null;
-            const sorted = candidates.slice().sort((a, b) => {
-              const da = (counts[a]?.[shift] ?? 0);
-              const db = (counts[b]?.[shift] ?? 0);
-              if (da !== db) return da - db;
-              return (Math.random() - 0.5); // שובר שוויון
-            });
-            return sorted[0];
-          };
-
           const dayOffs = emps.filter(emp => isDayOffApproved(emp, dateStr));
-          const hasWants = emps.some(emp => !!getWantedShift(emp, dateStr));
 
-          // אם אין חופש/בחירות ביום הזה — משתמשים בתבנית שבועית מגוונת + מונים
-          if (dayOffs.length === 0 && !hasWants) {
-            const pattern = WEEKLY_ROTATION_3_EMP[i % WEEKLY_ROTATION_3_EMP.length];
-            const assign = { morning: null, middle: null, evening: null };
-            for (let k = 0; k < 3; k++) {
-              assign[pattern[k]] = emps[k];
-            }
-
-            schedule.push({
-              day: days[i],
-              date: dateStr,
-              morning: assign.morning,
-              middle: assign.middle,
-              evening: assign.evening,
-              dept
-            });
-
-            inc(assign.morning, 'morning');
-            inc(assign.middle, 'middle');
-            inc(assign.evening, 'evening');
-          }
-
-          // יום עם חופש מאושר אחד: רק 2 עובדים עובדים (בוקר+ערב)
-          else if (dayOffs.length === 1) {
+          if (dayOffs.length === 1) {
+            // עובד אחד בחופש - רק 2 עובדים עובדים (בוקר + ערב)
             const working = emps.filter(emp => !dayOffs.includes(emp));
-
-            // אם יש בחירת משמרת - נכבד (בוקר/ערב בלבד ביום כזה)
-            const wantedMorning = working.find(e => getWantedShift(e, dateStr) === 'morning') || null;
-            const wantedEvening = working.find(e => getWantedShift(e, dateStr) === 'evening') || null;
-
-            let morningEmp = wantedMorning || pickLeast(working, 'morning');
-            let remaining = working.filter(e => e !== morningEmp);
-
-            let eveningEmp =
-              (wantedEvening && wantedEvening !== morningEmp)
-                ? wantedEvening
-                : (pickLeast(remaining, 'evening') || remaining[0]);
-
+            
+            const morningEmp = pickLeastBurdenedEmp(working, 'morning');
+            const eveningEmp = working.filter(e => e !== morningEmp)[0];
+            
             schedule.push({ day: days[i], date: dateStr, morning: morningEmp, evening: eveningEmp, dept });
+            
+            shiftCounts[morningEmp].morning++;
+            shiftCounts[eveningEmp].evening++;
 
-            inc(morningEmp, 'morning');
-            inc(eveningEmp, 'evening');
-          }
-
-          // יום רגיל: 3 משמרות
-          else {
-            // בסיס תבנית (גם אם יש Wants) כדי לא להיתקע בדפוס קבוע
-            const pattern = WEEKLY_ROTATION_3_EMP[i % WEEKLY_ROTATION_3_EMP.length];
-            let assign = { morning: null, middle: null, evening: null };
-            for (let k = 0; k < 3; k++) {
-              assign[pattern[k]] = emps[k];
-            }
-
-            // לכבד "רוצה משמרת" (אם קיימת)
+          } else {
+            // יום רגיל - 3 משמרות
+            
+            // בדיקה אם יש בחירות "רוצה משמרת"
             const wanted = { morning: null, middle: null, evening: null };
             for (const emp of emps) {
               const w = getWantedShift(emp, dateStr);
-              if (w && !wanted[w]) wanted[w] = emp;
+              if (w) wanted[w] = emp;
             }
 
             const used = new Set();
+            const assign = { morning: null, middle: null, evening: null };
 
+            // קודם כל מכבדים את הבחירות
             for (const shift of ['morning', 'middle', 'evening']) {
-              const emp = wanted[shift];
-              if (emp) {
-                assign[shift] = emp;
-                used.add(emp);
+              if (wanted[shift]) {
+                assign[shift] = wanted[shift];
+                used.add(wanted[shift]);
               }
             }
 
-            // להשלים משמרות חסרות בצורה הוגנת לפי מונים
+            // עכשיו משלימים משמרות חסרות בצורה הוגנת
+            const availableEmps = emps.filter(e => !used.has(e));
+            
             for (const shift of ['morning', 'middle', 'evening']) {
-              if (!wanted[shift]) {
-                // אם העובד שהיה בתבנית כבר "נלקח" בגלל Want אחר, נבחר הוגן
-                if (assign[shift] && used.has(assign[shift])) assign[shift] = null;
-
-                if (!assign[shift]) {
-                  const remaining = emps.filter(e => !used.has(e));
-                  const picked = pickLeast(remaining, shift) || remaining[0];
-                  assign[shift] = picked;
+              if (!assign[shift]) {
+                const emp = pickLeastBurdenedEmp(availableEmps, shift);
+                if (emp) {
+                  assign[shift] = emp;
+                  availableEmps.splice(availableEmps.indexOf(emp), 1);
+                  used.add(emp);
                 }
-                used.add(assign[shift]);
               }
             }
 
-            schedule.push({
-              day: days[i],
-              date: dateStr,
-              morning: assign.morning,
-              middle: assign.middle,
-              evening: assign.evening,
-              dept
-            });
-
-            inc(assign.morning, 'morning');
-            inc(assign.middle, 'middle');
-            inc(assign.evening, 'evening');
+            schedule.push({ day: days[i], date: dateStr, morning: assign.morning, middle: assign.middle, evening: assign.evening, dept });
+            
+            // עדכון מונים
+            shiftCounts[assign.morning].morning++;
+            shiftCounts[assign.middle].middle++;
+            shiftCounts[assign.evening].evening++;
           }
+
         } else {
-          // ✅ FIX 2: else היה "מנותק" בגלל סוגר מיותר
           // 2 עובדים
           const a = emps[0], b = emps[1];
           const aOff = isDayOffApproved(a, dateStr);
@@ -936,7 +869,6 @@
             let morning = mCant ? e : m;
             let evening = eCant ? m : e;
 
-            // תיקון באג: למנוע מצב שאותו עובד מקבל גם בוקר וגם ערב בגלל אילוץ חלקי
             if (morning === evening) {
               if (mCant && !cannotEvening(m, dateStr)) {
                 evening = m;
@@ -950,6 +882,7 @@
         }
       }
 
+      // שישי
       const fri = new Date(nextSunday); fri.setDate(nextSunday.getDate() + 5);
       const friStr = toLocalDateStr(fri);
 
@@ -963,6 +896,7 @@
         schedule.push({ day:'שישי', date: friStr, friday: aOff ? b : a, dept });
       }
 
+      // שבת
       const sat = new Date(nextSunday); sat.setDate(nextSunday.getDate() + 6);
       const satStr = toLocalDateStr(sat);
 
@@ -1269,7 +1203,6 @@
     return `${y}-${m}-${day}`;
   }
 
-  // UPDATED: כולל סוגים חדשים want-*
   function formatType(type) {
     const types = {
       'no-morning':'❌ לא בוקר',
@@ -1295,8 +1228,7 @@
     return `<span class="${classes[status]}">${statuses[status]}</span>`;
   }
 </script>
-
-<script>
+  <script>
   if ("serviceWorker" in navigator) {
     window.addEventListener("load", () => {
       navigator.serviceWorker.register("./service-worker.js");
