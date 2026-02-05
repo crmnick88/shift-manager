@@ -13,8 +13,18 @@
   <!-- SheetJS -->
   <script src="https://cdn.sheetjs.com/xlsx-0.20.0/package/dist/xlsx.full.min.js"></script>
 
-  <!-- html2pdf bundle: includes html2canvas + jsPDF -->
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+  <!-- ✅ PDF Library (jsDelivr) + Fallback to cdnjs -->
+  <script src="https://cdn.jsdelivr.net/npm/html2pdf.js@0.10.1/dist/html2pdf.bundle.min.js"></script>
+  <script>
+    // Fallback אם jsDelivr לא נטען
+    window.addEventListener('load', () => {
+      if (!window.html2pdf || typeof window.html2canvas !== 'function') {
+        const s = document.createElement('script');
+        s.src = "https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js";
+        document.head.appendChild(s);
+      }
+    });
+  </script>
 
   <style>
     * { margin:0; padding:0; box-sizing:border-box; }
@@ -308,7 +318,6 @@
 
     <div id="export-section" style="display:none; margin-top:10px;">
       <button class="btn" onclick="exportToExcel()" style="background:#28a745;">📥 ייצא לאקסל</button>
-      <!-- שמרתי onclick כמו פעם + הוספתי גם EventListener למטה -->
       <button id="pdf-btn" type="button" class="btn" onclick="exportToPDF()" style="background:#d63384;">📄 ייצא ל-PDF</button>
     </div>
 
@@ -477,10 +486,7 @@
 
       employees.forEach(emp => {
         const data = allData[emp];
-        html += `<div class="employee-constraints">
-          <div style="display:flex; justify-content:space-between; align-items:center; gap:10px; flex-wrap:wrap;">
-            <h4 style="margin:0;">${emp}</h4>
-          </div>`;
+        html += `<div class="employee-constraints"><h4>${emp}</h4>`;
 
         let hasValid = false;
 
@@ -839,13 +845,9 @@
   }
 
   /* =========================================================
-     ✅ PDF: A4 לאורך, עמוד אחד, בלי חיתוך ובלי פיצול
-     - clone עם CSS מוקטן
-     - html2canvas -> canvas אחד
-     - jsPDF -> addImage -> Fit to page
+     ✅ PDF: A4 לאורך, עמוד אחד, Fit-to-page (לא חותך, לא מפצל)
      ========================================================= */
   async function exportToPDF() {
-    // הודעה מיידית כדי שתדע שהפונקציה באמת הופעלה
     showMessage('לחיצה התקבלה ✅ מתחיל ייצוא PDF...', 'success');
 
     const original = document.getElementById('schedule-result');
@@ -854,13 +856,12 @@
       return;
     }
 
-    // בדיקת טעינת הספריה
+    // חשוב: בטלפון יכול לקחת רגע אחרי ה-load עד שה-fallback נטען
     if (!window.html2pdf || typeof window.html2canvas !== 'function') {
-      showMessage('שגיאה: ספריית PDF לא נטענה (CDN).', 'error');
+      showMessage('שגיאה: ספריית PDF לא נטענה (CDN). נסה רענון דף.', 'error');
       return;
     }
 
-    // Clone לצילום
     const clone = original.cloneNode(true);
     clone.id = 'pdf-clone';
     clone.style.position = 'fixed';
@@ -881,7 +882,6 @@
 
       const imgData = canvas.toDataURL('image/jpeg', 1.0);
 
-      // jsPDF detection (יציב לכל מיני גרסאות)
       const jsPDF =
         (window.jspdf && window.jspdf.jsPDF) ||
         window.jsPDF ||
@@ -904,15 +904,14 @@
       const imgW = canvas.width;
       const imgH = canvas.height;
 
-      // Fit to single page
       const ratio = Math.min(maxW / imgW, maxH / imgH);
-      const renderW = imgW * ratio;
+      const renderO = imgW * ratio;
       const renderH = imgH * ratio;
 
-      const x = (pageW - renderW) / 2;
+      const x = (pageW - renderO) / 2;
       const y = (pageH - renderH) / 2;
 
-      pdf.addImage(imgData, 'JPEG', x, y, renderW, renderH, undefined, 'FAST');
+      pdf.addImage(imgData, 'JPEG', x, y, renderO, renderH, undefined, 'FAST');
 
       const today = new Date();
       const filename = `סידור_${today.getDate()}-${today.getMonth()+1}-${today.getFullYear()}.pdf`;
@@ -927,7 +926,7 @@
     }
   }
 
-  // ✅ EventListener נוסף לכפתור (גיבוי אם onclick "נופל" אצלך)
+  // ✅ EventListener נוסף לכפתור (גיבוי)
   document.addEventListener('DOMContentLoaded', () => {
     const btn = document.getElementById('pdf-btn');
     if (!btn) return;
