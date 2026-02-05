@@ -782,8 +782,19 @@
           // שובר שוויון - מי שיש לו פחות משמרות בכלל
           const totalA = shiftCounts[a].morning + shiftCounts[a].middle + shiftCounts[a].evening;
           const totalB = shiftCounts[b].morning + shiftCounts[b].middle + shiftCounts[b].evening;
-          return totalA - totalB;
+          if (totalA !== totalB) return totalA - totalB;
+          // שובר שוויון נוסף - רנדומלי!
+          return Math.random() - 0.5;
         });
+        
+        // אם יש כמה עובדים עם אותו מספר משמרות, בחר רנדומלית ביניהם
+        const minCount = shiftCounts[sorted[0]][shift];
+        const candidates = sorted.filter(emp => shiftCounts[emp][shift] === minCount);
+        
+        if (candidates.length > 1) {
+          // בחר רנדומלית מבין המועמדים
+          return candidates[Math.floor(Math.random() * candidates.length)];
+        }
         
         return sorted[0];
       };
