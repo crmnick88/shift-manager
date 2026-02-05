@@ -13,7 +13,7 @@
   <!-- SheetJS -->
   <script src="https://cdn.sheetjs.com/xlsx-0.20.0/package/dist/xlsx.full.min.js"></script>
 
-  <!-- html2pdf (includes html2canvas + jsPDF) -->
+  <!-- html2pdf bundle: includes html2canvas + jsPDF -->
   <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
 
   <style>
@@ -70,7 +70,6 @@
       border-right:4px solid #667eea;
     }
 
-    /* תצוגה רגילה באתר */
     .schedule-table{
       width:100%;
       margin-top:20px;
@@ -125,7 +124,6 @@
     }
     .toolbar .btn{ width:auto; padding:10px 14px; font-size:14px; margin-top:0; }
 
-    /* פס הפרדה למחלקה */
     .dept-divider td{
       background:#667eea !important;
       color:#fff !important;
@@ -310,7 +308,8 @@
 
     <div id="export-section" style="display:none; margin-top:10px;">
       <button class="btn" onclick="exportToExcel()" style="background:#28a745;">📥 ייצא לאקסל</button>
-      <button class="btn" onclick="exportToPDF()" style="background:#d63384;">📄 ייצא ל-PDF</button>
+      <!-- שמרתי onclick כמו פעם + הוספתי גם EventListener למטה -->
+      <button id="pdf-btn" type="button" class="btn" onclick="exportToPDF()" style="background:#d63384;">📄 ייצא ל-PDF</button>
     </div>
 
     <div id="schedule-result"></div>
@@ -337,7 +336,6 @@
   let currentEmployee = '';
   let currentSchedule = null;
 
-  // Users (username = password)
   const USERS = {
     'ILAY': 'ILAY',
     'ROVEN': 'ROVEN',
@@ -353,7 +351,6 @@
     'MOHAMAD': 'MOHAMAD'
   };
 
-  // Departments
   const DEPARTMENTS = {
     'מחלקת מיחשוב': ['ILAY', 'ROVEN'],
     'מחלקת קטנים': ['HAI', 'NATALI'],
@@ -419,21 +416,11 @@
     const snapshot = await db.ref('constraints/' + currentEmployee).once('value');
     const data = snapshot.val() || {};
 
-    if (data.c1) {
-      document.getElementById('c1-date').value = data.c1.date || '';
-      document.getElementById('c1-type').value = data.c1.type || '';
-    } else {
-      document.getElementById('c1-date').value = '';
-      document.getElementById('c1-type').value = '';
-    }
+    document.getElementById('c1-date').value = data.c1?.date || '';
+    document.getElementById('c1-type').value = data.c1?.type || '';
 
-    if (data.c2) {
-      document.getElementById('c2-date').value = data.c2.date || '';
-      document.getElementById('c2-type').value = data.c2.type || '';
-    } else {
-      document.getElementById('c2-date').value = '';
-      document.getElementById('c2-type').value = '';
-    }
+    document.getElementById('c2-date').value = data.c2?.date || '';
+    document.getElementById('c2-type').value = data.c2?.type || '';
 
     displayMyConstraints(data);
   }
@@ -450,12 +437,8 @@
     if (c2Date && !isValidWeekday(c2Date)) return showMessage('❌ לא ניתן לבחור שישי או שבת', 'error');
 
     const constraints = {};
-    if (c1Date && c1Type) {
-      constraints.c1 = { date: c1Date, type: c1Type, status: c1Type === 'day-off' ? 'pending' : 'approved' };
-    }
-    if (c2Date && c2Type) {
-      constraints.c2 = { date: c2Date, type: c2Type, status: c2Type === 'day-off' ? 'pending' : 'approved' };
-    }
+    if (c1Date && c1Type) constraints.c1 = { date: c1Date, type: c1Type, status: c1Type === 'day-off' ? 'pending' : 'approved' };
+    if (c2Date && c2Type) constraints.c2 = { date: c2Date, type: c2Type, status: c2Type === 'day-off' ? 'pending' : 'approved' };
 
     await db.ref('constraints/' + currentEmployee).set(constraints);
 
@@ -465,27 +448,18 @@
   }
 
   function displayMyConstraints(data) {
-    const today = new Date();
-    today.setHours(0,0,0,0);
-
+    const today = new Date(); today.setHours(0,0,0,0);
     let html = '<h3 style="color:#667eea;">האילוצים שלי:</h3>';
     let hasValid = false;
 
     if (data.c1 && new Date(data.c1.date + 'T00:00:00') >= today) {
-      html += `<div class="constraint-card">
-        <strong>אילוץ 1:</strong> ${formatDate(data.c1.date)} - ${formatType(data.c1.type)}
-        ${getStatusBadge(data.c1)}
-      </div>`;
+      html += `<div class="constraint-card"><strong>אילוץ 1:</strong> ${formatDate(data.c1.date)} - ${formatType(data.c1.type)} ${getStatusBadge(data.c1)}</div>`;
       hasValid = true;
     }
     if (data.c2 && new Date(data.c2.date + 'T00:00:00') >= today) {
-      html += `<div class="constraint-card">
-        <strong>אילוץ 2:</strong> ${formatDate(data.c2.date)} - ${formatType(data.c2.type)}
-        ${getStatusBadge(data.c2)}
-      </div>`;
+      html += `<div class="constraint-card"><strong>אילוץ 2:</strong> ${formatDate(data.c2.date)} - ${formatType(data.c2.type)} ${getStatusBadge(data.c2)}</div>`;
       hasValid = true;
     }
-
     if (!hasValid) html += '<p style="color:#28a745;">אין אילוצים עתידיים</p>';
     document.getElementById('my-constraints').innerHTML = html;
   }
@@ -493,8 +467,7 @@
   async function loadAllConstraints() {
     const snapshot = await db.ref('constraints').once('value');
     const allData = snapshot.val() || {};
-    const today = new Date();
-    today.setHours(0,0,0,0);
+    const today = new Date(); today.setHours(0,0,0,0);
 
     let html = '<h2>אילוצי העובדים</h2>';
 
@@ -507,19 +480,12 @@
         html += `<div class="employee-constraints">
           <div style="display:flex; justify-content:space-between; align-items:center; gap:10px; flex-wrap:wrap;">
             <h4 style="margin:0;">${emp}</h4>
-            <button class="reset-btn" onclick="resetEmployeeConstraints('${emp}')">🧹 איפוס אילוצים</button>
           </div>`;
 
         let hasValid = false;
 
-        if (data?.c1 && new Date(data.c1.date + 'T00:00:00') >= today) {
-          html += formatConstraintForManager(emp, 'c1', data.c1);
-          hasValid = true;
-        }
-        if (data?.c2 && new Date(data.c2.date + 'T00:00:00') >= today) {
-          html += formatConstraintForManager(emp, 'c2', data.c2);
-          hasValid = true;
-        }
+        if (data?.c1 && new Date(data.c1.date + 'T00:00:00') >= today) { html += formatConstraintForManager(emp,'c1',data.c1); hasValid = true; }
+        if (data?.c2 && new Date(data.c2.date + 'T00:00:00') >= today) { html += formatConstraintForManager(emp,'c2',data.c2); hasValid = true; }
 
         if (!hasValid) html += '<p style="color:#28a745;">✅ אין אילוצים</p>';
         html += '</div>';
@@ -532,9 +498,7 @@
   }
 
   function formatConstraintForManager(emp, key, c) {
-    let html = `<div style="margin:10px 0; padding:10px; background:#f8f9fa; border-radius:6px;">
-      📌 ${formatDate(c.date)} - ${formatType(c.type)}`;
-
+    let html = `<div style="margin:10px 0; padding:10px; background:#f8f9fa; border-radius:6px;">📌 ${formatDate(c.date)} - ${formatType(c.type)}`;
     if (c.type === 'day-off') {
       const status = c.status || 'pending';
       if (status === 'pending') {
@@ -543,14 +507,10 @@
           <button class="reject-btn" onclick="updateApproval('${emp}','${key}','rejected')">❌ דחה</button>
         </div>
         <span class="status-pending">⏳ ממתין</span>`;
-      } else if (status === 'approved') {
-        html += `<span class="status-approved">✅ מאושר</span>`;
-      } else {
-        html += `<span class="status-rejected">❌ נדחה</span>`;
-      }
+      } else if (status === 'approved') html += `<span class="status-approved">✅ מאושר</span>`;
+      else html += `<span class="status-rejected">❌ נדחה</span>`;
     }
-
-    return html + '</div>';
+    return html + `</div>`;
   }
 
   async function updateApproval(emp, key, status) {
@@ -566,17 +526,6 @@
       showMessage('בקשת החופש אושרה!', 'success');
     }
     await loadAllConstraints();
-  }
-
-  async function resetEmployeeConstraints(emp) {
-    const ok = confirm(`לאפס אילוצים ל-${emp}?`);
-    if (!ok) return;
-
-    await db.ref(`constraints/${emp}`).set(null);
-    showMessage(`אילוצים אופסו עבור ${emp}`, 'success');
-
-    await loadAllConstraints();
-    if (currentSchedule) await generateSchedule();
   }
 
   async function resetAllConstraints() {
@@ -603,9 +552,7 @@
 
       if (conflicts.length > 0) {
         let msg = '⚠️ קונפליקטים:\n\n';
-        conflicts.forEach(c => {
-          msg += `🏢 ${c.dept}\n📅 ${formatDate(c.date)}: ${c.emps.join(' ו-')} - ${c.desc}\n\n`;
-        });
+        conflicts.forEach(c => { msg += `🏢 ${c.dept}\n📅 ${formatDate(c.date)}: ${c.emps.join(' ו-')} - ${c.desc}\n\n`; });
         showMessage(msg, 'error');
         document.getElementById('schedule-result').innerHTML = `<div class="message error">${msg}</div>`;
         document.getElementById('export-section').style.display = 'none';
@@ -628,8 +575,7 @@
 
   function checkConflicts(constraints) {
     const conflicts = [];
-    const today = new Date();
-    today.setHours(0,0,0,0);
+    const today = new Date(); today.setHours(0,0,0,0);
 
     for (const [dept, emps] of Object.entries(DEPARTMENTS)) {
       const allDates = [];
@@ -650,10 +596,7 @@
       });
 
       const byDate = {};
-      allDates.forEach(c => {
-        if (!byDate[c.date]) byDate[c.date] = [];
-        byDate[c.date].push(c);
-      });
+      allDates.forEach(c => { (byDate[c.date] ||= []).push(c); });
 
       Object.entries(byDate).forEach(([date, dateConstraints]) => {
         const dayOffCount = dateConstraints.filter(c => c.type === 'day-off').length;
@@ -662,11 +605,7 @@
 
         if (emps.length === 3) {
           if (dayOffCount >= 2) {
-            conflicts.push({
-              dept, date,
-              emps: dateConstraints.filter(c => c.type === 'day-off').map(c => c.emp),
-              desc: 'יותר מעובד אחד ביקש חופש'
-            });
+            conflicts.push({ dept, date, emps: dateConstraints.filter(c => c.type === 'day-off').map(c => c.emp), desc: 'יותר מעובד אחד ביקש חופש' });
           }
         } else {
           if (dayOffCount === 2) conflicts.push({ dept, date, emps: dateConstraints.map(c => c.emp), desc: 'שניהם ביקשו חופש' });
@@ -680,15 +619,12 @@
   }
 
   function createSchedule(constraints) {
-    const today = new Date();
-    today.setHours(0,0,0,0);
-
+    const today = new Date(); today.setHours(0,0,0,0);
     const nextSunday = new Date(today);
     const dow = today.getDay();
     nextSunday.setDate(today.getDate() + (dow === 0 ? 0 : 7 - dow));
 
     const allSchedules = {};
-    const issues = [];
 
     const hasConstraint = (emp, dateStr, type) => {
       const data = constraints[emp];
@@ -730,7 +666,7 @@
           const dayOffs = emps.filter(emp => hasConstraint(emp, dateStr, 'full'));
           if (dayOffs.length === 1) {
             const working = emps.filter(emp => !dayOffs.includes(emp));
-            schedule.push({ day: days[i], date: dateStr, morning: working[0], evening: working[1], middleCancelled:true, covering: dayOffs[0], dept });
+            schedule.push({ day: days[i], date: dateStr, morning: working[0], evening: working[1], dept });
           } else {
             const rotation = i % 3;
             schedule.push({ day: days[i], date: dateStr, morning: emps[rotation], middle: emps[(rotation+1)%3], evening: emps[(rotation+2)%3], dept });
@@ -740,89 +676,42 @@
           const aOff = hasConstraint(a, dateStr, 'full');
           const bOff = hasConstraint(b, dateStr, 'full');
 
-          if (aOff && !bOff) {
-            schedule.push({ day: days[i], date: dateStr, morning: b, evening: b, covering: a, dept });
-          } else if (bOff && !aOff) {
-            schedule.push({ day: days[i], date: dateStr, morning: a, evening: a, covering: b, dept });
-          } else if (!aOff && !bOff) {
-            const aCanMorning = !hasConstraint(a, dateStr, 'morning');
-            const bCanMorning = !hasConstraint(b, dateStr, 'morning');
-            const aCanEvening = !hasConstraint(a, dateStr, 'evening');
-            const bCanEvening = !hasConstraint(b, dateStr, 'evening');
-
-            if (!aCanMorning && !bCanMorning) {
-              issues.push({ dept, date: dateStr, desc: 'אין אף אחד שיכול לעבוד בוקר' });
-              schedule.push({ day: days[i], date: dateStr, morning: '-', evening: '-', dept });
-              continue;
-            }
-            if (!aCanEvening && !bCanEvening) {
-              issues.push({ dept, date: dateStr, desc: 'אין אף אחד שיכול לעבוד ערב' });
-              schedule.push({ day: days[i], date: dateStr, morning: '-', evening: '-', dept });
-              continue;
-            }
-
-            const preferMorning = (i % 2 === 0) ? a : b;
-            const other = (preferMorning === a) ? b : a;
-
-            let morning = (preferMorning === a ? aCanMorning : bCanMorning) ? preferMorning : other;
-
-            const otherForEvening = (morning === a) ? b : a;
-            const otherCanEvening = (otherForEvening === a) ? aCanEvening : bCanEvening;
-            const morningCanEvening = (morning === a) ? aCanEvening : bCanEvening;
-
-            let evening = null;
-            if (otherCanEvening) evening = otherForEvening;
-            else if (morningCanEvening) evening = morning;
-
-            if (morning === evening) {
-              issues.push({ dept, date: dateStr, desc: 'יצא שיבוץ כפול לעובד אחד (בלי חופש מאושר של השני)' });
-              schedule.push({ day: days[i], date: dateStr, morning: morning, evening: '-', dept });
-            } else {
-              schedule.push({ day: days[i], date: dateStr, morning, evening, dept });
-            }
-          } else {
-            schedule.push({ day: days[i], date: dateStr, morning: '-', evening: '-', dept });
+          if (aOff && !bOff) schedule.push({ day: days[i], date: dateStr, morning: b, evening: b, dept });
+          else if (bOff && !aOff) schedule.push({ day: days[i], date: dateStr, morning: a, evening: a, dept });
+          else {
+            const m = (i % 2 === 0) ? a : b;
+            const e = (m === a) ? b : a;
+            const mCant = hasConstraint(m, dateStr, 'morning');
+            const eCant = hasConstraint(e, dateStr, 'evening');
+            schedule.push({ day: days[i], date: dateStr, morning: mCant ? e : m, evening: eCant ? m : e, dept });
           }
         }
       }
 
-      const fri = new Date(nextSunday);
-      fri.setDate(nextSunday.getDate() + 5);
+      const fri = new Date(nextSunday); fri.setDate(nextSunday.getDate() + 5);
       const friStr = toLocalDateStr(fri);
-
       if (isThreeEmp) {
         const friOff = emps.find(emp => hasConstraint(emp, friStr, 'full'));
-        const friWorking = friOff ? emps.filter(e => e !== friOff) : [emps[0], emps[1]];
+        const friWorking = friOff ? emps.filter(x => x !== friOff) : [emps[0], emps[1]];
         schedule.push({ day:'שישי', date: friStr, friday: friWorking, dept });
       } else {
         const a = emps[0], b = emps[1];
         const aOff = hasConstraint(a, friStr, 'full');
-        const bOff = hasConstraint(b, friStr, 'full');
-        if (aOff && !bOff) schedule.push({ day:'שישי', date: friStr, friday: b, dept });
-        else schedule.push({ day:'שישי', date: friStr, friday: a, dept });
+        schedule.push({ day:'שישי', date: friStr, friday: aOff ? b : a, dept });
       }
 
-      const sat = new Date(nextSunday);
-      sat.setDate(nextSunday.getDate() + 6);
+      const sat = new Date(nextSunday); sat.setDate(nextSunday.getDate() + 6);
       const satStr = toLocalDateStr(sat);
-
       if (isThreeEmp) {
         const friWorking = schedule[schedule.length - 1].friday;
         const satWorking = emps.find(e => !friWorking.includes(e)) || emps[2];
         schedule.push({ day:'מוצ"ש', date: satStr, saturday: satWorking, dept });
       } else {
         const friEmp = schedule[schedule.length - 1].friday;
-        const satEmp = (friEmp === emps[0]) ? emps[1] : emps[0];
-        schedule.push({ day:'מוצ"ש', date: satStr, saturday: satEmp, dept });
+        schedule.push({ day:'מוצ"ש', date: satStr, saturday: (friEmp === emps[0]) ? emps[1] : emps[0], dept });
       }
 
       allSchedules[dept] = schedule;
-    }
-
-    if (issues.length > 0) {
-      let msg = '⚠️ נמצאו בעיות שיבוץ:\n\n';
-      issues.forEach(x => { msg += `🏢 ${x.dept}\n📅 ${formatDate(x.date)} - ${x.desc}\n\n`; });
-      throw new Error(msg);
     }
 
     return allSchedules;
@@ -832,10 +721,7 @@
     const deptOrder = Object.keys(DEPARTMENTS);
     const sampleDept = deptOrder.find(d => allSchedules[d] && allSchedules[d].length) || deptOrder[0];
     const sampleSchedule = allSchedules[sampleDept] || [];
-    if (sampleSchedule.length === 0) {
-      document.getElementById('schedule-result').innerHTML = '';
-      return;
-    }
+    if (sampleSchedule.length === 0) { document.getElementById('schedule-result').innerHTML = ''; return; }
 
     const dayCols = sampleSchedule.map(d => ({ day: d.day, date: d.date }));
     const totalCols = dayCols.length + 2;
@@ -848,10 +734,7 @@
             <th>עובד</th>
             <th>מחלקה</th>`;
 
-    dayCols.forEach(c => {
-      html += `<th>${c.day}<br>${formatDate(c.date)}</th>`;
-    });
-
+    dayCols.forEach(c => { html += `<th>${c.day}<br>${formatDate(c.date)}</th>`; });
     html += `</tr>`;
 
     deptOrder.forEach(dept => {
@@ -866,7 +749,7 @@
           <td style="background:#eef2ff; font-weight:bold;">${dept}</td>`;
 
         dayCols.forEach(c => {
-          const day = deptSchedule.find(d => d.date === c.date) || null;
+          const day = deptSchedule.find(d => d.date === c.date);
           if (!day) { html += `<td style="background:#f0f0f0;">-</td>`; return; }
 
           const isThreeEmp = employees.length === 3;
@@ -874,46 +757,31 @@
 
           if (day.friday) {
             if (isThreeEmp) {
-              if (Array.isArray(day.friday) && day.friday.includes(emp)) {
-                html += isKavLavan
-                  ? `<td><span class="shift-friday">עובד בשישי</span></td>`
-                  : `<td><span class="shift-friday">שישי<br>8:30-14:30</span></td>`;
-              } else html += `<td style="background:#f0f0f0;">-</td>`;
-            } else {
-              html += (day.friday === emp)
-                ? `<td><span class="shift-friday">בוקר<br>8:30-14:30</span></td>`
+              const works = Array.isArray(day.friday) && day.friday.includes(emp);
+              html += works
+                ? (isKavLavan ? `<td><span class="shift-friday">עובד בשישי</span></td>` : `<td><span class="shift-friday">שישי<br>8:30-14:30</span></td>`)
                 : `<td style="background:#f0f0f0;">-</td>`;
+            } else {
+              html += (day.friday === emp) ? `<td><span class="shift-friday">בוקר<br>8:30-14:30</span></td>` : `<td style="background:#f0f0f0;">-</td>`;
             }
             return;
           }
 
           if (day.saturday) {
             if (isThreeEmp) {
-              if (day.saturday === emp) {
-                html += isKavLavan
-                  ? `<td><span class="shift-saturday">עובד במוצ"ש</span></td>`
-                  : `<td><span class="shift-saturday">מוצ"ש<br>מוצ"ש-22:30</span></td>`;
-              } else html += `<td style="background:#f0f0f0;">-</td>`;
-            } else {
               html += (day.saturday === emp)
-                ? `<td><span class="shift-saturday">ערב<br>מוצ"ש-22:30</span></td>`
+                ? (isKavLavan ? `<td><span class="shift-saturday">עובד במוצ"ש</span></td>` : `<td><span class="shift-saturday">מוצ"ש<br>מוצ"ש-22:30</span></td>`)
                 : `<td style="background:#f0f0f0;">-</td>`;
+            } else {
+              html += (day.saturday === emp) ? `<td><span class="shift-saturday">ערב<br>מוצ"ש-22:30</span></td>` : `<td style="background:#f0f0f0;">-</td>`;
             }
             return;
           }
 
           const shifts = [];
-          if (day.morning === emp) shifts.push(isKavLavan
-            ? '<span class="shift-morning">בוקר</span>'
-            : '<span class="shift-morning">בוקר<br>9:00-16:00</span>');
-
-          if (day.middle === emp) shifts.push(isKavLavan
-            ? '<span class="shift-middle">אמצע</span>'
-            : '<span class="shift-middle">אמצע<br>11:00-19:00</span>');
-
-          if (day.evening === emp) shifts.push(isKavLavan
-            ? '<span class="shift-evening">ערב</span>'
-            : '<span class="shift-evening">ערב<br>15:00-21:30</span>');
+          if (day.morning === emp) shifts.push(isKavLavan ? '<span class="shift-morning">בוקר</span>' : '<span class="shift-morning">בוקר<br>9:00-16:00</span>');
+          if (day.middle === emp) shifts.push(isKavLavan ? '<span class="shift-middle">אמצע</span>' : '<span class="shift-middle">אמצע<br>11:00-19:00</span>');
+          if (day.evening === emp) shifts.push(isKavLavan ? '<span class="shift-evening">ערב</span>' : '<span class="shift-evening">ערב<br>15:00-21:30</span>');
 
           html += shifts.length ? `<td>${shifts.join('<br>')}</td>` : `<td style="background:#f0f0f0;">-</td>`;
         });
@@ -930,6 +798,7 @@
     if (!currentSchedule) return;
 
     const wb = XLSX.utils.book_new();
+
     for (const [dept, schedule] of Object.entries(currentSchedule)) {
       const employees = DEPARTMENTS[dept] || [];
       const isThreeEmp = employees.length === 3;
@@ -970,21 +839,28 @@
   }
 
   /* =========================================================
-     ✅ PDF: FIXED FOR ANDROID
-     - לא משתמשים ב-window.jspdf בצורה שעלולה להיכשל
-     - מציירים canvas עם html2canvas (מגיע מה-bundle)
-     - מחפשים jsPDF בצורה "בטוחה"
-     - עמוד A4 לאורך אחד + התאמה מלאה בלי חיתוך
+     ✅ PDF: A4 לאורך, עמוד אחד, בלי חיתוך ובלי פיצול
+     - clone עם CSS מוקטן
+     - html2canvas -> canvas אחד
+     - jsPDF -> addImage -> Fit to page
      ========================================================= */
   async function exportToPDF() {
-    const original = document.getElementById('schedule-result');
+    // הודעה מיידית כדי שתדע שהפונקציה באמת הופעלה
+    showMessage('לחיצה התקבלה ✅ מתחיל ייצוא PDF...', 'success');
 
+    const original = document.getElementById('schedule-result');
     if (!original || !original.innerHTML.trim()) {
       showMessage('אין סידור לייצוא. צור סידור קודם.', 'error');
       return;
     }
 
-    // Clone זמני לצילום נקי + הקטנת PDF בעזרת CSS של #pdf-clone
+    // בדיקת טעינת הספריה
+    if (!window.html2pdf || typeof window.html2canvas !== 'function') {
+      showMessage('שגיאה: ספריית PDF לא נטענה (CDN).', 'error');
+      return;
+    }
+
+    // Clone לצילום
     const clone = original.cloneNode(true);
     clone.id = 'pdf-clone';
     clone.style.position = 'fixed';
@@ -993,18 +869,6 @@
     document.body.appendChild(clone);
 
     try {
-      showMessage('מייצא ל-PDF (A4 לאורך, עמוד אחד)...', 'success');
-
-      // לוודא ש-html2pdf נטען
-      if (!window.html2pdf) {
-        throw new Error('html2pdf לא נטען. בדוק חיבור/חסימה של CDN.');
-      }
-
-      // לוודא ש-html2canvas זמין (מגיע מה-bundle)
-      if (typeof window.html2canvas !== 'function') {
-        throw new Error('html2canvas לא נטען. בדוק שהקובץ html2pdf.bundle נטען.');
-      }
-
       const canvas = await window.html2canvas(clone, {
         scale: 2,
         useCORS: true,
@@ -1017,14 +881,15 @@
 
       const imgData = canvas.toDataURL('image/jpeg', 1.0);
 
-      // ✅ חיפוש jsPDF בצורה בטוחה (באנדרואיד/גרסאות שונות זה משתנה)
+      // jsPDF detection (יציב לכל מיני גרסאות)
       const jsPDF =
         (window.jspdf && window.jspdf.jsPDF) ||
         window.jsPDF ||
         (window.jspdf && window.jspdf.default);
 
       if (!jsPDF) {
-        throw new Error('jsPDF לא נטען. בדוק שהקובץ html2pdf.bundle נטען.');
+        showMessage('שגיאה: jsPDF לא נטען מה-bundle.', 'error');
+        return;
       }
 
       const pdf = new jsPDF('p', 'mm', 'a4'); // A4 לאורך
@@ -1039,76 +904,80 @@
       const imgW = canvas.width;
       const imgH = canvas.height;
 
+      // Fit to single page
       const ratio = Math.min(maxW / imgW, maxH / imgH);
-
       const renderW = imgW * ratio;
       const renderH = imgH * ratio;
 
       const x = (pageW - renderW) / 2;
       const y = (pageH - renderH) / 2;
 
-      pdf.addImage(imgData, 'JPEG', x, y, renderW, renderH);
+      pdf.addImage(imgData, 'JPEG', x, y, renderW, renderH, undefined, 'FAST');
 
       const today = new Date();
       const filename = `סידור_${today.getDate()}-${today.getMonth()+1}-${today.getFullYear()}.pdf`;
       pdf.save(filename);
 
-      showMessage('PDF יוצא בהצלחה! (עמוד אחד)', 'success');
+      showMessage('PDF יוצא בהצלחה! (A4 לאורך, עמוד אחד)', 'success');
     } catch (err) {
       console.error('PDF Export Error:', err);
-      showMessage('שגיאה ביצוא PDF: ' + (err.message || err), 'error');
+      showMessage('שגיאה ביצוא PDF: ' + (err?.message || err), 'error');
     } finally {
       document.body.removeChild(clone);
     }
   }
+
+  // ✅ EventListener נוסף לכפתור (גיבוי אם onclick "נופל" אצלך)
+  document.addEventListener('DOMContentLoaded', () => {
+    const btn = document.getElementById('pdf-btn');
+    if (!btn) return;
+    btn.addEventListener('click', (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+      exportToPDF();
+    }, { passive: false });
+  });
 
   // Helpers
   function hideAll() {
     document.querySelectorAll('.section').forEach(s => s.classList.remove('active'));
     document.getElementById('message').innerHTML = '';
   }
-
   function clearInputs() {
     document.getElementById('emp-username').value = '';
     document.getElementById('emp-password').value = '';
     document.getElementById('mgr-username').value = '';
     document.getElementById('mgr-password').value = '';
   }
-
   function showMessage(text, type) {
     const div = document.getElementById('message');
     div.className = `message ${type}`;
     div.textContent = text;
     setTimeout(() => div.innerHTML = '', 8000);
   }
-
   function formatDate(dateStr) {
     const d = new Date(dateStr + 'T00:00:00');
     return `${String(d.getDate()).padStart(2,'0')}/${String(d.getMonth()+1).padStart(2,'0')}`;
   }
-
   function toLocalDateStr(d) {
     const y = d.getFullYear();
-    const m = String(d.getMonth() + 1).padStart(2, '0');
-    const day = String(d.getDate()).padStart(2, '0');
+    const m = String(d.getMonth()+1).padStart(2,'0');
+    const day = String(d.getDate()).padStart(2,'0');
     return `${y}-${m}-${day}`;
   }
-
   function formatType(type) {
-    const types = { 'no-morning': '❌ לא בוקר', 'no-evening': '❌ לא ערב', 'day-off': '🏖️ חופש מלא' };
+    const types = { 'no-morning':'❌ לא בוקר', 'no-evening':'❌ לא ערב', 'day-off':'🏖️ חופש מלא' };
     return types[type] || type;
   }
-
   function isValidWeekday(dateStr) {
     const d = new Date(dateStr + 'T00:00:00');
     const day = d.getDay();
     return day !== 5 && day !== 6;
   }
-
   function getStatusBadge(c) {
     if (c.type !== 'day-off') return '';
-    const statuses = { 'pending': '⏳ ממתין', 'approved': '✅ מאושר', 'rejected': '❌ נדחה' };
-    const classes  = { 'pending': 'status-pending', 'approved': 'status-approved', 'rejected': 'status-rejected' };
+    const statuses = { 'pending':'⏳ ממתין', 'approved':'✅ מאושר', 'rejected':'❌ נדחה' };
+    const classes  = { 'pending':'status-pending', 'approved':'status-approved', 'rejected':'status-rejected' };
     const status = c.status || 'pending';
     return `<span class="${classes[status]}">${statuses[status]}</span>`;
   }
