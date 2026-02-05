@@ -664,6 +664,9 @@
       return !c.status || c.status === 'approved';
     };
 
+    // הוגנות (B): מונים לפי מחלקה לעובדים עם 3 משמרות
+    const fairCounts = {};
+
     for (const [dept, emps] of Object.entries(DEPARTMENTS)) {
       const allDates = [];
 
@@ -759,6 +762,15 @@
       return null;
     };
 
+    const WEEKLY_ROTATION_3_EMP = [
+      ['morning','middle','evening'],
+      ['middle','evening','morning'],
+      ['evening','morning','middle'],
+      ['morning','evening','middle'],
+      ['evening','middle','morning']
+    ];
+
+
     // עבור 2 עובדים: "לא יכול" בוקר/ערב
     const cannotMorning = (emp, dateStr) => {
       const c = getApprovedConstraintOnDate(emp, dateStr);
@@ -780,47 +792,130 @@
         const dateStr = toLocalDateStr(date);
 
         if (isThreeEmp) {
-          const dayOffs = emps.filter(emp => isDayOffApproved(emp, dateStr));
+  // הוגנות (B): ניסיון לאזן כמה שיותר את כמות הבוקר/אמצע/ערב לכל עובד במהלך השבוע
+  if (!fairCounts[dept]) {
+    fairCounts[dept] = {};
+    emps.forEach(e => { fairCounts[dept][e] = { morning: 0, middle: 0, evening: 0 }; });
+  }
+  const counts = fairCounts[dept];
 
-          if (dayOffs.length === 1) {
-            const working = emps.filter(emp => !dayOffs.includes(emp));
-            schedule.push({ day: days[i], date: dateStr, morning: working[0], evening: working[1], dept });
+  const inc = (emp, shift) => {
+    if (emp && counts[emp] && counts[emp][shift] != null) counts[emp][shift] += 1;
+  };
 
-          } else {
-            // בסיס רוטציה
-            const rotation = i % 3;
-            let assign = {
-              morning: emps[rotation],
-              middle: emps[(rotation+1)%3],
-              evening: emps[(rotation+2)%3]
-            };
+  const pickLeast = (candidates, shift) => {
+    if (!candidates || candidates.length === 0) return null;
+    const sorted = candidates.slice().sort((a, b) => {
+      const da = (counts[a]?.[shift] ?? 0);
+      const db = (counts[b]?.[shift] ?? 0);
+      if (da !== db) return da - db;
+      return (Math.random() - 0.5); // שובר שוויון
+    });
+    return sorted[0];
+  };
 
-            // NEW: לכבד "רוצה משמרת"
-            const wanted = { morning: null, middle: null, evening: null };
-            for (const emp of emps) {
-              const w = getWantedShift(emp, dateStr);
-              if (w) wanted[w] = emp;
-            }
+  const dayOffs = emps.filter(emp => isDayOffApproved(emp, dateStr));
+  const hasWants = emps.some(emp => !!getWantedShift(emp, dateStr));
 
-            const used = new Set();
-            for (const shift of ["morning","middle","evening"]) {
-              const emp = wanted[shift];
-              if (emp) {
-                assign[shift] = emp;
-                used.add(emp);
-              }
-            }
+  // אם אין חופש/בחירות ביום הזה — משתמשים בתבנית שבועית מגוונת + מונים
+  if (dayOffs.length === 0 && !hasWants) {
+    const pattern = WEEKLY_ROTATION_3_EMP[i % WEEKLY_ROTATION_3_EMP.length];
+    const assign = { morning: null, middle: null, evening: null };
+    for (let k = 0; k < 3; k++) {
+      assign[pattern[k]] = emps[k];
+    }
 
-            const remainingEmps = emps.filter(e => !used.has(e));
+    schedule.push({
+      day: days[i],
+      date: dateStr,
+      morning: assign.morning,
+      middle: assign.middle,
+      evening: assign.evening,
+      dept
+    });
 
-            for (const shift of ["morning","middle","evening"]) {
-              if (!wanted[shift]) {
-                assign[shift] = remainingEmps.shift();
-              }
-            }
+    inc(assign.morning, 'morning');
+    inc(assign.middle, 'middle');
+    inc(assign.evening, 'evening');
+  }
 
-            schedule.push({ day: days[i], date: dateStr, morning: assign.morning, middle: assign.middle, evening: assign.evening, dept });
-          }
+  // יום עם חופש מאושר אחד: רק 2 עובדים עובדים (בוקר+ערב)
+  else if (dayOffs.length === 1) {
+    const working = emps.filter(emp => !dayOffs.includes(emp));
+
+    // אם יש בחירת משמרת - נכבד (בוקר/ערב בלבד ביום כזה)
+    const wantedMorning = working.find(e => getWantedShift(e, dateStr) === 'morning') || null;
+    const wantedEvening = working.find(e => getWantedShift(e, dateStr) === 'evening') || null;
+
+    let morningEmp = wantedMorning || pickLeast(working, 'morning');
+    let remaining = working.filter(e => e !== morningEmp);
+
+    let eveningEmp =
+      (wantedEvening && wantedEvening !== morningEmp)
+        ? wantedEvening
+        : (pickLeast(remaining, 'evening') || remaining[0]);
+
+    schedule.push({ day: days[i], date: dateStr, morning: morningEmp, evening: eveningEmp, dept });
+
+    inc(morningEmp, 'morning');
+    inc(eveningEmp, 'evening');
+  }
+
+  // יום רגיל: 3 משמרות
+  else {
+    // בסיס תבנית (גם אם יש Wants) כדי לא להיתקע בדפוס קבוע
+    const pattern = WEEKLY_ROTATION_3_EMP[i % WEEKLY_ROTATION_3_EMP.length];
+    let assign = { morning: null, middle: null, evening: null };
+    for (let k = 0; k < 3; k++) {
+      assign[pattern[k]] = emps[k];
+    }
+
+    // לכבד "רוצה משמרת" (אם קיימת)
+    const wanted = { morning: null, middle: null, evening: null };
+    for (const emp of emps) {
+      const w = getWantedShift(emp, dateStr);
+      if (w && !wanted[w]) wanted[w] = emp;
+    }
+
+    const used = new Set();
+
+    for (const shift of ['morning', 'middle', 'evening']) {
+      const emp = wanted[shift];
+      if (emp) {
+        assign[shift] = emp;
+        used.add(emp);
+      }
+    }
+
+    // להשלים משמרות חסרות בצורה הוגנת לפי מונים
+    for (const shift of ['morning', 'middle', 'evening']) {
+      if (!wanted[shift]) {
+        // אם העובד שהיה בתבנית כבר "נלקח" בגלל Want אחר, נבחר הוגן
+        if (assign[shift] && used.has(assign[shift])) assign[shift] = null;
+
+        if (!assign[shift]) {
+          const remaining = emps.filter(e => !used.has(e));
+          const picked = pickLeast(remaining, shift) || remaining[0];
+          assign[shift] = picked;
+        }
+        used.add(assign[shift]);
+      }
+    }
+
+    schedule.push({
+      day: days[i],
+      date: dateStr,
+      morning: assign.morning,
+      middle: assign.middle,
+      evening: assign.evening,
+      dept
+    });
+
+    inc(assign.morning, 'morning');
+    inc(assign.middle, 'middle');
+    inc(assign.evening, 'evening');
+  }
+}
 
         } else {
           // 2 עובדים
