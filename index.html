@@ -759,6 +759,14 @@
       return null;
     };
 
+    const WEEKLY_ROTATION_3_EMP = [
+      ['morning', 'middle', 'evening'],
+      ['middle', 'evening', 'morning'],
+      ['evening', 'morning', 'middle'],
+      ['morning', 'evening', 'middle'],
+      ['evening', 'middle', 'morning']
+    ];
+
     // עבור 2 עובדים: "לא יכול" בוקר/ערב
     const cannotMorning = (emp, dateStr) => {
       const c = getApprovedConstraintOnDate(emp, dateStr);
@@ -779,48 +787,166 @@
         date.setDate(nextSunday.getDate() + i);
         const dateStr = toLocalDateStr(date);
 
-        if (isThreeEmp) {
-          const dayOffs = emps.filter(emp => isDayOffApproved(emp, dateStr));
+if (isThreeEmp) {
 
-          if (dayOffs.length === 1) {
-            const working = emps.filter(emp => !dayOffs.includes(emp));
-            schedule.push({ day: days[i], date: dateStr, morning: working[0], evening: working[1], dept });
+  // ---- הוגנות שבועית במחלקות של 3 עובדים (ללא דפוס קבוע) ----
+  // יוצר/שומר מונים לכל מחלקה, פעם אחת לכל createSchedule
+  // כדי שלא "יתאפס" כל יום. (נשמר על האובייקט של הפונקציה)
+  if (!allSchedules.__fairCounts) allSchedules.__fairCounts = {};
+  const deptKey = dept; // מפתח לפי שם מחלקה
 
-          } else {
-            // בסיס רוטציה
-            const rotation = i % 3;
-            let assign = {
-              morning: emps[rotation],
-              middle: emps[(rotation+1)%3],
-              evening: emps[(rotation+2)%3]
-            };
+  if (!allSchedules.__fairCounts[deptKey]) {
+    allSchedules.__fairCounts[deptKey] = {};
+    emps.forEach(e => {
+      allSchedules.__fairCounts[deptKey][e] = {
+        morning: 0,
+        middle: 0,
+        evening: 0,
+        lastShift: null,
+        streak: 0
+      };
+    });
+  }
 
-            // NEW: לכבד "רוצה משמרת"
-            const wanted = { morning: null, middle: null, evening: null };
-            for (const emp of emps) {
-              const w = getWantedShift(emp, dateStr);
-              if (w) wanted[w] = emp;
-            }
+  const counts = allSchedules.__fairCounts[deptKey];
 
-            const used = new Set();
-            for (const shift of ["morning","middle","evening"]) {
-              const emp = wanted[shift];
-              if (emp) {
-                assign[shift] = emp;
-                used.add(emp);
-              }
-            }
+  const mark = (emp, shiftKey) => {
+    counts[emp][shiftKey] += 1;
 
-            const remainingEmps = emps.filter(e => !used.has(e));
+    if (counts[emp].lastShift === shiftKey) {
+      counts[emp].streak += 1;
+    } else {
+      counts[emp].lastShift = shiftKey;
+      counts[emp].streak = 1;
+    }
+  };
 
-            for (const shift of ["morning","middle","evening"]) {
-              if (!wanted[shift]) {
-                assign[shift] = remainingEmps.shift();
-              }
-            }
+  // בוחר מועמד "הכי הוגן" למשמרת (מי שעשה הכי מעט מהסוג הזה),
+  // עם עונש קטן על רצפים כדי שלא יתקעו על אותה משמרת.
+  const pickFair = (candidates, shiftKey) => {
+    if (!candidates || candidates.length === 0) return null;
 
-            schedule.push({ day: days[i], date: dateStr, morning: assign.morning, middle: assign.middle, evening: assign.evening, dept });
-          }
+    const scored = candidates.map(emp => {
+      const base = counts[emp][shiftKey];           // כמה כבר עבד את המשמרת הזו השבוע
+      const hardPenalty = (counts[emp].lastShift === shiftKey && counts[emp].streak >= 2) ? 1000 : 0;
+      const softPenalty = (counts[emp].lastShift === shiftKey && counts[emp].streak === 1) ? 2 : 0;
+      const tie = Math.random() * 0.01;            // שובר שוויון קטן (לא פוגע בהוגנות)
+      return { emp, score: base + hardPenalty + softPenalty + tie };
+    });
+
+    scored.sort((a, b) => a.score - b.score);
+    return scored[0].emp;
+  };
+
+  const dayOffs = emps.filter(emp => isDayOffApproved(emp, dateStr));
+  const hasWants = emps.some(emp => !!getWantedShift(emp, dateStr));
+
+  // כשאין אילוצים ביום זה במחלקה של 3 עובדים,
+  // נשתמש ברוטציה שבועית קבועה כדי להבטיח גיוון משמרות.
+  if (dayOffs.length === 0 && !hasWants) {
+    const pattern = WEEKLY_ROTATION_3_EMP[i % WEEKLY_ROTATION_3_EMP.length];
+    const assign = {
+      morning: emps[pattern.indexOf('morning')],
+      middle: emps[pattern.indexOf('middle')],
+      evening: emps[pattern.indexOf('evening')]
+    };
+
+    schedule.push({ day: days[i], date: dateStr, morning: assign.morning, middle: assign.middle, evening: assign.evening, dept });
+    mark(assign.morning, "morning");
+    mark(assign.middle, "middle");
+    mark(assign.evening, "evening");
+    continue;
+  }
+
+  // ---- יום עם חופש מאושר אחד: רק 2 עובדים עובדים (בוקר+ערב) ----
+  if (dayOffs.length === 1) {
+    const working = emps.filter(emp => !dayOffs.includes(emp));
+
+    // אם יש "רוצה משמרת" ביום כזה, נכבד אם אפשר (בוקר/ערב בלבד)
+    const wantedMorning = working.find(e => getWantedShift(e, dateStr) === "morning") || null;
+    const wantedEvening = working.find(e => getWantedShift(e, dateStr) === "evening") || null;
+
+    let morningEmp = wantedMorning || pickFair(working, "morning");
+    let remaining = working.filter(e => e !== morningEmp);
+
+    let eveningEmp = wantedEvening && wantedEvening !== morningEmp
+      ? wantedEvening
+      : pickFair(remaining, "evening");
+
+    if (!eveningEmp) eveningEmp = remaining[0];
+
+    schedule.push({ day: days[i], date: dateStr, morning: morningEmp, evening: eveningEmp, dept });
+
+    mark(morningEmp, "morning");
+    mark(eveningEmp, "evening");
+
+  } else {
+    // ---- יום רגיל: 3 משמרות ----
+
+    // 1) נכבד "רוצה משמרת" (אם יש) – אבל לא ניתן לשניים לקחת את אותה משמרת
+    const wanted = { morning: null, middle: null, evening: null };
+    for (const emp of emps) {
+      const w = getWantedShift(emp, dateStr);
+      if (w && !wanted[w]) wanted[w] = emp;
+    }
+
+    const assign = { morning: null, middle: null, evening: null };
+    const used = new Set();
+
+    for (const shift of ["morning", "middle", "evening"]) {
+      const emp = wanted[shift];
+      if (emp) {
+        assign[shift] = emp;
+        used.add(emp);
+      }
+    }
+
+    // 2) נשלים משמרות חסרות לפי הוגנות
+    //    (מתוך עובדים שלא שובצו עדיין)
+    const remainingEmps = emps.filter(e => !used.has(e));
+
+    // בוקר
+    if (!assign.morning) {
+      assign.morning = pickFair(remainingEmps, "morning");
+      used.add(assign.morning);
+    }
+
+    // ערב
+    if (!assign.evening) {
+      const remainingForEvening = emps.filter(e => !used.has(e));
+      assign.evening = pickFair(remainingForEvening, "evening");
+      used.add(assign.evening);
+    }
+
+    // אמצע
+    if (!assign.middle) {
+      const remainingForMiddle = emps.filter(e => !used.has(e));
+      assign.middle = pickFair(remainingForMiddle, "middle");
+      used.add(assign.middle);
+    }
+
+    // fallback בטיחותי (לא אמור לקרות, אבל למניעת null)
+    if (!assign.morning || !assign.middle || !assign.evening) {
+      const left = emps.filter(e => ![assign.morning, assign.middle, assign.evening].includes(e));
+      if (!assign.morning) assign.morning = left.shift() || emps[0];
+      if (!assign.middle) assign.middle = left.shift() || emps[1];
+      if (!assign.evening) assign.evening = left.shift() || emps[2];
+    }
+
+    schedule.push({
+      day: days[i],
+      date: dateStr,
+      morning: assign.morning,
+      middle: assign.middle,
+      evening: assign.evening,
+      dept
+    });
+
+    mark(assign.morning, "morning");
+    mark(assign.middle, "middle");
+    mark(assign.evening, "evening");
+  }
+}
 
         } else {
           // 2 עובדים
@@ -882,6 +1008,7 @@
       allSchedules[dept] = schedule;
     }
 
+    delete allSchedules.__fairCounts;
     return allSchedules;
   }
 
