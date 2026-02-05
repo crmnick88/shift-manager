@@ -13,72 +13,75 @@
   <!-- SheetJS -->
   <script src="https://cdn.sheetjs.com/xlsx-0.20.0/package/dist/xlsx.full.min.js"></script>
 
+  <!-- html2pdf (Export PDF) -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+
   <style>
     * { margin:0; padding:0; box-sizing:border-box; }
-    body {
+    body{
       font-family:'Segoe UI',Tahoma,Geneva,Verdana,sans-serif;
       background:linear-gradient(135deg,#667eea 0%,#764ba2 100%);
       min-height:100vh; padding:20px;
     }
-    .container {
+    .container{
       max-width:900px; margin:0 auto; background:white; border-radius:20px;
       box-shadow:0 20px 60px rgba(0,0,0,0.3); padding:30px;
     }
-    h1 { text-align:center; color:#667eea; margin-bottom:30px; font-size:2.3em; }
-    .section { display:none; }
-    .section.active { display:block; }
+    h1{ text-align:center; color:#667eea; margin-bottom:30px; font-size:2.3em; }
+    .section{ display:none; }
+    .section.active{ display:block; }
 
-    .btn {
+    .btn{
       width:100%; padding:15px; background:#667eea; color:white; border:none;
       border-radius:10px; font-size:18px; font-weight:bold; cursor:pointer;
       transition:all 0.3s; margin-top:10px;
     }
-    .btn:hover { background:#5568d3; transform:translateY(-2px); }
+    .btn:hover{ background:#5568d3; transform:translateY(-2px); }
 
-    .mode-btn {
+    .mode-btn{
       padding:20px 40px; margin:10px; border:2px solid #667eea; background:white;
       color:#667eea; border-radius:10px; cursor:pointer; font-size:20px;
       font-weight:bold; transition:all 0.3s;
     }
-    .mode-btn:hover { background:#667eea; color:white; }
+    .mode-btn:hover{ background:#667eea; color:white; }
 
-    input, select {
+    input, select{
       width:100%; padding:12px; border:2px solid #e0e0e0; border-radius:8px;
       font-size:16px; margin-top:8px;
     }
-    .form-group { margin-bottom:15px; }
-    label { display:block; margin-bottom:5px; font-weight:bold; color:#555; }
+    .form-group{ margin-bottom:15px; }
+    label{ display:block; margin-bottom:5px; font-weight:bold; color:#555; }
 
-    .constraint-item {
+    .constraint-item{
       background:white; padding:15px; border-radius:8px; margin-bottom:15px;
       border:2px solid #e0e0e0;
     }
-    .constraint-card { background:#fff3cd; padding:15px; border-radius:8px; margin-bottom:10px; }
+    .constraint-card{ background:#fff3cd; padding:15px; border-radius:8px; margin-bottom:10px; }
 
-    .message {
+    .message{
       padding:15px; border-radius:8px; margin-top:20px; text-align:center;
       font-weight:bold; white-space:pre-line;
     }
-    .message.success { background:#d4edda; color:#155724; }
-    .message.error { background:#f8d7da; color:#721c24; }
+    .message.success{ background:#d4edda; color:#155724; }
+    .message.error{ background:#f8d7da; color:#721c24; }
 
-    .employee-constraints {
+    .employee-constraints{
       background:white; padding:15px; border-radius:8px; margin-bottom:15px;
       border-right:4px solid #667eea;
     }
 
-    /* טבלת סידור */
-    #schedule-result { overflow-x:auto; } /* נוח במובייל */
-    .schedule-table {
+    /* חזרה לתצוגה "כמו קודם" - בלי גלילה אופקית */
+    #schedule-result{ overflow: visible; }
+
+    .schedule-table{
       width:100%;
-      min-width: 900px; /* כדי לא להידחס במובייל */
       margin-top:20px;
       border-collapse:collapse;
       background:white;
       border-radius:8px;
       overflow:hidden;
     }
-    .schedule-table th {
+    .schedule-table th{
       background:#667eea;
       color:white;
       padding:15px 10px;
@@ -86,7 +89,7 @@
       font-size:14px;
       min-width:100px;
     }
-    .schedule-table td {
+    .schedule-table td{
       padding:15px 10px;
       text-align:center;
       border:1px solid #e0e0e0;
@@ -94,40 +97,37 @@
       min-width:100px;
     }
 
-    .shift-morning, .shift-middle, .shift-evening, .shift-friday, .shift-saturday {
+    .shift-morning, .shift-middle, .shift-evening, .shift-friday, .shift-saturday{
       display:inline-block; padding:8px 12px; border-radius:6px;
       font-size:13px; font-weight:bold; line-height:1.6;
     }
-    .shift-morning { background:#fff3cd; }
-    .shift-middle  { background:#ffd4a3; }
-    .shift-evening { background:#d1ecf1; }
-    .shift-friday  { background:#d4edda; }
+    .shift-morning{ background:#fff3cd; }
+    .shift-middle{ background:#ffd4a3; }
+    .shift-evening{ background:#d1ecf1; }
+    .shift-friday{ background:#d4edda; }
     .shift-saturday{ background:#e7d4f5; }
 
-    .approval-buttons { display:inline-flex; gap:10px; margin-right:10px; flex-wrap:wrap; }
-    .approve-btn, .reject-btn, .reset-btn {
-      padding:8px 14px; border:none; border-radius:6px; cursor:pointer;
-      font-weight:bold;
+    .approval-buttons{ display:inline-flex; gap:10px; margin-right:10px; flex-wrap:wrap; }
+    .approve-btn, .reject-btn, .reset-btn{
+      padding:8px 14px; border:none; border-radius:6px; cursor:pointer; font-weight:bold;
     }
-    .approve-btn { background:#28a745; color:white; }
-    .reject-btn  { background:#dc3545; color:white; }
-    .reset-btn   { background:#6c757d; color:white; }
+    .approve-btn{ background:#28a745; color:white; }
+    .reject-btn{ background:#dc3545; color:white; }
+    .reset-btn{ background:#6c757d; color:white; }
 
-    .status-pending, .status-approved, .status-rejected {
+    .status-pending, .status-approved, .status-rejected{
       padding:5px 12px; border-radius:20px; font-size:14px; display:inline-block; margin-right:8px;
     }
-    .status-pending  { background:#fff3cd; color:#856404; }
-    .status-approved { background:#d4edda; color:#155724; }
-    .status-rejected { background:#f8d7da; color:#721c24; }
+    .status-pending{ background:#fff3cd; color:#856404; }
+    .status-approved{ background:#d4edda; color:#155724; }
+    .status-rejected{ background:#f8d7da; color:#721c24; }
 
-    .toolbar {
+    .toolbar{
       display:flex; gap:10px; flex-wrap:wrap; margin: 10px 0 20px 0;
     }
-    .toolbar .btn {
-      width:auto; padding:10px 14px; font-size:14px; margin-top:0;
-    }
+    .toolbar .btn{ width:auto; padding:10px 14px; font-size:14px; margin-top:0; }
 
-    /* פס הפרדה למחלקה בתוך טבלה אחת */
+    /* פס הפרדה למחלקה */
     .dept-divider td{
       background:#667eea !important;
       color:#fff !important;
@@ -136,7 +136,7 @@
       font-size:16px;
       padding:12px !important;
       border:0 !important;
-      letter-spacing: .3px;
+      letter-spacing:.3px;
     }
   </style>
 </head>
@@ -258,6 +258,7 @@
 
     <div id="export-section" style="display:none; margin-top:10px;">
       <button class="btn" onclick="exportToExcel()" style="background:#28a745;">📥 ייצא לאקסל</button>
+      <button class="btn" onclick="exportToPDF()" style="background:#d63384;">📄 ייצא ל-PDF</button>
     </div>
 
     <div id="schedule-result"></div>
@@ -300,7 +301,7 @@
     'MOHAMAD': 'MOHAMAD'
   };
 
-  // Departments (כולל מחסנאים)
+  // Departments
   const DEPARTMENTS = {
     'מחלקת מיחשוב': ['ILAY', 'ROVEN'],
     'מחלקת קטנים': ['HAI', 'NATALI'],
@@ -749,7 +750,6 @@
             } else {
               schedule.push({ day: days[i], date: dateStr, morning, evening, dept });
             }
-
           } else {
             schedule.push({ day: days[i], date: dateStr, morning: '-', evening: '-', dept });
           }
@@ -769,7 +769,6 @@
         const a = emps[0], b = emps[1];
         const aOff = hasConstraint(a, friStr, 'full');
         const bOff = hasConstraint(b, friStr, 'full');
-
         if (aOff && !bOff) schedule.push({ day:'שישי', date: friStr, friday: b, dept });
         else schedule.push({ day:'שישי', date: friStr, friday: a, dept });
       }
@@ -801,12 +800,11 @@
     return allSchedules;
   }
 
-  /* ====== תצוגה: טבלה אחת לכל הסניף + פס הפרדה למחלקות ====== */
+  /* תצוגה: טבלה אחת + פס הפרדה עם שם מחלקה */
   function displaySchedule(allSchedules) {
     const deptOrder = Object.keys(DEPARTMENTS);
     if (deptOrder.length === 0) return;
 
-    // כותרות ימים (לוקחים מהמחלקה הראשונה)
     const sampleDept = deptOrder.find(d => allSchedules[d] && allSchedules[d].length) || deptOrder[0];
     const sampleSchedule = allSchedules[sampleDept] || [];
     if (sampleSchedule.length === 0) {
@@ -815,7 +813,7 @@
     }
 
     const dayCols = sampleSchedule.map(d => ({ day: d.day, date: d.date }));
-    const totalCols = dayCols.length + 2; // עובד + מחלקה + ימים
+    const totalCols = dayCols.length + 2;
 
     let html = `
       <h2 style="color:#667eea; margin-top:30px;">📅 סידור שבועי - כל הסניף</h2>
@@ -831,12 +829,10 @@
 
     html += `</tr>`;
 
-    // לכל מחלקה: פס הפרדה + שורות עובדים
     deptOrder.forEach(dept => {
       const employees = DEPARTMENTS[dept] || [];
       const deptSchedule = allSchedules[dept] || [];
 
-      // פס הפרדה
       html += `<tr class="dept-divider"><td colspan="${totalCols}">🏢 ${dept}</td></tr>`;
 
       employees.forEach(emp => {
@@ -846,24 +842,18 @@
 
         dayCols.forEach(c => {
           const day = deptSchedule.find(d => d.date === c.date) || null;
-          if (!day) {
-            html += `<td style="background:#f0f0f0;">-</td>`;
-            return;
-          }
+          if (!day) { html += `<td style="background:#f0f0f0;">-</td>`; return; }
 
           const isThreeEmp = employees.length === 3;
           const isKavLavan = dept === 'מחלקת קו לבן';
 
-          // שישי
           if (day.friday) {
             if (isThreeEmp) {
               if (Array.isArray(day.friday) && day.friday.includes(emp)) {
                 html += isKavLavan
                   ? `<td><span class="shift-friday">עובד בשישי</span></td>`
                   : `<td><span class="shift-friday">שישי<br>8:30-14:30</span></td>`;
-              } else {
-                html += `<td style="background:#f0f0f0;">-</td>`;
-              }
+              } else html += `<td style="background:#f0f0f0;">-</td>`;
             } else {
               html += (day.friday === emp)
                 ? `<td><span class="shift-friday">בוקר<br>8:30-14:30</span></td>`
@@ -872,16 +862,13 @@
             return;
           }
 
-          // מוצ"ש
           if (day.saturday) {
             if (isThreeEmp) {
               if (day.saturday === emp) {
                 html += isKavLavan
                   ? `<td><span class="shift-saturday">עובד במוצ"ש</span></td>`
                   : `<td><span class="shift-saturday">מוצ"ש<br>מוצ"ש-22:30</span></td>`;
-              } else {
-                html += `<td style="background:#f0f0f0;">-</td>`;
-              }
+              } else html += `<td style="background:#f0f0f0;">-</td>`;
             } else {
               html += (day.saturday === emp)
                 ? `<td><span class="shift-saturday">ערב<br>מוצ"ש-22:30</span></td>`
@@ -890,7 +877,6 @@
             return;
           }
 
-          // ראשון-חמישי
           const shifts = [];
           if (day.morning === emp) shifts.push(isKavLavan
             ? '<span class="shift-morning">בוקר</span>'
@@ -955,16 +941,34 @@
       });
 
       const ws = XLSX.utils.aoa_to_sheet(data);
-      const colWidths = [{ wch: 15 }];
-      schedule.forEach(() => colWidths.push({ wch: 22 }));
-      ws['!cols'] = colWidths;
-
       XLSX.utils.book_append_sheet(wb, ws, dept);
     }
 
     const today = new Date();
     XLSX.writeFile(wb, `סידור_${today.getDate()}-${today.getMonth()+1}-${today.getFullYear()}.xlsx`);
     showMessage('הקובץ יוצא!', 'success');
+  }
+
+  function exportToPDF() {
+    const el = document.getElementById('schedule-result');
+    if (!el || !el.innerHTML.trim()) {
+      showMessage('אין סידור לייצוא. צור סידור קודם.', 'error');
+      return;
+    }
+
+    const today = new Date();
+    const filename = `סידור_${today.getDate()}-${today.getMonth()+1}-${today.getFullYear()}.pdf`;
+
+    const opt = {
+      margin: 8,
+      filename,
+      image: { type: 'jpeg', quality: 0.98 },
+      html2canvas: { scale: 2, useCORS: true },
+      jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' } // לפי הבקשה: לאורך
+    };
+
+    showMessage('מייצא ל-PDF...', 'success');
+    html2pdf().set(opt).from(el).save();
   }
 
   // Helpers
