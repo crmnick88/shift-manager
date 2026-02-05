@@ -1,36 +1,19 @@
-const CACHE_NAME = "shift-manager-v2";
+/* service-worker.js */
+const CACHE_VERSION = "v4"; // <-- כל פעם שאתה משנה קוד, תעלה ל-v5, v6...
+const CACHE_NAME = `shift-pwa-${CACHE_VERSION}`;
 
-// שים לב: ב-GitHub Pages האתר יושב בתוך /shift-manager/
 const ASSETS = [
   "./",
   "./index.html",
   "./manifest.json",
   "./icon-192.png",
-  "./icon-512.png"
+  "./icon-512.png",
 ];
 
 self.addEventListener("install", (event) => {
+  self.skipWaiting();
   event.waitUntil(
-    (async () => {
-      const cache = await caches.open(CACHE_NAME);
-
-      // במקום addAll (שנופל אם קובץ אחד נכשל) – מוסיפים אחד אחד
-      for (const url of ASSETS) {
-        try {
-          const res = await fetch(url, { cache: "no-cache" });
-          if (res.ok) {
-            await cache.put(url, res.clone());
-          } else {
-            // אם יש 404 וכו' – פשוט מדלגים
-            console.warn("SW: skip caching (bad status)", url, res.status);
-          }
-        } catch (err) {
-          console.warn("SW: skip caching (fetch failed)", url, err);
-        }
-      }
-
-      self.skipWaiting();
-    })()
+    caches.open(CACHE_NAME).then((cache) => cache.addAll(ASSETS))
   );
 });
 
@@ -38,14 +21,47 @@ self.addEventListener("activate", (event) => {
   event.waitUntil(
     (async () => {
       const keys = await caches.keys();
-      await Promise.all(keys.map((k) => (k !== CACHE_NAME ? caches.delete(k) : null)));
-      self.clients.claim();
+      await Promise.all(
+        keys
+          .filter((k) => k.startsWith("shift-pwa-") && k !== CACHE_NAME)
+          .map((k) => caches.delete(k))
+      );
+      await self.clients.claim();
     })()
   );
 });
 
+// Network-first ל-HTML כדי שלא "יתקע" על קוד ישן
 self.addEventListener("fetch", (event) => {
+  const req = event.request;
+  const url = new URL(req.url);
+
+  // רק על אותו origin
+  if (url.origin !== location.origin) return;
+
+  // HTML: תמיד לנסות רשת קודם
+  if (req.mode === "navigate" || url.pathname.endsWith("/index.html")) {
+    event.respondWith(
+      fetch(req)
+        .then((res) => {
+          const copy = res.clone();
+          caches.open(CACHE_NAME).then((cache) => cache.put(req, copy));
+          return res;
+        })
+        .catch(() => caches.match(req).then((r) => r || caches.match("./index.html")))
+    );
+    return;
+  }
+
+  // שאר הקבצים: cache-first
   event.respondWith(
-    caches.match(event.request).then((cached) => cached || fetch(event.request))
+    caches.match(req).then((cached) => {
+      if (cached) return cached;
+      return fetch(req).then((res) => {
+        const copy = res.clone();
+        caches.open(CACHE_NAME).then((cache) => cache.put(req, copy));
+        return res;
+      });
+    })
   );
 });
