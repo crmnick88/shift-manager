@@ -508,29 +508,17 @@
   }
 
   async function updateApproval(emp, key, status) {
-    const ref = db.ref(`constraints/${emp}/${key}`);
-
     if (status === 'rejected') {
-      // ג… ׳‘׳׳§׳•׳ ׳׳׳—׳•׳§ ׳׳× ׳”׳׳™׳׳•׳¥ ג€“ ׳©׳•׳׳¨׳™׳ ׳¡׳˜׳˜׳•׳¡ "׳ ׳“׳—׳”" (׳©׳§׳™׳₪׳•׳× + ׳”׳™׳¡׳˜׳•׳¨׳™׳”)
-      await ref.update({
-        status: "rejected",
-        decidedAt: firebase.database.ServerValue.TIMESTAMP,
-        decidedBy: MANAGER.username,
-        approvedAt: null,
-        approvedBy: null
-      });
-      showMessage('׳‘׳§׳©׳× ׳”׳—׳•׳₪׳© ׳ ׳“׳—׳×׳”', 'success');
+      await db.ref(`constraints/${emp}/${key}`).set(null);
+      showMessage('׳‘׳§׳©׳× ׳”׳—׳•׳₪׳© ׳ ׳“׳—׳×׳” ׳•׳ ׳׳—׳§׳”', 'success');
     } else {
-      await ref.update({
+      await db.ref(`constraints/${emp}/${key}`).update({
         status: "approved",
         approvedAt: firebase.database.ServerValue.TIMESTAMP,
-        approvedBy: MANAGER.username,
-        decidedAt: firebase.database.ServerValue.TIMESTAMP,
-        decidedBy: MANAGER.username
+        approvedBy: MANAGER.username
       });
       showMessage('׳‘׳§׳©׳× ׳”׳—׳•׳₪׳© ׳׳•׳©׳¨׳”!', 'success');
     }
-
     await loadAllConstraints();
   }
 
