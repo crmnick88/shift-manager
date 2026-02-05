@@ -795,12 +795,7 @@
               evening: emps[(rotation+2)%3]
             };
 
-            // NEW: לכבד "רוצה משמרת"
-            const wanted = { morning: null, middle: null, evening: null };
-            for (const emp of emps) {
-              const w = getWantedShift(emp, dateStr);
-              if (w) wanted[w] = emp;
-            }
+
 
             const used = new Set();
             for (const shift of ["morning","middle","evening"]) {
