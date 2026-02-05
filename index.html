@@ -13,7 +13,7 @@
   <!-- SheetJS -->
   <script src="https://cdn.sheetjs.com/xlsx-0.20.0/package/dist/xlsx.full.min.js"></script>
 
-  <!-- html2pdf -->
+  <!-- html2pdf (includes html2canvas + jsPDF) -->
   <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
 
   <style>
@@ -70,9 +70,7 @@
       border-right:4px solid #667eea;
     }
 
-    /* כמו קודם - בלי גלילה אופקית */
-    #schedule-result{ overflow: visible; }
-
+    /* תצוגה רגילה באתר */
     .schedule-table{
       width:100%;
       margin-top:20px;
@@ -137,6 +135,65 @@
       padding:12px !important;
       border:0 !important;
       letter-spacing:.3px;
+    }
+
+    /* ==========================
+       PDF MODE (A4 לאורך - עמוד אחד)
+       הכל מוקטן כדי שהטבלה תיכנס כולה בתוך דף A4 לאורך
+       ========================== */
+    #pdf-clone {
+      direction: rtl;
+      background: #fff;
+      padding: 10px !important;
+      width: fit-content !important;
+      max-width: none !important;
+    }
+
+    /* מקטינים כותרות ומרווחים ב-PDF */
+    #pdf-clone h2 {
+      margin: 0 0 8px 0 !important;
+      font-size: 14px !important;
+      line-height: 1.2 !important;
+    }
+
+    #pdf-clone .schedule-table{
+      width: auto !important;              /* שיצלם את כל הרוחב בלי "למתוח" */
+      table-layout: fixed !important;      /* עמודות צפופות */
+      border-collapse: collapse !important;
+      margin-top: 6px !important;
+    }
+
+    /* עמודות צרות + טקסט קטן */
+    #pdf-clone .schedule-table th{
+      font-size: 9px !important;
+      padding: 6px 4px !important;
+      min-width: 50px !important;
+      white-space: nowrap !important;
+    }
+    #pdf-clone .schedule-table td{
+      font-size: 9px !important;
+      padding: 6px 4px !important;
+      min-width: 50px !important;
+      white-space: nowrap !important;
+    }
+
+    /* תגיות משמרת קטנות */
+    #pdf-clone .shift-morning,
+    #pdf-clone .shift-middle,
+    #pdf-clone .shift-evening,
+    #pdf-clone .shift-friday,
+    #pdf-clone .shift-saturday{
+      font-size: 8px !important;
+      padding: 4px 6px !important;
+      line-height: 1.2 !important;
+      border-radius: 5px !important;
+      white-space: nowrap !important;
+    }
+
+    /* פס מחלקה קטן */
+    #pdf-clone .dept-divider td{
+      font-size: 10px !important;
+      padding: 6px !important;
     }
   </style>
 </head>
@@ -399,18 +456,10 @@
 
     const constraints = {};
     if (c1Date && c1Type) {
-      constraints.c1 = {
-        date: c1Date,
-        type: c1Type,
-        status: c1Type === 'day-off' ? 'pending' : 'approved'
-      };
+      constraints.c1 = { date: c1Date, type: c1Type, status: c1Type === 'day-off' ? 'pending' : 'approved' };
     }
     if (c2Date && c2Type) {
-      constraints.c2 = {
-        date: c2Date,
-        type: c2Type,
-        status: c2Type === 'day-off' ? 'pending' : 'approved'
-      };
+      constraints.c2 = { date: c2Date, type: c2Type, status: c2Type === 'day-off' ? 'pending' : 'approved' };
     }
 
     await db.ref('constraints/' + currentEmployee).set(constraints);
@@ -688,21 +737,10 @@
           const dayOffs = emps.filter(emp => hasConstraint(emp, dateStr, 'full'));
           if (dayOffs.length === 1) {
             const working = emps.filter(emp => !dayOffs.includes(emp));
-            schedule.push({
-              day: days[i], date: dateStr,
-              morning: working[0], evening: working[1],
-              middleCancelled: true, covering: dayOffs[0],
-              dept
-            });
+            schedule.push({ day: days[i], date: dateStr, morning: working[0], evening: working[1], middleCancelled:true, covering: dayOffs[0], dept });
           } else {
             const rotation = i % 3;
-            schedule.push({
-              day: days[i], date: dateStr,
-              morning: emps[rotation],
-              middle: emps[(rotation+1)%3],
-              evening: emps[(rotation+2)%3],
-              dept
-            });
+            schedule.push({ day: days[i], date: dateStr, morning: emps[rotation], middle: emps[(rotation+1)%3], evening: emps[(rotation+2)%3], dept });
           }
         } else {
           const a = emps[0], b = emps[1];
@@ -745,7 +783,7 @@
 
             if (morning === evening) {
               issues.push({ dept, date: dateStr, desc: 'יצא שיבוץ כפול לעובד אחד (בלי חופש מאושר של השני)' });
-              schedule.push({ day: days[i], date: dateStr, morning: morning, evening: '-', issue: true, dept });
+              schedule.push({ day: days[i], date: dateStr, morning: morning, evening: '-', dept });
             } else {
               schedule.push({ day: days[i], date: dateStr, morning, evening, dept });
             }
@@ -945,8 +983,14 @@
     showMessage('הקובץ יוצא!', 'success');
   }
 
-  /* ✅ PDF FIX: clone -> export (מונע דף לבן) */
-  function exportToPDF() {
+  /* =========================================================
+     ✅ PDF: A4 לאורך, עמוד אחד, בלי חיתוך
+     - יוצרים clone
+     - מפעילים עליו PDF-Mode CSS (הקטנת טבלה/פונטים/עמודות/שורות)
+     - מצלמים לתמונה אחת (canvas)
+     - מוסיפים לעמוד A4 אחד עם התאמת יחס (Fit to page)
+     ========================================================= */
+  async function exportToPDF() {
     const original = document.getElementById('schedule-result');
 
     if (!original || !original.innerHTML.trim()) {
@@ -954,35 +998,71 @@
       return;
     }
 
+    // Clone זמני לצילום נקי + הקטנה ע"י CSS של #pdf-clone
     const clone = original.cloneNode(true);
-    clone.style.background = "white";
-    clone.style.padding = "20px";
-    clone.style.direction = "rtl";
-    clone.style.width = "100%";
     clone.id = "pdf-clone";
+    clone.style.position = "fixed";
+    clone.style.left = "-99999px";
+    clone.style.top = "0";
 
     document.body.appendChild(clone);
 
-    const today = new Date();
-    const filename = `סידור_${today.getDate()}-${today.getMonth()+1}-${today.getFullYear()}.pdf`;
+    try {
+      showMessage('מייצא ל-PDF (A4 לאורך, עמוד אחד)...', 'success');
 
-    const opt = {
-      margin: 10,
-      filename: filename,
-      image: { type: 'jpeg', quality: 1 },
-      html2canvas: { scale: 2, useCORS: true, scrollY: 0 },
-      jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' } // לאורך
-    };
+      // משתמשים ב-html2canvas שמגיע בתוך html2pdf.bundle
+      const canvas = await html2pdf()
+        .set({
+          html2canvas: {
+            scale: 2,
+            useCORS: true,
+            scrollY: 0,
+            windowWidth: clone.scrollWidth,
+            windowHeight: clone.scrollHeight
+          }
+        })
+        .from(clone)
+        .toCanvas()
+        .get('canvas');
 
-    showMessage('מייצא ל-PDF...', 'success');
+      const imgData = canvas.toDataURL('image/jpeg', 1.0);
 
-    html2pdf()
-      .set(opt)
-      .from(clone)
-      .save()
-      .then(() => {
-        document.body.removeChild(clone);
-      });
+      // jsPDF מתוך bundle
+      const { jsPDF } = window.jspdf;
+      const pdf = new jsPDF('p', 'mm', 'a4'); // A4 לאורך
+
+      const pageW = pdf.internal.pageSize.getWidth();
+      const pageH = pdf.internal.pageSize.getHeight();
+
+      // התאמה לעמוד אחד
+      const margin = 5; // שוליים קטנים
+      const maxW = pageW - margin * 2;
+      const maxH = pageH - margin * 2;
+
+      const imgW = canvas.width;
+      const imgH = canvas.height;
+
+      const ratio = Math.min(maxW / imgW, maxH / imgH);
+
+      const renderW = imgW * ratio;
+      const renderH = imgH * ratio;
+
+      const x = (pageW - renderW) / 2;
+      const y = (pageH - renderH) / 2;
+
+      pdf.addImage(imgData, 'JPEG', x, y, renderW, renderH, undefined, 'FAST');
+
+      const today = new Date();
+      const filename = `סידור_${today.getDate()}-${today.getMonth()+1}-${today.getFullYear()}.pdf`;
+      pdf.save(filename);
+
+      showMessage('PDF יוצא בהצלחה! (עמוד אחד)', 'success');
+    } catch (err) {
+      console.error(err);
+      showMessage('שגיאה ביצוא PDF: ' + (err.message || err), 'error');
+    } finally {
+      document.body.removeChild(clone);
+    }
   }
 
   // Helpers
