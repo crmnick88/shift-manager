@@ -13,7 +13,7 @@
   <!-- SheetJS -->
   <script src="https://cdn.sheetjs.com/xlsx-0.20.0/package/dist/xlsx.full.min.js"></script>
 
-  <!-- html2pdf (Export PDF) -->
+  <!-- html2pdf -->
   <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
 
   <style>
@@ -70,7 +70,7 @@
       border-right:4px solid #667eea;
     }
 
-    /* חזרה לתצוגה "כמו קודם" - בלי גלילה אופקית */
+    /* כמו קודם - בלי גלילה אופקית */
     #schedule-result{ overflow: visible; }
 
     .schedule-table{
@@ -679,7 +679,6 @@
       const days = ['ראשון','שני','שלישי','רביעי','חמישי','שישי','שבת'];
       const isThreeEmp = emps.length === 3;
 
-      // Sunday-Thursday
       for (let i=0;i<5;i++) {
         const date = new Date(nextSunday);
         date.setDate(nextSunday.getDate() + i);
@@ -756,7 +755,6 @@
         }
       }
 
-      // Friday
       const fri = new Date(nextSunday);
       fri.setDate(nextSunday.getDate() + 5);
       const friStr = toLocalDateStr(fri);
@@ -773,7 +771,6 @@
         else schedule.push({ day:'שישי', date: friStr, friday: a, dept });
       }
 
-      // Saturday
       const sat = new Date(nextSunday);
       sat.setDate(nextSunday.getDate() + 6);
       const satStr = toLocalDateStr(sat);
@@ -800,7 +797,6 @@
     return allSchedules;
   }
 
-  /* תצוגה: טבלה אחת + פס הפרדה עם שם מחלקה */
   function displaySchedule(allSchedules) {
     const deptOrder = Object.keys(DEPARTMENTS);
     if (deptOrder.length === 0) return;
@@ -949,26 +945,44 @@
     showMessage('הקובץ יוצא!', 'success');
   }
 
+  /* ✅ PDF FIX: clone -> export (מונע דף לבן) */
   function exportToPDF() {
-    const el = document.getElementById('schedule-result');
-    if (!el || !el.innerHTML.trim()) {
+    const original = document.getElementById('schedule-result');
+
+    if (!original || !original.innerHTML.trim()) {
       showMessage('אין סידור לייצוא. צור סידור קודם.', 'error');
       return;
     }
+
+    const clone = original.cloneNode(true);
+    clone.style.background = "white";
+    clone.style.padding = "20px";
+    clone.style.direction = "rtl";
+    clone.style.width = "100%";
+    clone.id = "pdf-clone";
+
+    document.body.appendChild(clone);
 
     const today = new Date();
     const filename = `סידור_${today.getDate()}-${today.getMonth()+1}-${today.getFullYear()}.pdf`;
 
     const opt = {
-      margin: 8,
-      filename,
-      image: { type: 'jpeg', quality: 0.98 },
-      html2canvas: { scale: 2, useCORS: true },
-      jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' } // לפי הבקשה: לאורך
+      margin: 10,
+      filename: filename,
+      image: { type: 'jpeg', quality: 1 },
+      html2canvas: { scale: 2, useCORS: true, scrollY: 0 },
+      jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' } // לאורך
     };
 
     showMessage('מייצא ל-PDF...', 'success');
-    html2pdf().set(opt).from(el).save();
+
+    html2pdf()
+      .set(opt)
+      .from(clone)
+      .save()
+      .then(() => {
+        document.body.removeChild(clone);
+      });
   }
 
   // Helpers
