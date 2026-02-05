@@ -250,6 +250,7 @@
   let currentEmployee = '';
   let currentSchedule = null;
 
+  // ✅ Users (username = password)
   const USERS = {
     'ILAY': 'ILAY',
     'ROVEN': 'ROVEN',
@@ -260,12 +261,16 @@
     'ELIYA': 'ELIYA',
     'LIOR': 'LIOR',
     'AMANI': 'AMANI',
-    'SHIROT': 'SHIROT'
+    'SHIROT': 'SHIROT',
+    'AVI': 'AVI',
+    'MOHAMAD': 'MOHAMAD'
   };
 
+  // ✅ Departments (כולל מחלקת מחסנאים)
   const DEPARTMENTS = {
     'מחלקת מיחשוב': ['ILAY', 'ROVEN'],
     'מחלקת קטנים': ['HAI', 'NATALI'],
+    'מחלקת מחסנאים': ['AVI', 'MOHAMAD'],
     'מחלקת קו לבן': ['INNA', 'TAMIR', 'ELIYA'],
     'נציגות שירות': ['LIOR', 'AMANI', 'SHIROT']
   };
@@ -484,7 +489,6 @@
     await loadAllConstraints();
   }
 
-  // ✅ כפתור איפוס אילוצים לעובד
   async function resetEmployeeConstraints(emp) {
     const ok = confirm(`לאפס אילוצים ל-${emp}?`);
     if (!ok) return;
@@ -493,11 +497,9 @@
     showMessage(`אילוצים אופסו עבור ${emp}`, 'success');
 
     await loadAllConstraints();
-    // אם כבר יש סידור מוצג - לרענן
     if (currentSchedule) await generateSchedule();
   }
 
-  // ✅ כפתור איפוס אילוצים לכל העובדים
   async function resetAllConstraints() {
     const ok = confirm(`לאפס אילוצים לכל העובדים? פעולה זו מוחקת את כל האילוצים.`);
     if (!ok) return;
@@ -517,13 +519,8 @@
       const snapshot = await db.ref('constraints').once('value');
       const constraints = snapshot.val() || {};
 
-      // בדיקת קונפליקטים “מבניים” (כמו ששניהם חופש וכו')
       const conflicts = checkConflicts(constraints);
-
-      // יצירת הסידור + בדיקת קונפליקטים “שיבוץ כפול”
       const schedule = createSchedule(constraints);
-      // אם createSchedule מצא בעיה — הוא זורק error עם הודעה
-      // ולכן אם הגענו לפה, אין בעיות שיבוץ
 
       if (conflicts.length > 0) {
         let msg = '⚠️ קונפליקטים:\n\n';
@@ -544,7 +541,8 @@
     } catch (error) {
       console.error(error);
       showMessage(error.message || 'שגיאה ביצירת הסידור', 'error');
-      document.getElementById('schedule-result').innerHTML = `<div class="message error">${error.message || 'שגיאה ביצירת הסידור'}</div>`;
+      document.getElementById('schedule-result').innerHTML =
+        `<div class="message error">${error.message || 'שגיאה ביצירת הסידור'}</div>`;
       document.getElementById('export-section').style.display = 'none';
     }
   }
@@ -615,7 +613,7 @@
     nextSunday.setDate(today.getDate() + (dow === 0 ? 0 : 7 - dow));
 
     const allSchedules = {};
-    const doubleShiftIssues = [];
+    const issues = [];
 
     const hasConstraint = (emp, dateStr, type) => {
       const data = constraints[emp];
@@ -656,7 +654,7 @@
       for (let i=0;i<5;i++) {
         const date = new Date(nextSunday);
         date.setDate(nextSunday.getDate() + i);
-        const dateStr = toLocalDateStr(date); // ✅ תאריך לוקאלי
+        const dateStr = toLocalDateStr(date);
 
         if (isThreeEmp) {
           const dayOffs = emps.filter(emp => hasConstraint(emp, dateStr, 'full'));
@@ -679,7 +677,6 @@
             });
           }
         } else {
-          // ✅ אלגוריתם משופר ל-2 עובדים (מונע “כפול” אם אין חופש מאושר)
           const a = emps[0], b = emps[1];
           const aOff = hasConstraint(a, dateStr, 'full');
           const bOff = hasConstraint(b, dateStr, 'full');
@@ -694,46 +691,38 @@
             const aCanEvening = !hasConstraint(a, dateStr, 'evening');
             const bCanEvening = !hasConstraint(b, dateStr, 'evening');
 
-            // אם אין אף אחד שיכול בוקר/ערב -> קונפליקט
             if (!aCanMorning && !bCanMorning) {
-              doubleShiftIssues.push({ dept, date: dateStr, desc: 'אין אף אחד שיכול לעבוד בוקר' });
+              issues.push({ dept, date: dateStr, desc: 'אין אף אחד שיכול לעבוד בוקר' });
               schedule.push({ day: days[i], date: dateStr, morning: '-', evening: '-' });
               continue;
             }
             if (!aCanEvening && !bCanEvening) {
-              doubleShiftIssues.push({ dept, date: dateStr, desc: 'אין אף אחד שיכול לעבוד ערב' });
+              issues.push({ dept, date: dateStr, desc: 'אין אף אחד שיכול לעבוד ערב' });
               schedule.push({ day: days[i], date: dateStr, morning: '-', evening: '-' });
               continue;
             }
 
-            // העדפה רוטציה
             const preferMorning = (i % 2 === 0) ? a : b;
             const other = (preferMorning === a) ? b : a;
 
-            let morning = null;
-            if (preferMorning === a ? aCanMorning : bCanMorning) morning = preferMorning;
-            else morning = other; // השני בטוח יכול (כי לא שניהם חסומים)
+            let morning = (preferMorning === a ? aCanMorning : bCanMorning) ? preferMorning : other;
 
-            let evening = null;
-            // ננסה לתת ערב למי שלא עבד בוקר אם אפשר
             const otherForEvening = (morning === a) ? b : a;
             const otherCanEvening = (otherForEvening === a) ? aCanEvening : bCanEvening;
             const morningCanEvening = (morning === a) ? aCanEvening : bCanEvening;
 
+            let evening = null;
             if (otherCanEvening) evening = otherForEvening;
             else if (morningCanEvening) evening = morning;
 
-            // אם עדיין יצא אותו עובד בוקר+ערב – זה חוקית רק אם השני בחופש (וכאן הוא לא)
             if (morning === evening) {
-              doubleShiftIssues.push({ dept, date: dateStr, desc: 'יצא שיבוץ כפול לעובד אחד (בלי חופש מאושר של השני)' });
-              // נשים “-” כדי שתראה שזה בעיה ולא ייראה כמו חופש
+              issues.push({ dept, date: dateStr, desc: 'יצא שיבוץ כפול לעובד אחד (בלי חופש מאושר של השני)' });
               schedule.push({ day: days[i], date: dateStr, morning: morning, evening: '-', issue: true });
             } else {
               schedule.push({ day: days[i], date: dateStr, morning, evening });
             }
 
           } else {
-            // שניהם בחופש (או נתון לא תקין) - ייתפס כבר בקונפליקטים הכלליים, אבל נשאיר סימון
             schedule.push({ day: days[i], date: dateStr, morning: '-', evening: '-' });
           }
         }
@@ -749,7 +738,6 @@
         const friWorking = friOff ? emps.filter(e => e !== friOff) : [emps[0], emps[1]];
         schedule.push({ day:'שישי', date: friStr, friday: friWorking, isKavLavan, isNetzigut });
       } else {
-        // ביום שישי אצלך אין בחירה בעובדים באפליקציה (אבל עדיין נתמודד עם day-off מאושר)
         const a = emps[0], b = emps[1];
         const aOff = hasConstraint(a, friStr, 'full');
         const bOff = hasConstraint(b, friStr, 'full');
@@ -776,10 +764,9 @@
       allSchedules[dept] = schedule;
     }
 
-    // אם יש בעיות שיבוץ כפול – נרים שגיאה ברורה למנהל
-    if (doubleShiftIssues.length > 0) {
+    if (issues.length > 0) {
       let msg = '⚠️ נמצאו בעיות שיבוץ (מניעת כפילות):\n\n';
-      doubleShiftIssues.forEach(x => {
+      issues.forEach(x => {
         msg += `🏢 ${x.dept}\n📅 ${formatDate(x.date)} - ${x.desc}\n\n`;
       });
       throw new Error(msg);
@@ -944,7 +931,6 @@
     return `${String(d.getDate()).padStart(2,'0')}/${String(d.getMonth()+1).padStart(2,'0')}`;
   }
 
-  // ✅ תאריך לוקאלי (מונע הזזת יום בגלל UTC)
   function toLocalDateStr(d) {
     const y = d.getFullYear();
     const m = String(d.getMonth() + 1).padStart(2, '0');
