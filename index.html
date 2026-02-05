@@ -139,12 +139,8 @@
       gap:10px;
       margin-bottom:8px;
     }
-    .emp-header-row h4{
-      margin:0;
-    }
-    .emp-header-row .reset-btn{
-      white-space:nowrap;
-    }
+    .emp-header-row h4{ margin:0; }
+    .emp-header-row .reset-btn{ white-space:nowrap; }
   </style>
 </head>
 
@@ -435,8 +431,6 @@
         const data = allData[emp];
 
         html += `<div class="employee-constraints">`;
-
-        // ✅ כותרת + כפתור איפוס לעובד
         html += `
           <div class="emp-header-row">
             <h4>${emp}</h4>
@@ -481,7 +475,6 @@
       html += `<span class="status-approved">✅ פעיל</span>`;
     }
 
-    // ✅ כפתור למחיקה נקודתית של האילוץ (c1/c2)
     html += `
       <div class="approval-buttons" style="margin-top:8px;">
         <button class="reset-btn" onclick="deleteSingleConstraint('${emp}','${key}')">🗑️ מחק אילוץ זה</button>
@@ -493,7 +486,7 @@
 
   async function updateApproval(emp, key, status) {
     if (status === 'rejected') {
-      await db.ref(`constraints/${emp}/${key}`).set(null);
+      await db.ref(`constraints/${emp}/${key}`).remove();
       showMessage('בקשת החופש נדחתה ונמחקה', 'success');
     } else {
       await db.ref(`constraints/${emp}/${key}`).update({
@@ -506,31 +499,27 @@
     await loadAllConstraints();
   }
 
-  // ✅ מחיקת אילוץ בודד (c1 או c2)
   async function deleteSingleConstraint(emp, key){
     const ok = confirm(`למחוק את ${key} עבור ${emp}?`);
     if(!ok) return;
-    await db.ref(`constraints/${emp}/${key}`).set(null);
+    await db.ref(`constraints/${emp}/${key}`).remove();
     showMessage(`נמחק ${key} עבור ${emp}`, 'success');
     await loadAllConstraints();
 
-    // אם יש כבר טבלה מוצגת - כדי שלא תישאר "תקועה"
     currentSchedule = null;
     document.getElementById('schedule-result').innerHTML = '';
     document.getElementById('export-section').style.display = 'none';
   }
 
-  // ✅ איפוס אילוצים לעובד (מוחק את constraints/<EMP>)
   async function resetEmployeeConstraints(emp){
     const ok = confirm(`לאפס את כל האילוצים של ${emp}? (ימחק c1+c2)`);
     if(!ok) return;
 
-    await db.ref(`constraints/${emp}`).set(null);
+    await db.ref(`constraints/${emp}`).remove();
     showMessage(`אופסו האילוצים של ${emp}`, 'success');
 
     await loadAllConstraints();
 
-    // לנקות סידור מוצג (כי יכול להיות שהיה "תקוע" על חופש ישן)
     currentSchedule = null;
     document.getElementById('schedule-result').innerHTML = '';
     document.getElementById('export-section').style.display = 'none';
@@ -540,7 +529,7 @@
     const ok = confirm(`לאפס אילוצים לכל העובדים? פעולה זו מוחקת את כל האילוצים.`);
     if (!ok) return;
 
-    await db.ref(`constraints`).set(null);
+    await db.ref(`constraints`).remove();
     showMessage(`כל האילוצים אופסו`, 'success');
 
     currentSchedule = null;
@@ -550,10 +539,8 @@
     await loadAllConstraints();
   }
 
-  // ✅ רענון הכל: אילוצים + סידור
   async function refreshAll(){
     await loadAllConstraints();
-    // אם אתה רוצה תמיד לייצר סידור מחדש בלחיצה אחת:
     await generateSchedule();
   }
 
@@ -648,11 +635,12 @@
       const check = (c) => {
         if (!c) return false;
 
+        // Day-off MUST be approved + have approvedAt (prevents "stuck old record" bug)
         if (c.type === 'day-off') {
           if (c.status !== 'approved') return false;
-          // אם ישן תקוע בלי approvedAt — לא נתחשב בו
           if (!c.approvedAt) return false;
         } else {
+          // For non-dayoff: treat as approved unless explicitly not approved (shouldn't happen)
           if (c.status && c.status !== 'approved') return false;
         }
 
@@ -673,6 +661,7 @@
       const days = ['ראשון','שני','שלישי','רביעי','חמישי','שישי','שבת'];
       const isThreeEmp = emps.length === 3;
 
+      // Sunday-Thursday
       for (let i=0;i<5;i++) {
         const date = new Date(nextSunday);
         date.setDate(nextSunday.getDate() + i);
@@ -704,6 +693,7 @@
         }
       }
 
+      // Friday
       const fri = new Date(nextSunday); fri.setDate(nextSunday.getDate() + 5);
       const friStr = toLocalDateStr(fri);
       if (isThreeEmp) {
@@ -716,6 +706,7 @@
         schedule.push({ day:'שישי', date: friStr, friday: aOff ? b : a, dept });
       }
 
+      // Saturday
       const sat = new Date(nextSunday); sat.setDate(nextSunday.getDate() + 6);
       const satStr = toLocalDateStr(sat);
       if (isThreeEmp) {
@@ -811,47 +802,103 @@
   }
 
   function exportToExcel() {
-    if (!currentSchedule) return;
-
-    const wb = XLSX.utils.book_new();
-
-    for (const [dept, schedule] of Object.entries(currentSchedule)) {
-      const employees = DEPARTMENTS[dept] || [];
-      const isThreeEmp = employees.length === 3;
-      const isKavLavan = dept === 'מחלקת קו לבן';
-
-      const data = [[dept]];
-      const headerRow = ['עובד'];
-      schedule.forEach(day => headerRow.push(`${day.day} ${formatDate(day.date)}`));
-      data.push(headerRow);
-
-      employees.forEach(emp => {
-        const row = [emp];
-        schedule.forEach(day => {
-          if (day.friday) {
-            if (isThreeEmp) row.push(day.friday.includes(emp) ? (isKavLavan ? 'עובד בשישי' : 'שישי 8:30-14:30') : '-');
-            else row.push(day.friday === emp ? 'בוקר 8:30-14:30' : '-');
-          } else if (day.saturday) {
-            if (isThreeEmp) row.push(day.saturday === emp ? (isKavLavan ? 'עובד במוצ"ש' : 'מוצ"ש מוצ"ש-22:30') : '-');
-            else row.push(day.saturday === emp ? 'ערב מוצ"ש-22:30' : '-');
-          } else {
-            const shifts = [];
-            if (day.morning === emp) shifts.push(isKavLavan ? 'בוקר' : 'בוקר 9:00-16:00');
-            if (day.middle === emp) shifts.push(isKavLavan ? 'אמצע' : 'אמצע 11:00-19:00');
-            if (day.evening === emp) shifts.push(isKavLavan ? 'ערב' : 'ערב 15:00-21:30');
-            row.push(shifts.length ? shifts.join(', ') : '-');
-          }
-        });
-        data.push(row);
-      });
-
-      const ws = XLSX.utils.aoa_to_sheet(data);
-      XLSX.utils.book_append_sheet(wb, ws, dept);
+    if (!currentSchedule) {
+      showMessage('אין סידור לייצוא. צור סידור קודם.', 'error');
+      return;
     }
 
+    // Build ONE big sheet: "כל הסניף"
+    const wb = XLSX.utils.book_new();
+
+    // Use any dept schedule to get the week dates/headers
+    const deptOrder = Object.keys(DEPARTMENTS);
+    const sampleDept = deptOrder.find(d => currentSchedule[d] && currentSchedule[d].length) || deptOrder[0];
+    const sampleSchedule = currentSchedule[sampleDept] || [];
+
+    if (!sampleSchedule.length) {
+      showMessage('אין נתוני סידור לייצוא.', 'error');
+      return;
+    }
+
+    const dayCols = sampleSchedule.map(d => ({ day: d.day, date: d.date }));
+    const header = ['עובד', 'מחלקה', ...dayCols.map(c => `${c.day} ${formatDate(c.date)}`)];
+
+    const data = [];
+    data.push(['סידור שבועי - כל הסניף']);
+    data.push(header);
+
+    const makeDividerRow = (deptName) => {
+      const row = new Array(header.length).fill('');
+      row[0] = `🏢 ${deptName}`;
+      return row;
+    };
+
+    const isKavLavanDept = (dept) => dept === 'מחלקת קו לבן';
+
+    const getShiftText = (dept, employees, emp, dayObj) => {
+      const isThreeEmp = employees.length === 3;
+      const isKavLavan = isKavLavanDept(dept);
+
+      if (dayObj.friday) {
+        if (isThreeEmp) {
+          const works = Array.isArray(dayObj.friday) && dayObj.friday.includes(emp);
+          if (!works) return '-';
+          return isKavLavan ? 'עובד בשישי' : 'שישי 8:30-14:30';
+        } else {
+          return (dayObj.friday === emp) ? 'בוקר 8:30-14:30' : '-';
+        }
+      }
+
+      if (dayObj.saturday) {
+        if (isThreeEmp) {
+          if (dayObj.saturday !== emp) return '-';
+          return isKavLavan ? 'עובד במוצ"ש' : 'מוצ"ש מוצ"ש-22:30';
+        } else {
+          return (dayObj.saturday === emp) ? 'ערב מוצ"ש-22:30' : '-';
+        }
+      }
+
+      const shifts = [];
+      if (dayObj.morning === emp) shifts.push(isKavLavan ? 'בוקר' : 'בוקר 9:00-16:00');
+      if (dayObj.middle === emp) shifts.push(isKavLavan ? 'אמצע' : 'אמצע 11:00-19:00');
+      if (dayObj.evening === emp) shifts.push(isKavLavan ? 'ערב' : 'ערב 15:00-21:30');
+      return shifts.length ? shifts.join(', ') : '-';
+    };
+
+    // Fill rows by department order, with divider rows between departments
+    deptOrder.forEach(dept => {
+      const employees = DEPARTMENTS[dept] || [];
+      const deptSchedule = currentSchedule[dept] || [];
+
+      data.push(makeDividerRow(dept));
+
+      employees.forEach(emp => {
+        const row = [emp, dept];
+
+        dayCols.forEach(c => {
+          const dayObj = deptSchedule.find(d => d.date === c.date);
+          row.push(dayObj ? getShiftText(dept, employees, emp, dayObj) : '-');
+        });
+
+        data.push(row);
+      });
+    });
+
+    const ws = XLSX.utils.aoa_to_sheet(data);
+
+    // Column widths (roughly)
+    const colWidths = [
+      { wch: 14 }, // עובד
+      { wch: 22 }, // מחלקה
+      ...dayCols.map(() => ({ wch: 22 }))
+    ];
+    ws['!cols'] = colWidths;
+
+    XLSX.utils.book_append_sheet(wb, ws, 'כל הסניף');
+
     const today = new Date();
-    XLSX.writeFile(wb, `סידור_${today.getDate()}-${today.getMonth()+1}-${today.getFullYear()}.xlsx`);
-    showMessage('הקובץ יוצא!', 'success');
+    XLSX.writeFile(wb, `סידור_כל-הסניף_${today.getDate()}-${today.getMonth()+1}-${today.getFullYear()}.xlsx`);
+    showMessage('הקובץ יוצא (גליון אחד לכל הסניף)!', 'success');
   }
 
   // Helpers
