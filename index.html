@@ -139,7 +139,6 @@
 
     /* ==========================
        PDF MODE (A4 לאורך - עמוד אחד)
-       הכל מוקטן כדי שהטבלה תיכנס כולה בתוך דף A4 לאורך
        ========================== */
     #pdf-clone {
       direction: rtl;
@@ -149,7 +148,6 @@
       max-width: none !important;
     }
 
-    /* מקטינים כותרות ומרווחים ב-PDF */
     #pdf-clone h2 {
       margin: 0 0 8px 0 !important;
       font-size: 14px !important;
@@ -157,13 +155,12 @@
     }
 
     #pdf-clone .schedule-table{
-      width: auto !important;              /* שיצלם את כל הרוחב בלי "למתוח" */
-      table-layout: fixed !important;      /* עמודות צפופות */
+      width: auto !important;
+      table-layout: fixed !important;
       border-collapse: collapse !important;
       margin-top: 6px !important;
     }
 
-    /* עמודות צרות + טקסט קטן */
     #pdf-clone .schedule-table th{
       font-size: 9px !important;
       padding: 6px 4px !important;
@@ -177,7 +174,6 @@
       white-space: nowrap !important;
     }
 
-    /* תגיות משמרת קטנות */
     #pdf-clone .shift-morning,
     #pdf-clone .shift-middle,
     #pdf-clone .shift-evening,
@@ -190,7 +186,6 @@
       white-space: nowrap !important;
     }
 
-    /* פס מחלקה קטן */
     #pdf-clone .dept-divider td{
       font-size: 10px !important;
       padding: 6px !important;
@@ -689,7 +684,7 @@
     today.setHours(0,0,0,0);
 
     const nextSunday = new Date(today);
-    const dow = today.getDay(); // 0=Sunday
+    const dow = today.getDay();
     nextSunday.setDate(today.getDate() + (dow === 0 ? 0 : 7 - dow));
 
     const allSchedules = {};
@@ -702,12 +697,10 @@
       const check = (c) => {
         if (!c) return false;
 
-        // חופש מלא: רק approved + approvedAt
         if (c.type === 'day-off') {
           if (c.status !== 'approved') return false;
           if (!c.approvedAt) return false;
         } else {
-          // אילוץ רגיל: אם יש status והוא לא approved - לא נחשב
           if (c.status && c.status !== 'approved') return false;
         }
 
@@ -837,8 +830,6 @@
 
   function displaySchedule(allSchedules) {
     const deptOrder = Object.keys(DEPARTMENTS);
-    if (deptOrder.length === 0) return;
-
     const sampleDept = deptOrder.find(d => allSchedules[d] && allSchedules[d].length) || deptOrder[0];
     const sampleSchedule = allSchedules[sampleDept] || [];
     if (sampleSchedule.length === 0) {
@@ -939,7 +930,6 @@
     if (!currentSchedule) return;
 
     const wb = XLSX.utils.book_new();
-
     for (const [dept, schedule] of Object.entries(currentSchedule)) {
       const employees = DEPARTMENTS[dept] || [];
       const isThreeEmp = employees.length === 3;
@@ -952,16 +942,13 @@
 
       employees.forEach(emp => {
         const row = [emp];
-
         schedule.forEach(day => {
           if (day.friday) {
             if (isThreeEmp) row.push(day.friday.includes(emp) ? (isKavLavan ? 'עובד בשישי' : 'שישי 8:30-14:30') : '-');
             else row.push(day.friday === emp ? 'בוקר 8:30-14:30' : '-');
-
           } else if (day.saturday) {
             if (isThreeEmp) row.push(day.saturday === emp ? (isKavLavan ? 'עובד במוצ"ש' : 'מוצ"ש מוצ"ש-22:30') : '-');
             else row.push(day.saturday === emp ? 'ערב מוצ"ש-22:30' : '-');
-
           } else {
             const shifts = [];
             if (day.morning === emp) shifts.push(isKavLavan ? 'בוקר' : 'בוקר 9:00-16:00');
@@ -970,7 +957,6 @@
             row.push(shifts.length ? shifts.join(', ') : '-');
           }
         });
-
         data.push(row);
       });
 
@@ -984,11 +970,11 @@
   }
 
   /* =========================================================
-     ✅ PDF: A4 לאורך, עמוד אחד, בלי חיתוך
-     - יוצרים clone
-     - מפעילים עליו PDF-Mode CSS (הקטנת טבלה/פונטים/עמודות/שורות)
-     - מצלמים לתמונה אחת (canvas)
-     - מוסיפים לעמוד A4 אחד עם התאמת יחס (Fit to page)
+     ✅ PDF: FIXED FOR ANDROID
+     - לא משתמשים ב-window.jspdf בצורה שעלולה להיכשל
+     - מציירים canvas עם html2canvas (מגיע מה-bundle)
+     - מחפשים jsPDF בצורה "בטוחה"
+     - עמוד A4 לאורך אחד + התאמה מלאה בלי חיתוך
      ========================================================= */
   async function exportToPDF() {
     const original = document.getElementById('schedule-result');
@@ -998,44 +984,55 @@
       return;
     }
 
-    // Clone זמני לצילום נקי + הקטנה ע"י CSS של #pdf-clone
+    // Clone זמני לצילום נקי + הקטנת PDF בעזרת CSS של #pdf-clone
     const clone = original.cloneNode(true);
-    clone.id = "pdf-clone";
-    clone.style.position = "fixed";
-    clone.style.left = "-99999px";
-    clone.style.top = "0";
-
+    clone.id = 'pdf-clone';
+    clone.style.position = 'fixed';
+    clone.style.left = '-99999px';
+    clone.style.top = '0';
     document.body.appendChild(clone);
 
     try {
       showMessage('מייצא ל-PDF (A4 לאורך, עמוד אחד)...', 'success');
 
-      // משתמשים ב-html2canvas שמגיע בתוך html2pdf.bundle
-      const canvas = await html2pdf()
-        .set({
-          html2canvas: {
-            scale: 2,
-            useCORS: true,
-            scrollY: 0,
-            windowWidth: clone.scrollWidth,
-            windowHeight: clone.scrollHeight
-          }
-        })
-        .from(clone)
-        .toCanvas()
-        .get('canvas');
+      // לוודא ש-html2pdf נטען
+      if (!window.html2pdf) {
+        throw new Error('html2pdf לא נטען. בדוק חיבור/חסימה של CDN.');
+      }
+
+      // לוודא ש-html2canvas זמין (מגיע מה-bundle)
+      if (typeof window.html2canvas !== 'function') {
+        throw new Error('html2canvas לא נטען. בדוק שהקובץ html2pdf.bundle נטען.');
+      }
+
+      const canvas = await window.html2canvas(clone, {
+        scale: 2,
+        useCORS: true,
+        backgroundColor: '#ffffff',
+        scrollX: 0,
+        scrollY: 0,
+        windowWidth: clone.scrollWidth,
+        windowHeight: clone.scrollHeight
+      });
 
       const imgData = canvas.toDataURL('image/jpeg', 1.0);
 
-      // jsPDF מתוך bundle
-      const { jsPDF } = window.jspdf;
+      // ✅ חיפוש jsPDF בצורה בטוחה (באנדרואיד/גרסאות שונות זה משתנה)
+      const jsPDF =
+        (window.jspdf && window.jspdf.jsPDF) ||
+        window.jsPDF ||
+        (window.jspdf && window.jspdf.default);
+
+      if (!jsPDF) {
+        throw new Error('jsPDF לא נטען. בדוק שהקובץ html2pdf.bundle נטען.');
+      }
+
       const pdf = new jsPDF('p', 'mm', 'a4'); // A4 לאורך
 
       const pageW = pdf.internal.pageSize.getWidth();
       const pageH = pdf.internal.pageSize.getHeight();
 
-      // התאמה לעמוד אחד
-      const margin = 5; // שוליים קטנים
+      const margin = 5;
       const maxW = pageW - margin * 2;
       const maxH = pageH - margin * 2;
 
@@ -1050,7 +1047,7 @@
       const x = (pageW - renderW) / 2;
       const y = (pageH - renderH) / 2;
 
-      pdf.addImage(imgData, 'JPEG', x, y, renderW, renderH, undefined, 'FAST');
+      pdf.addImage(imgData, 'JPEG', x, y, renderW, renderH);
 
       const today = new Date();
       const filename = `סידור_${today.getDate()}-${today.getMonth()+1}-${today.getFullYear()}.pdf`;
@@ -1058,7 +1055,7 @@
 
       showMessage('PDF יוצא בהצלחה! (עמוד אחד)', 'success');
     } catch (err) {
-      console.error(err);
+      console.error('PDF Export Error:', err);
       showMessage('שגיאה ביצוא PDF: ' + (err.message || err), 'error');
     } finally {
       document.body.removeChild(clone);
