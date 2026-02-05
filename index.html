@@ -333,6 +333,50 @@
 
   const MANAGER = { username: 'SAGI', password: '102' };
 
+  // ======== NEW: התאמת אפשרויות אילוץ לפי מחלקה (2 עובדים vs 3 עובדים) ========
+  function getDeptOfEmp(emp) {
+    for (const [dept, list] of Object.entries(DEPARTMENTS)) {
+      if (list.includes(emp)) return dept;
+    }
+    return null;
+  }
+
+  function buildConstraintOptionsForEmp(emp) {
+    const dept = getDeptOfEmp(emp);
+    const size = dept ? (DEPARTMENTS[dept]?.length || 0) : 0;
+
+    // 3 עובדים -> העובד בוחר משמרת שהוא כן רוצה
+    if (size === 3) {
+      return [
+        { value: "", label: "-- בחר --" },
+        { value: "want-morning", label: "✅ רוצה בוקר" },
+        { value: "want-middle",  label: "✅ רוצה אמצע" },
+        { value: "want-evening", label: "✅ רוצה ערב" },
+        { value: "day-off",      label: "🏖️ חופש מלא" }
+      ];
+    }
+
+    // 2 עובדים -> כמו שהיה
+    return [
+      { value: "", label: "-- בחר --" },
+      { value: "no-morning", label: "❌ לא בוקר" },
+      { value: "no-evening", label: "❌ לא ערב" },
+      { value: "day-off",    label: "🏖️ חופש מלא" }
+    ];
+  }
+
+  function applyConstraintOptions(emp) {
+    const options = buildConstraintOptionsForEmp(emp);
+
+    ["c1-type", "c2-type"].forEach(id => {
+      const sel = document.getElementById(id);
+      const current = sel.value;
+      sel.innerHTML = options.map(o => `<option value="${o.value}">${o.label}</option>`).join("");
+      if (options.some(o => o.value === current)) sel.value = current;
+    });
+  }
+  // ============================================================================
+
   function showLoginForm(type) {
     hideAll();
     document.getElementById(type + '-login').classList.add('active');
@@ -358,9 +402,14 @@
 
     if (USERS[username] && USERS[username] === password) {
       currentEmployee = username;
+
       hideAll();
       document.getElementById('employee-section').classList.add('active');
       document.getElementById('employee-welcome').textContent = `שלום ${username}! 👋`;
+
+      // NEW: להתאים את האופציות לפי מחלקה לפני טעינת הערכים
+      applyConstraintOptions(currentEmployee);
+
       loadEmployeeConstraints();
       showMessage('התחברת בהצלחה', 'success');
     } else {
@@ -385,6 +434,9 @@
   }
 
   async function loadEmployeeConstraints() {
+    // NEW: גם פה, כדי לוודא שה-selectים תמיד מותאמים למחלקה
+    if (currentEmployee) applyConstraintOptions(currentEmployee);
+
     const snapshot = await db.ref('constraints/' + currentEmployee).once('value');
     const data = snapshot.val() || {};
 
@@ -452,7 +504,6 @@
 
         html += `<div class="employee-constraints">`;
 
-        // ✅ כותרת + כפתור איפוס לעובד
         html += `
           <div class="emp-header-row">
             <h4>${emp}</h4>
@@ -497,7 +548,6 @@
       html += `<span class="status-approved">✅ פעיל</span>`;
     }
 
-    // ✅ כפתור למחיקה נקודתית של האילוץ (c1/c2)
     html += `
       <div class="approval-buttons" style="margin-top:8px;">
         <button class="reset-btn" onclick="deleteSingleConstraint('${emp}','${key}')">🗑️ מחק אילוץ זה</button>
@@ -522,7 +572,6 @@
     await loadAllConstraints();
   }
 
-  // ✅ מחיקת אילוץ בודד (c1 או c2)
   async function deleteSingleConstraint(emp, key){
     const ok = confirm(`למחוק את ${key} עבור ${emp}?`);
     if(!ok) return;
@@ -530,13 +579,11 @@
     showMessage(`נמחק ${key} עבור ${emp}`, 'success');
     await loadAllConstraints();
 
-    // אם יש כבר טבלה מוצגת - כדי שלא תישאר "תקועה"
     currentSchedule = null;
     document.getElementById('schedule-result').innerHTML = '';
     document.getElementById('export-section').style.display = 'none';
   }
 
-  // ✅ איפוס אילוצים לעובד (מוחק את constraints/<EMP>)
   async function resetEmployeeConstraints(emp){
     const ok = confirm(`לאפס את כל האילוצים של ${emp}? (ימחק c1+c2)`);
     if(!ok) return;
@@ -546,7 +593,6 @@
 
     await loadAllConstraints();
 
-    // לנקות סידור מוצג (כי יכול להיות שהיה "תקוע" על חופש ישן)
     currentSchedule = null;
     document.getElementById('schedule-result').innerHTML = '';
     document.getElementById('export-section').style.display = 'none';
@@ -566,10 +612,8 @@
     await loadAllConstraints();
   }
 
-  // ✅ רענון הכל: אילוצים + סידור
   async function refreshAll(){
     await loadAllConstraints();
-    // אם אתה רוצה תמיד לייצר סידור מחדש בלחיצה אחת:
     await generateSchedule();
   }
 
@@ -608,17 +652,13 @@
     const conflicts = [];
     const today = new Date(); today.setHours(0,0,0,0);
 
-    // ✅ פונקציה אחידה: האם אילוץ "מאושר באמת" לשיבוץ?
     const isApprovedForScheduling = (c) => {
       if (!c) return false;
       if (new Date(c.date + 'T00:00:00') < today) return false;
 
       if (c.type === 'day-off') {
-        // חופש מלא רק אם אושר ע"י מנהל (וגם יש חותמת זמן)
         return c.status === 'approved' && !!c.approvedAt;
       }
-
-      // שאר האילוצים: מאושר אוטומטית (או סטטוס מאושר)
       return !c.status || c.status === 'approved';
     };
 
@@ -643,13 +683,28 @@
 
       Object.entries(byDate).forEach(([date, dateConstraints]) => {
         const dayOffCount = dateConstraints.filter(c => c.type === 'day-off').length;
+
         const noMorningCount = dateConstraints.filter(c => c.type === 'no-morning' || c.type === 'day-off').length;
         const noEveningCount = dateConstraints.filter(c => c.type === 'no-evening' || c.type === 'day-off').length;
 
         if (emps.length === 3) {
           if (dayOffCount >= 2) {
-            conflicts.push({ dept, date, emps: dateConstraints.filter(c => c.type === 'day-off').map(c => c.emp), desc: 'יותר מעובד אחד ביקש חופש' });
+            conflicts.push({
+              dept, date,
+              emps: dateConstraints.filter(c => c.type === 'day-off').map(c => c.emp),
+              desc: 'יותר מעובד אחד ביקש חופש'
+            });
           }
+
+          // NEW: התנגשות בבחירת "רוצה משמרת"
+          const wantMorning = dateConstraints.filter(c => c.type === 'want-morning').map(c => c.emp);
+          const wantMiddle  = dateConstraints.filter(c => c.type === 'want-middle').map(c => c.emp);
+          const wantEvening = dateConstraints.filter(c => c.type === 'want-evening').map(c => c.emp);
+
+          if (wantMorning.length > 1) conflicts.push({ dept, date, emps: wantMorning, desc: 'יותר מעובד אחד בחר משמרת בוקר' });
+          if (wantMiddle.length  > 1) conflicts.push({ dept, date, emps: wantMiddle,  desc: 'יותר מעובד אחד בחר משמרת אמצע' });
+          if (wantEvening.length > 1) conflicts.push({ dept, date, emps: wantEvening, desc: 'יותר מעובד אחד בחר משמרת ערב' });
+
         } else {
           if (dayOffCount === 2) conflicts.push({ dept, date, emps: dateConstraints.map(c => c.emp), desc: 'שניהם ביקשו חופש' });
           else if (noMorningCount === 2) conflicts.push({ dept, date, emps: dateConstraints.map(c => c.emp), desc: 'שניהם לא יכולים בוקר' });
@@ -669,7 +724,6 @@
 
     const allSchedules = {};
 
-    // ✅ פונקציה אחידה: האם אילוץ "מאושר באמת" לשיבוץ?
     const isApprovedForScheduling = (c) => {
       if (!c) return false;
       if (new Date(c.date + 'T00:00:00') < today) return false;
@@ -677,25 +731,40 @@
       if (c.type === 'day-off') {
         return c.status === 'approved' && !!c.approvedAt;
       }
-
       return !c.status || c.status === 'approved';
     };
 
-    const hasConstraint = (emp, dateStr, type) => {
+    // NEW: קבלת אילוץ מאושר לאותו תאריך (אם יש)
+    const getApprovedConstraintOnDate = (emp, dateStr) => {
       const data = constraints[emp];
-      if (!data) return false;
+      if (!data) return null;
+      const c1 = data.c1 && isApprovedForScheduling(data.c1) && data.c1.date === dateStr ? data.c1 : null;
+      const c2 = data.c2 && isApprovedForScheduling(data.c2) && data.c2.date === dateStr ? data.c2 : null;
+      return c1 || c2;
+    };
 
-      const check = (c) => {
-        if (!isApprovedForScheduling(c)) return false;
-        if (c.date !== dateStr) return false;
+    const isDayOffApproved = (emp, dateStr) => {
+      const c = getApprovedConstraintOnDate(emp, dateStr);
+      return c && c.type === 'day-off';
+    };
 
-        if (type === 'morning') return c.type === 'no-morning' || c.type === 'day-off';
-        if (type === 'evening') return c.type === 'no-evening' || c.type === 'day-off';
-        if (type === 'full') return c.type === 'day-off';
-        return false;
-      };
+    const getWantedShift = (emp, dateStr) => {
+      const c = getApprovedConstraintOnDate(emp, dateStr);
+      if (!c) return null;
+      if (c.type === 'want-morning') return 'morning';
+      if (c.type === 'want-middle')  return 'middle';
+      if (c.type === 'want-evening') return 'evening';
+      return null;
+    };
 
-      return check(data.c1) || check(data.c2);
+    // עבור 2 עובדים: "לא יכול" בוקר/ערב
+    const cannotMorning = (emp, dateStr) => {
+      const c = getApprovedConstraintOnDate(emp, dateStr);
+      return !!c && (c.type === 'no-morning' || c.type === 'day-off');
+    };
+    const cannotEvening = (emp, dateStr) => {
+      const c = getApprovedConstraintOnDate(emp, dateStr);
+      return !!c && (c.type === 'no-evening' || c.type === 'day-off');
     };
 
     for (const [dept, emps] of Object.entries(DEPARTMENTS)) {
@@ -709,18 +778,53 @@
         const dateStr = toLocalDateStr(date);
 
         if (isThreeEmp) {
-          const dayOffs = emps.filter(emp => hasConstraint(emp, dateStr, 'full'));
+          const dayOffs = emps.filter(emp => isDayOffApproved(emp, dateStr));
+
           if (dayOffs.length === 1) {
             const working = emps.filter(emp => !dayOffs.includes(emp));
             schedule.push({ day: days[i], date: dateStr, morning: working[0], evening: working[1], dept });
+
           } else {
+            // בסיס רוטציה
             const rotation = i % 3;
-            schedule.push({ day: days[i], date: dateStr, morning: emps[rotation], middle: emps[(rotation+1)%3], evening: emps[(rotation+2)%3], dept });
+            let assign = {
+              morning: emps[rotation],
+              middle: emps[(rotation+1)%3],
+              evening: emps[(rotation+2)%3]
+            };
+
+            // NEW: לכבד "רוצה משמרת"
+            const wanted = { morning: null, middle: null, evening: null };
+            for (const emp of emps) {
+              const w = getWantedShift(emp, dateStr);
+              if (w) wanted[w] = emp;
+            }
+
+            const used = new Set();
+            for (const shift of ["morning","middle","evening"]) {
+              const emp = wanted[shift];
+              if (emp) {
+                assign[shift] = emp;
+                used.add(emp);
+              }
+            }
+
+            const remainingEmps = emps.filter(e => !used.has(e));
+
+            for (const shift of ["morning","middle","evening"]) {
+              if (!wanted[shift]) {
+                assign[shift] = remainingEmps.shift();
+              }
+            }
+
+            schedule.push({ day: days[i], date: dateStr, morning: assign.morning, middle: assign.middle, evening: assign.evening, dept });
           }
+
         } else {
+          // 2 עובדים
           const a = emps[0], b = emps[1];
-          const aOff = hasConstraint(a, dateStr, 'full');
-          const bOff = hasConstraint(b, dateStr, 'full');
+          const aOff = isDayOffApproved(a, dateStr);
+          const bOff = isDayOffApproved(b, dateStr);
 
           if (aOff && !bOff) schedule.push({ day: days[i], date: dateStr, morning: b, evening: b, dept });
           else if (bOff && !aOff) schedule.push({ day: days[i], date: dateStr, morning: a, evening: a, dept });
@@ -728,21 +832,17 @@
             const m = (i % 2 === 0) ? a : b;
             const e = (m === a) ? b : a;
 
-            const mCant = hasConstraint(m, dateStr, 'morning');
-            const eCant = hasConstraint(e, dateStr, 'evening');
+            const mCant = cannotMorning(m, dateStr);
+            const eCant = cannotEvening(e, dateStr);
 
             let morning = mCant ? e : m;
             let evening = eCant ? m : e;
 
-            // ✅ תיקון באג: אם יצא אותו עובד גם בבוקר וגם בערב בגלל אילוץ חלקי,
-            // ננסה לשמור חלוקה לשני עובדים (כדי שהשני לא ייראה "בחופש").
+            // תיקון באג: למנוע מצב שאותו עובד מקבל גם בוקר וגם ערב בגלל אילוץ חלקי
             if (morning === evening) {
-              // אם m לא יכול בוקר (אז הבוקר עבר ל-e) – ננסה לתת את הערב ל-m אם הוא כן יכול ערב
-              if (mCant && !hasConstraint(m, dateStr, 'evening')) {
+              if (mCant && !cannotEvening(m, dateStr)) {
                 evening = m;
-              }
-              // אם e לא יכול ערב (אז הערב עבר ל-m) – ננסה לתת את הבוקר ל-e אם הוא כן יכול בוקר
-              else if (eCant && !hasConstraint(e, dateStr, 'morning')) {
+              } else if (eCant && !cannotMorning(e, dateStr)) {
                 morning = e;
               }
             }
@@ -754,18 +854,20 @@
 
       const fri = new Date(nextSunday); fri.setDate(nextSunday.getDate() + 5);
       const friStr = toLocalDateStr(fri);
+
       if (isThreeEmp) {
-        const friOff = emps.find(emp => hasConstraint(emp, friStr, 'full'));
+        const friOff = emps.find(emp => isDayOffApproved(emp, friStr));
         const friWorking = friOff ? emps.filter(x => x !== friOff) : [emps[0], emps[1]];
         schedule.push({ day:'שישי', date: friStr, friday: friWorking, dept });
       } else {
         const a = emps[0], b = emps[1];
-        const aOff = hasConstraint(a, friStr, 'full');
+        const aOff = isDayOffApproved(a, friStr);
         schedule.push({ day:'שישי', date: friStr, friday: aOff ? b : a, dept });
       }
 
       const sat = new Date(nextSunday); sat.setDate(nextSunday.getDate() + 6);
       const satStr = toLocalDateStr(sat);
+
       if (isThreeEmp) {
         const friWorking = schedule[schedule.length - 1].friday;
         const satWorking = emps.find(e => !friWorking.includes(e)) || emps[2];
@@ -868,7 +970,6 @@
     const sampleDept = deptOrder.find(d => currentSchedule[d] && currentSchedule[d].length) || deptOrder[0];
     const sampleSchedule = currentSchedule[sampleDept] || [];
 
-    // בניית HTML
     let html = `<!DOCTYPE html>
 <html lang="he" dir="rtl">
 <head>
@@ -923,36 +1024,13 @@
       background: #eef2ff;
       font-weight: bold;
     }
-    .morning {
-      background: #fff3cd;
-      font-weight: bold;
-    }
-    .middle {
-      background: #ffd4a3;
-      font-weight: bold;
-    }
-    .evening {
-      background: #d1ecf1;
-      font-weight: bold;
-    }
-    .friday {
-      background: #d4edda;
-      font-weight: bold;
-    }
-    .saturday {
-      background: #e7d4f5;
-      font-weight: bold;
-    }
-    .empty {
-      background: #f0f0f0;
-      color: #999;
-    }
-    .dept-row td {
-      background: #667eea;
-      color: white;
-      font-weight: bold;
-      font-size: 16px;
-    }
+    .morning { background: #fff3cd; font-weight: bold; }
+    .middle  { background: #ffd4a3; font-weight: bold; }
+    .evening { background: #d1ecf1; font-weight: bold; }
+    .friday  { background: #d4edda; font-weight: bold; }
+    .saturday{ background: #e7d4f5; font-weight: bold; }
+    .empty   { background: #f0f0f0; color: #999; }
+    .dept-row td { background: #667eea; color: white; font-weight: bold; font-size: 16px; }
   </style>
 </head>
 <body>
@@ -964,25 +1042,21 @@
         <th>עובד</th>
         <th>מחלקה</th>`;
 
-    // כותרות ימים
     sampleSchedule.forEach(day => {
       html += `<th>${day.day}<br>${formatDate(day.date)}</th>`;
     });
     html += `</tr></thead><tbody>`;
 
-    // עבור כל מחלקה
     deptOrder.forEach((dept, deptIndex) => {
       const employees = DEPARTMENTS[dept] || [];
       const deptSchedule = currentSchedule[dept] || [];
       const isThreeEmp = employees.length === 3;
       const isKavLavan = dept === 'מחלקת קו לבן';
 
-      // שורת מחלקה
       if (deptIndex > 0) {
         html += `<tr class="dept-row"><td colspan="${sampleSchedule.length + 2}">🏢 ${dept}</td></tr>`;
       }
 
-      // שורות עובדים
       employees.forEach(emp => {
         html += `<tr>
           <td>${DISPLAY_NAMES[emp] || emp}</td>
@@ -1032,24 +1106,9 @@
               }
             } else {
               const shifts = [];
-              if (day.morning === emp) {
-                shifts.push({
-                  text: isKavLavan ? 'בוקר' : 'בוקר<br>9:00-16:00',
-                  class: 'morning'
-                });
-              }
-              if (day.middle === emp) {
-                shifts.push({
-                  text: isKavLavan ? 'אמצע' : 'אמצע<br>11:00-19:00',
-                  class: 'middle'
-                });
-              }
-              if (day.evening === emp) {
-                shifts.push({
-                  text: isKavLavan ? 'ערב' : 'ערב<br>15:00-21:30',
-                  class: 'evening'
-                });
-              }
+              if (day.morning === emp) shifts.push({ text: isKavLavan ? 'בוקר' : 'בוקר<br>9:00-16:00', class: 'morning' });
+              if (day.middle === emp) shifts.push({ text: isKavLavan ? 'אמצע' : 'אמצע<br>11:00-19:00', class: 'middle' });
+              if (day.evening === emp) shifts.push({ text: isKavLavan ? 'ערב' : 'ערב<br>15:00-21:30', class: 'evening' });
 
               if (shifts.length > 0) {
                 cellText = shifts.map(s => `<span class="${s.class}">${s.text}</span>`).join('<br>');
@@ -1070,7 +1129,6 @@
 
     html += `</tbody></table></div></body></html>`;
 
-    // יצירת קובץ להורדה
     const blob = new Blob([html], { type: 'text/html;charset=utf-8' });
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
@@ -1112,10 +1170,20 @@
     const day = String(d.getDate()).padStart(2,'0');
     return `${y}-${m}-${day}`;
   }
+
+  // UPDATED: כולל סוגים חדשים want-*
   function formatType(type) {
-    const types = { 'no-morning':'❌ לא בוקר', 'no-evening':'❌ לא ערב', 'day-off':'🏖️ חופש מלא' };
+    const types = {
+      'no-morning':'❌ לא בוקר',
+      'no-evening':'❌ לא ערב',
+      'want-morning':'✅ רוצה בוקר',
+      'want-middle':'✅ רוצה אמצע',
+      'want-evening':'✅ רוצה ערב',
+      'day-off':'🏖️ חופש מלא'
+    };
     return types[type] || type;
   }
+
   function isValidWeekday(dateStr) {
     const d = new Date(dateStr + 'T00:00:00');
     const day = d.getDay();
