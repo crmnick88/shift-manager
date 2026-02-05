@@ -727,9 +727,27 @@
           else {
             const m = (i % 2 === 0) ? a : b;
             const e = (m === a) ? b : a;
+
             const mCant = hasConstraint(m, dateStr, 'morning');
             const eCant = hasConstraint(e, dateStr, 'evening');
-            schedule.push({ day: days[i], date: dateStr, morning: mCant ? e : m, evening: eCant ? m : e, dept });
+
+            let morning = mCant ? e : m;
+            let evening = eCant ? m : e;
+
+            // ✅ תיקון באג: אם יצא אותו עובד גם בבוקר וגם בערב בגלל אילוץ חלקי,
+            // ננסה לשמור חלוקה לשני עובדים (כדי שהשני לא ייראה "בחופש").
+            if (morning === evening) {
+              // אם m לא יכול בוקר (אז הבוקר עבר ל-e) – ננסה לתת את הערב ל-m אם הוא כן יכול ערב
+              if (mCant && !hasConstraint(m, dateStr, 'evening')) {
+                evening = m;
+              }
+              // אם e לא יכול ערב (אז הערב עבר ל-m) – ננסה לתת את הבוקר ל-e אם הוא כן יכול בוקר
+              else if (eCant && !hasConstraint(e, dateStr, 'morning')) {
+                morning = e;
+              }
+            }
+
+            schedule.push({ day: days[i], date: dateStr, morning, evening, dept });
           }
         }
       }
