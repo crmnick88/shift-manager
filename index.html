@@ -833,9 +833,22 @@
     }
 
     const wb = XLSX.utils.book_new();
-    const allData = [];
 
-    // בניית כל הנתונים מכל המחלקות לגליון אחד
+    // צבעים בסיסיים שעובדים במובייל
+    const COLORS = {
+      morning: 'FFF3CD',      // צהוב - בוקר
+      middle: 'FFD4A3',       // כתום - אמצע
+      evening: 'D1ECF1',      // כחול - ערב
+      friday: 'D4EDDA',       // ירוק - שישי
+      saturday: 'E7D4F5',     // סגול - מוצ"ש
+      header: '667EEA',       // כחול כהה - כותרות
+      empName: '667EEA',      // כחול כהה - שם עובד
+      deptCol: 'EEF2FF',      // סגול בהיר - עמודת מחלקה
+      deptRow: '667EEA',      // כחול כהה - שורת מחלקה
+      empty: 'F0F0F0'         // אפור - ריק
+    };
+
+    const allData = [];
     const deptOrder = Object.keys(DEPARTMENTS);
     const sampleDept = deptOrder.find(d => currentSchedule[d] && currentSchedule[d].length) || deptOrder[0];
     const sampleSchedule = currentSchedule[sampleDept] || [];
@@ -898,8 +911,102 @@
       });
     });
 
-    // יצירת worksheet אחד
+    // יצירת worksheet
     const ws = XLSX.utils.aoa_to_sheet(allData);
+
+    // הגדרת רוחב עמודות
+    const colWidths = [{ wch: 12 }, { wch: 15 }];
+    sampleSchedule.forEach(() => colWidths.push({ wch: 18 }));
+    ws['!cols'] = colWidths;
+
+    // הגדרת גובה שורות
+    ws['!rows'] = allData.map(() => ({ hpt: 30 }));
+
+    // עיצוב כל התאים
+    const range = XLSX.utils.decode_range(ws['!ref']);
+    
+    for (let R = range.s.r; R <= range.e.r; ++R) {
+      for (let C = range.s.c; C <= range.e.c; ++C) {
+        const cellAddress = XLSX.utils.encode_cell({ r: R, c: C });
+        if (!ws[cellAddress]) continue;
+
+        const cellValue = ws[cellAddress].v || '';
+        let bgColor = 'FFFFFF';
+        let textColor = '000000';
+        let isBold = false;
+
+        // שורה 0 - כותרות
+        if (R === 0) {
+          bgColor = COLORS.header;
+          textColor = 'FFFFFF';
+          isBold = true;
+        }
+        // שורות מחלקה (divider) - מזהה לפי תוכן
+        else if (C === 0 && (cellValue === 'מחלקת מיחשוב' || cellValue === 'מחלקת קטנים' || 
+                             cellValue === 'מחלקת מחסנאים' || cellValue === 'מחלקת קו לבן' || 
+                             cellValue === 'נציגות שירות')) {
+          bgColor = COLORS.deptRow;
+          textColor = 'FFFFFF';
+          isBold = true;
+        }
+        // עמודת שמות עובדים
+        else if (C === 0) {
+          bgColor = COLORS.empName;
+          textColor = 'FFFFFF';
+          isBold = true;
+        }
+        // עמודת מחלקה
+        else if (C === 1) {
+          bgColor = COLORS.deptCol;
+          isBold = true;
+        }
+        // תאי משמרות
+        else {
+          // זיהוי סוג משמרת לפי תוכן
+          if (cellValue.includes('בוקר') && !cellValue.includes('8:30')) {
+            bgColor = COLORS.morning;
+            isBold = true;
+          } else if (cellValue.includes('אמצע')) {
+            bgColor = COLORS.middle;
+            isBold = true;
+          } else if (cellValue.includes('ערב') && !cellValue.includes('מוצ"ש')) {
+            bgColor = COLORS.evening;
+            isBold = true;
+          } else if (cellValue.includes('שישי') || cellValue.includes('8:30')) {
+            bgColor = COLORS.friday;
+            isBold = true;
+          } else if (cellValue.includes('מוצ"ש')) {
+            bgColor = COLORS.saturday;
+            isBold = true;
+          } else if (cellValue === '-') {
+            bgColor = COLORS.empty;
+          }
+        }
+
+        // החלת עיצוב על התא
+        ws[cellAddress].s = {
+          fill: { fgColor: { rgb: bgColor } },
+          font: { 
+            name: 'Arial', 
+            sz: 11, 
+            bold: isBold,
+            color: { rgb: textColor }
+          },
+          alignment: { 
+            horizontal: 'center', 
+            vertical: 'center',
+            wrapText: true
+          },
+          border: {
+            top: { style: 'thin', color: { rgb: 'D3D3D3' } },
+            bottom: { style: 'thin', color: { rgb: 'D3D3D3' } },
+            left: { style: 'thin', color: { rgb: 'D3D3D3' } },
+            right: { style: 'thin', color: { rgb: 'D3D3D3' } }
+          }
+        };
+      }
+    }
+
     XLSX.utils.book_append_sheet(wb, ws, 'סידור שבועי');
 
     const today = new Date();
