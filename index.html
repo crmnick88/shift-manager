@@ -811,47 +811,168 @@
   }
 
   function exportToExcel() {
-    if (!currentSchedule) return;
+    if (!currentSchedule) {
+      showMessage('אין סידור לייצא! יש ליצור סידור תחילה.', 'error');
+      return;
+    }
 
     const wb = XLSX.utils.book_new();
+
+    // צבעים מהטבלה המקורית
+    const COLORS = {
+      morning: { bg: 'FFF3CD', text: '000000' },
+      middle: { bg: 'FFD4A3', text: '000000' },
+      evening: { bg: 'D1ECF1', text: '000000' },
+      friday: { bg: 'D4EDDA', text: '000000' },
+      saturday: { bg: 'E7D4F5', text: '000000' },
+      header: { bg: '667EEA', text: 'FFFFFF' },
+      empName: { bg: '667EEA', text: 'FFFFFF' },
+      deptName: { bg: 'EEF2FF', text: '000000' },
+      deptDivider: { bg: '667EEA', text: 'FFFFFF' },
+      empty: { bg: 'F0F0F0', text: '000000' }
+    };
 
     for (const [dept, schedule] of Object.entries(currentSchedule)) {
       const employees = DEPARTMENTS[dept] || [];
       const isThreeEmp = employees.length === 3;
       const isKavLavan = dept === 'מחלקת קו לבן';
 
-      const data = [[dept]];
-      const headerRow = ['עובד'];
+      const data = [];
+      
+      // שורת מחלקה
+      const deptRow = [dept];
+      for (let i = 0; i < schedule.length + 1; i++) deptRow.push('');
+      data.push(deptRow);
+
+      // שורת כותרות
+      const headerRow = ['עובד', 'מחלקה'];
       schedule.forEach(day => headerRow.push(`${day.day} ${formatDate(day.date)}`));
       data.push(headerRow);
 
+      // שורות עובדים
       employees.forEach(emp => {
-        const row = [emp];
+        const row = [emp, dept];
         schedule.forEach(day => {
+          let cellText = '';
+          
           if (day.friday) {
-            if (isThreeEmp) row.push(day.friday.includes(emp) ? (isKavLavan ? 'עובד בשישי' : 'שישי 8:30-14:30') : '-');
-            else row.push(day.friday === emp ? 'בוקר 8:30-14:30' : '-');
+            if (isThreeEmp) {
+              cellText = (Array.isArray(day.friday) && day.friday.includes(emp))
+                ? (isKavLavan ? 'עובד בשישי' : 'שישי\n8:30-14:30')
+                : '-';
+            } else {
+              cellText = (day.friday === emp) ? 'בוקר\n8:30-14:30' : '-';
+            }
           } else if (day.saturday) {
-            if (isThreeEmp) row.push(day.saturday === emp ? (isKavLavan ? 'עובד במוצ"ש' : 'מוצ"ש מוצ"ש-22:30') : '-');
-            else row.push(day.saturday === emp ? 'ערב מוצ"ש-22:30' : '-');
+            if (isThreeEmp) {
+              cellText = (day.saturday === emp)
+                ? (isKavLavan ? 'עובד במוצ"ש' : 'מוצ"ש\nמוצ"ש-22:30')
+                : '-';
+            } else {
+              cellText = (day.saturday === emp) ? 'ערב\nמוצ"ש-22:30' : '-';
+            }
           } else {
             const shifts = [];
-            if (day.morning === emp) shifts.push(isKavLavan ? 'בוקר' : 'בוקר 9:00-16:00');
-            if (day.middle === emp) shifts.push(isKavLavan ? 'אמצע' : 'אמצע 11:00-19:00');
-            if (day.evening === emp) shifts.push(isKavLavan ? 'ערב' : 'ערב 15:00-21:30');
-            row.push(shifts.length ? shifts.join(', ') : '-');
+            if (day.morning === emp) shifts.push(isKavLavan ? 'בוקר' : 'בוקר\n9:00-16:00');
+            if (day.middle === emp) shifts.push(isKavLavan ? 'אמצע' : 'אמצע\n11:00-19:00');
+            if (day.evening === emp) shifts.push(isKavLavan ? 'ערב' : 'ערב\n15:00-21:30');
+            cellText = shifts.length ? shifts.join('\n') : '-';
           }
+          
+          row.push(cellText);
         });
         data.push(row);
       });
 
       const ws = XLSX.utils.aoa_to_sheet(data);
+
+      // הגדרת רוחב עמודות
+      const colWidths = [{ wch: 15 }, { wch: 15 }];
+      schedule.forEach(() => colWidths.push({ wch: 15 }));
+      ws['!cols'] = colWidths;
+
+      // הגדרת גובה שורות
+      const rowHeights = [{ hpt: 25 }];
+      for (let i = 0; i < data.length; i++) rowHeights.push({ hpt: 40 });
+      ws['!rows'] = rowHeights;
+
+      // עיצוב תאים
+      const range = XLSX.utils.decode_range(ws['!ref']);
+      
+      for (let R = range.s.r; R <= range.e.r; ++R) {
+        for (let C = range.s.c; C <= range.e.c; ++C) {
+          const cellAddress = XLSX.utils.encode_cell({ r: R, c: C });
+          if (!ws[cellAddress]) continue;
+
+          ws[cellAddress].s = {
+            alignment: {
+              horizontal: 'center',
+              vertical: 'center',
+              wrapText: true
+            },
+            border: {
+              top: { style: 'thin', color: { rgb: 'E0E0E0' } },
+              bottom: { style: 'thin', color: { rgb: 'E0E0E0' } },
+              left: { style: 'thin', color: { rgb: 'E0E0E0' } },
+              right: { style: 'thin', color: { rgb: 'E0E0E0' } }
+            },
+            font: {
+              name: 'Arial',
+              sz: 11,
+              bold: false,
+              color: { rgb: '000000' }
+            }
+          };
+
+          if (R === 0) {
+            ws[cellAddress].s.fill = { fgColor: { rgb: COLORS.deptDivider.bg } };
+            ws[cellAddress].s.font = { name: 'Arial', sz: 14, bold: true, color: { rgb: COLORS.deptDivider.text } };
+          }
+          else if (R === 1) {
+            ws[cellAddress].s.fill = { fgColor: { rgb: COLORS.header.bg } };
+            ws[cellAddress].s.font = { name: 'Arial', sz: 12, bold: true, color: { rgb: COLORS.header.text } };
+          }
+          else {
+            if (C === 0) {
+              ws[cellAddress].s.fill = { fgColor: { rgb: COLORS.empName.bg } };
+              ws[cellAddress].s.font = { name: 'Arial', sz: 11, bold: true, color: { rgb: COLORS.empName.text } };
+            }
+            else if (C === 1) {
+              ws[cellAddress].s.fill = { fgColor: { rgb: COLORS.deptName.bg } };
+              ws[cellAddress].s.font.bold = true;
+            }
+            else {
+              const cellValue = ws[cellAddress].v || '';
+              let bgColor = COLORS.empty.bg;
+
+              if (cellValue.includes('בוקר') && !cellValue.includes('8:30')) {
+                bgColor = COLORS.morning.bg;
+              } else if (cellValue.includes('אמצע')) {
+                bgColor = COLORS.middle.bg;
+              } else if (cellValue.includes('ערב') && !cellValue.includes('מוצ"ש')) {
+                bgColor = COLORS.evening.bg;
+              } else if (cellValue.includes('שישי') || cellValue.includes('8:30')) {
+                bgColor = COLORS.friday.bg;
+              } else if (cellValue.includes('מוצ"ש')) {
+                bgColor = COLORS.saturday.bg;
+              }
+
+              ws[cellAddress].s.fill = { fgColor: { rgb: bgColor } };
+              ws[cellAddress].s.font.bold = (cellValue !== '-');
+            }
+          }
+        }
+      }
+
+      ws['!merges'] = [{ s: { r: 0, c: 0 }, e: { r: 0, c: schedule.length + 1 } }];
+
       XLSX.utils.book_append_sheet(wb, ws, dept);
     }
 
     const today = new Date();
-    XLSX.writeFile(wb, `סידור_${today.getDate()}-${today.getMonth()+1}-${today.getFullYear()}.xlsx`);
-    showMessage('הקובץ יוצא!', 'success');
+    const fileName = `סידור_${today.getDate()}-${today.getMonth()+1}-${today.getFullYear()}.xlsx`;
+    XLSX.writeFile(wb, fileName);
+    showMessage('הקובץ יוצא בהצלחה! ✅', 'success');
   }
 
   // Helpers
