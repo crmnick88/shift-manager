@@ -315,6 +315,22 @@
     'נציגות שירות': ['LIOR', 'AMANI', 'SHIROT']
   };
 
+  // מיפוי שמות תצוגה בעברית (רק לתצוגה בטבלה!)
+  const DISPLAY_NAMES = {
+    'ILAY': 'עילאי',
+    'ROVEN': 'ראובן',
+    'HAI': 'חי',
+    'NATALI': 'נטלי',
+    'AVI': 'אבי',
+    'MOHAMAD': 'מוחמד',
+    'INNA': 'אינה',
+    'TAMIR': 'תמיר',
+    'ELIYA': 'אליה',
+    'LIOR': 'ליאור',
+    'AMANI': 'אמאני',
+    'SHIROT': 'שירות'
+  };
+
   const MANAGER = { username: 'SAGI', password: '102' };
 
   function showLoginForm(type) {
@@ -761,7 +777,7 @@
 
       employees.forEach(emp => {
         html += `<tr>
-          <td style="background:#667eea; color:white; font-weight:bold;">${emp}</td>
+          <td style="background:#667eea; color:white; font-weight:bold;">${DISPLAY_NAMES[emp] || emp}</td>
           <td style="background:#eef2ff; font-weight:bold;">${dept}</td>`;
 
         dayCols.forEach(c => {
@@ -845,7 +861,7 @@
 
       // שורות עובדים
       employees.forEach(emp => {
-        const row = [emp, dept];
+        const row = [DISPLAY_NAMES[emp] || emp, dept];
         sampleSchedule.forEach(dayCol => {
           const day = deptSchedule.find(d => d.date === dayCol.date);
           let cellText = '-';
