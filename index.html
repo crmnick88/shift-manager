@@ -608,6 +608,20 @@
     const conflicts = [];
     const today = new Date(); today.setHours(0,0,0,0);
 
+    // ✅ פונקציה אחידה: האם אילוץ "מאושר באמת" לשיבוץ?
+    const isApprovedForScheduling = (c) => {
+      if (!c) return false;
+      if (new Date(c.date + 'T00:00:00') < today) return false;
+
+      if (c.type === 'day-off') {
+        // חופש מלא רק אם אושר ע"י מנהל (וגם יש חותמת זמן)
+        return c.status === 'approved' && !!c.approvedAt;
+      }
+
+      // שאר האילוצים: מאושר אוטומטית (או סטטוס מאושר)
+      return !c.status || c.status === 'approved';
+    };
+
     for (const [dept, emps] of Object.entries(DEPARTMENTS)) {
       const allDates = [];
 
@@ -616,9 +630,7 @@
         if (!data) return;
 
         const addIfApproved = (c) => {
-          if (!c) return;
-          if (c.status !== 'approved') return;
-          if (new Date(c.date + 'T00:00:00') < today) return;
+          if (!isApprovedForScheduling(c)) return;
           allDates.push({ emp, ...c });
         };
 
@@ -657,22 +669,24 @@
 
     const allSchedules = {};
 
+    // ✅ פונקציה אחידה: האם אילוץ "מאושר באמת" לשיבוץ?
+    const isApprovedForScheduling = (c) => {
+      if (!c) return false;
+      if (new Date(c.date + 'T00:00:00') < today) return false;
+
+      if (c.type === 'day-off') {
+        return c.status === 'approved' && !!c.approvedAt;
+      }
+
+      return !c.status || c.status === 'approved';
+    };
+
     const hasConstraint = (emp, dateStr, type) => {
       const data = constraints[emp];
       if (!data) return false;
 
       const check = (c) => {
-        if (!c) return false;
-
-        if (c.type === 'day-off') {
-          if (c.status !== 'approved') return false;
-          // אם ישן תקוע בלי approvedAt — לא נתחשב בו
-          if (!c.approvedAt) return false;
-        } else {
-          if (c.status && c.status !== 'approved') return false;
-        }
-
-        if (new Date(c.date + 'T00:00:00') < today) return false;
+        if (!isApprovedForScheduling(c)) return false;
         if (c.date !== dateStr) return false;
 
         if (type === 'morning') return c.type === 'no-morning' || c.type === 'day-off';
