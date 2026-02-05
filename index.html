@@ -832,31 +832,100 @@
       return;
     }
 
-    const wb = XLSX.utils.book_new();
-
-    // צבעים בסיסיים שעובדים במובייל
-    const COLORS = {
-      morning: 'FFF3CD',      // צהוב - בוקר
-      middle: 'FFD4A3',       // כתום - אמצע
-      evening: 'D1ECF1',      // כחול - ערב
-      friday: 'D4EDDA',       // ירוק - שישי
-      saturday: 'E7D4F5',     // סגול - מוצ"ש
-      header: '667EEA',       // כחול כהה - כותרות
-      empName: '667EEA',      // כחול כהה - שם עובד
-      deptCol: 'EEF2FF',      // סגול בהיר - עמודת מחלקה
-      deptRow: '667EEA',      // כחול כהה - שורת מחלקה
-      empty: 'F0F0F0'         // אפור - ריק
-    };
-
-    const allData = [];
     const deptOrder = Object.keys(DEPARTMENTS);
     const sampleDept = deptOrder.find(d => currentSchedule[d] && currentSchedule[d].length) || deptOrder[0];
     const sampleSchedule = currentSchedule[sampleDept] || [];
 
-    // שורת כותרות ראשית
-    const mainHeader = ['עובד', 'מחלקה'];
-    sampleSchedule.forEach(day => mainHeader.push(`${day.day} ${formatDate(day.date)}`));
-    allData.push(mainHeader);
+    // בניית HTML
+    let html = `<!DOCTYPE html>
+<html lang="he" dir="rtl">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>סידור עבודה שבועי</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      padding: 20px;
+      background: #f5f5f5;
+      margin: 0;
+    }
+    h1 {
+      text-align: center;
+      color: #667eea;
+      margin-bottom: 20px;
+    }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      background: white;
+      box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+    }
+    th, td {
+      padding: 12px 8px;
+      text-align: center;
+      border: 1px solid #ddd;
+      font-size: 13px;
+    }
+    thead th {
+      background: #667eea;
+      color: white;
+      font-weight: bold;
+    }
+    tbody td:first-child {
+      background: #667eea;
+      color: white;
+      font-weight: bold;
+    }
+    tbody td:nth-child(2) {
+      background: #eef2ff;
+      font-weight: bold;
+    }
+    .morning {
+      background: #fff3cd;
+      font-weight: bold;
+    }
+    .middle {
+      background: #ffd4a3;
+      font-weight: bold;
+    }
+    .evening {
+      background: #d1ecf1;
+      font-weight: bold;
+    }
+    .friday {
+      background: #d4edda;
+      font-weight: bold;
+    }
+    .saturday {
+      background: #e7d4f5;
+      font-weight: bold;
+    }
+    .empty {
+      background: #f0f0f0;
+      color: #999;
+    }
+    .dept-row td {
+      background: #667eea;
+      color: white;
+      font-weight: bold;
+      font-size: 16px;
+    }
+  </style>
+</head>
+<body>
+  <h1>📅 סידור עבודה שבועי</h1>
+  <table>
+    <thead>
+      <tr>
+        <th>עובד</th>
+        <th>מחלקה</th>`;
+
+    // כותרות ימים
+    sampleSchedule.forEach(day => {
+      html += `<th>${day.day}<br>${formatDate(day.date)}</th>`;
+    });
+    html += `</tr></thead><tbody>`;
 
     // עבור כל מחלקה
     deptOrder.forEach((dept, deptIndex) => {
@@ -865,153 +934,111 @@
       const isThreeEmp = employees.length === 3;
       const isKavLavan = dept === 'מחלקת קו לבן';
 
-      // שורת מחלקה (divider)
+      // שורת מחלקה
       if (deptIndex > 0) {
-        const deptRow = [dept];
-        for (let i = 0; i < sampleSchedule.length + 1; i++) deptRow.push('');
-        allData.push(deptRow);
+        html += `<tr class="dept-row"><td colspan="${sampleSchedule.length + 2}">🏢 ${dept}</td></tr>`;
       }
 
       // שורות עובדים
       employees.forEach(emp => {
-        const row = [DISPLAY_NAMES[emp] || emp, dept];
+        html += `<tr>
+          <td>${DISPLAY_NAMES[emp] || emp}</td>
+          <td>${dept}</td>`;
+
         sampleSchedule.forEach(dayCol => {
           const day = deptSchedule.find(d => d.date === dayCol.date);
           let cellText = '-';
+          let cellClass = 'empty';
 
           if (day) {
             if (day.friday) {
               if (isThreeEmp) {
-                cellText = (Array.isArray(day.friday) && day.friday.includes(emp))
-                  ? (isKavLavan ? 'עובד בשישי' : 'שישי 8:30-14:30')
-                  : '-';
+                if (Array.isArray(day.friday) && day.friday.includes(emp)) {
+                  cellText = isKavLavan ? 'עובד בשישי' : 'שישי<br>8:30-14:30';
+                  cellClass = 'friday';
+                } else {
+                  cellText = '-';
+                  cellClass = 'empty';
+                }
               } else {
-                cellText = (day.friday === emp) ? 'בוקר 8:30-14:30' : '-';
+                if (day.friday === emp) {
+                  cellText = 'בוקר<br>8:30-14:30';
+                  cellClass = 'friday';
+                } else {
+                  cellText = '-';
+                  cellClass = 'empty';
+                }
               }
             } else if (day.saturday) {
               if (isThreeEmp) {
-                cellText = (day.saturday === emp)
-                  ? (isKavLavan ? 'עובד במוצ"ש' : 'מוצ"ש מוצ"ש-22:30')
-                  : '-';
+                if (day.saturday === emp) {
+                  cellText = isKavLavan ? 'עובד במוצ"ש' : 'מוצ"ש<br>מוצ"ש-22:30';
+                  cellClass = 'saturday';
+                } else {
+                  cellText = '-';
+                  cellClass = 'empty';
+                }
               } else {
-                cellText = (day.saturday === emp) ? 'ערב מוצ"ש-22:30' : '-';
+                if (day.saturday === emp) {
+                  cellText = 'ערב<br>מוצ"ש-22:30';
+                  cellClass = 'saturday';
+                } else {
+                  cellText = '-';
+                  cellClass = 'empty';
+                }
               }
             } else {
               const shifts = [];
-              if (day.morning === emp) shifts.push(isKavLavan ? 'בוקר' : 'בוקר 9:00-16:00');
-              if (day.middle === emp) shifts.push(isKavLavan ? 'אמצע' : 'אמצע 11:00-19:00');
-              if (day.evening === emp) shifts.push(isKavLavan ? 'ערב' : 'ערב 15:00-21:30');
-              cellText = shifts.length ? shifts.join(', ') : '-';
+              if (day.morning === emp) {
+                shifts.push({
+                  text: isKavLavan ? 'בוקר' : 'בוקר<br>9:00-16:00',
+                  class: 'morning'
+                });
+              }
+              if (day.middle === emp) {
+                shifts.push({
+                  text: isKavLavan ? 'אמצע' : 'אמצע<br>11:00-19:00',
+                  class: 'middle'
+                });
+              }
+              if (day.evening === emp) {
+                shifts.push({
+                  text: isKavLavan ? 'ערב' : 'ערב<br>15:00-21:30',
+                  class: 'evening'
+                });
+              }
+
+              if (shifts.length > 0) {
+                cellText = shifts.map(s => `<span class="${s.class}">${s.text}</span>`).join('<br>');
+                cellClass = '';
+              } else {
+                cellText = '-';
+                cellClass = 'empty';
+              }
             }
           }
-          
-          row.push(cellText);
+
+          html += `<td class="${cellClass}">${cellText}</td>`;
         });
-        allData.push(row);
+
+        html += `</tr>`;
       });
     });
 
-    // יצירת worksheet
-    const ws = XLSX.utils.aoa_to_sheet(allData);
+    html += `</tbody></table></body></html>`;
 
-    // הגדרת רוחב עמודות
-    const colWidths = [{ wch: 12 }, { wch: 15 }];
-    sampleSchedule.forEach(() => colWidths.push({ wch: 18 }));
-    ws['!cols'] = colWidths;
-
-    // הגדרת גובה שורות
-    ws['!rows'] = allData.map(() => ({ hpt: 30 }));
-
-    // עיצוב כל התאים
-    const range = XLSX.utils.decode_range(ws['!ref']);
-    
-    for (let R = range.s.r; R <= range.e.r; ++R) {
-      for (let C = range.s.c; C <= range.e.c; ++C) {
-        const cellAddress = XLSX.utils.encode_cell({ r: R, c: C });
-        if (!ws[cellAddress]) continue;
-
-        const cellValue = ws[cellAddress].v || '';
-        let bgColor = 'FFFFFF';
-        let textColor = '000000';
-        let isBold = false;
-
-        // שורה 0 - כותרות
-        if (R === 0) {
-          bgColor = COLORS.header;
-          textColor = 'FFFFFF';
-          isBold = true;
-        }
-        // שורות מחלקה (divider) - מזהה לפי תוכן
-        else if (C === 0 && (cellValue === 'מחלקת מיחשוב' || cellValue === 'מחלקת קטנים' || 
-                             cellValue === 'מחלקת מחסנאים' || cellValue === 'מחלקת קו לבן' || 
-                             cellValue === 'נציגות שירות')) {
-          bgColor = COLORS.deptRow;
-          textColor = 'FFFFFF';
-          isBold = true;
-        }
-        // עמודת שמות עובדים
-        else if (C === 0) {
-          bgColor = COLORS.empName;
-          textColor = 'FFFFFF';
-          isBold = true;
-        }
-        // עמודת מחלקה
-        else if (C === 1) {
-          bgColor = COLORS.deptCol;
-          isBold = true;
-        }
-        // תאי משמרות
-        else {
-          // זיהוי סוג משמרת לפי תוכן
-          if (cellValue.includes('בוקר') && !cellValue.includes('8:30')) {
-            bgColor = COLORS.morning;
-            isBold = true;
-          } else if (cellValue.includes('אמצע')) {
-            bgColor = COLORS.middle;
-            isBold = true;
-          } else if (cellValue.includes('ערב') && !cellValue.includes('מוצ"ש')) {
-            bgColor = COLORS.evening;
-            isBold = true;
-          } else if (cellValue.includes('שישי') || cellValue.includes('8:30')) {
-            bgColor = COLORS.friday;
-            isBold = true;
-          } else if (cellValue.includes('מוצ"ש')) {
-            bgColor = COLORS.saturday;
-            isBold = true;
-          } else if (cellValue === '-') {
-            bgColor = COLORS.empty;
-          }
-        }
-
-        // החלת עיצוב על התא
-        ws[cellAddress].s = {
-          fill: { fgColor: { rgb: bgColor } },
-          font: { 
-            name: 'Arial', 
-            sz: 11, 
-            bold: isBold,
-            color: { rgb: textColor }
-          },
-          alignment: { 
-            horizontal: 'center', 
-            vertical: 'center',
-            wrapText: true
-          },
-          border: {
-            top: { style: 'thin', color: { rgb: 'D3D3D3' } },
-            bottom: { style: 'thin', color: { rgb: 'D3D3D3' } },
-            left: { style: 'thin', color: { rgb: 'D3D3D3' } },
-            right: { style: 'thin', color: { rgb: 'D3D3D3' } }
-          }
-        };
-      }
-    }
-
-    XLSX.utils.book_append_sheet(wb, ws, 'סידור שבועי');
-
+    // יצירת קובץ להורדה
+    const blob = new Blob([html], { type: 'text/html;charset=utf-8' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
     const today = new Date();
-    const fileName = `סידור_${today.getDate()}-${today.getMonth()+1}-${today.getFullYear()}.xlsx`;
-    XLSX.writeFile(wb, fileName);
+    a.download = `סידור_${today.getDate()}-${today.getMonth()+1}-${today.getFullYear()}.html`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+
     showMessage('הקובץ יוצא בהצלחה! ✅', 'success');
   }
 
