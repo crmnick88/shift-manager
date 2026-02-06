@@ -11,8 +11,7 @@ firebase.initializeApp({
   appId: "1:1091605398341:web:cb6c14e7d832c3e8df342c",
 });
 
-// חשוב: חייבים לאתחל Messaging, גם אם לא מטפלים ידנית בהתראות
 firebase.messaging();
 
-// ✅ Option A: לא מציגים showNotification כאן.
-// ה-FCM יציג את ההתראה בעצמו לפי webpush.notification ששלחנו מהשרת.
+// Option A: לא מציגים פה showNotification.
+// ה-FCM יציג את ההתראה אוטומטית לפי webpush.notification שנשלח מהשרת.
