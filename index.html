@@ -104,7 +104,10 @@
     .shift-friday{ background:#d4edda; }
     .shift-saturday{ background:#e7d4f5; }
 
-    .approval-buttons{ display:inline-flex; gap:10px; margin-right:10px; flex-wrap:wrap; }
+    
+
+    .shift-double{ background:#f8cbad; font-weight:bold; }
+.approval-buttons{ display:inline-flex; gap:10px; margin-right:10px; flex-wrap:wrap; }
     .approve-btn, .reject-btn, .reset-btn{
       padding:8px 14px; border:none; border-radius:6px; cursor:pointer; font-weight:bold;
     }
@@ -1070,7 +1073,11 @@
           if (day.middle === emp) shifts.push(isKavLavan ? '<span class="shift-middle">אמצע</span>' : '<span class="shift-middle">אמצע<br>11:00-19:00</span>');
           if (day.evening === emp) shifts.push(isKavLavan ? '<span class="shift-evening">ערב</span>' : '<span class="shift-evening">ערב<br>15:00-21:30</span>');
 
-          html += shifts.length ? `<td>${shifts.join('<br>')}</td>` : `<td style="background:#f0f0f0;">-</td>`;
+          if (shifts.length >= 2) {
+            html += `<td><span class="shift-double">כפולה</span></td>`;
+          } else {
+            html += shifts.length ? `<td>${shifts.join('<br>')}</td>` : `<td style="background:#f0f0f0;">-</td>`;
+          }
         });
 
         html += `</tr>`;
@@ -1146,7 +1153,9 @@
     .evening { background: #d1ecf1; font-weight: bold; }
     .friday  { background: #d4edda; font-weight: bold; }
     .saturday{ background: #e7d4f5; font-weight: bold; }
-    .empty   { background: #f0f0f0; color: #999; }
+    
+    .double  { background: #f8cbad; font-weight: bold; }
+.empty   { background: #f0f0f0; color: #999; }
     .dept-row td { background: #667eea; color: white; font-weight: bold; font-size: 16px; }
   </style>
 </head>
@@ -1225,14 +1234,18 @@
               if (day.middle === emp) shifts.push({ text: isKavLavan ? 'אמצע' : 'אמצע<br>11:00-19:00', class: 'middle' });
               if (day.evening === emp) shifts.push({ text: isKavLavan ? 'ערב' : 'ערב<br>15:00-21:30', class: 'evening' });
 
-              if (shifts.length > 0) {
-                cellText = shifts.map(s => `<span class="${s.class}">${s.text}</span>`).join('<br>');
+              
+              if (shifts.length >= 2) {
+                cellText = 'כפולה';
+                cellClass = 'double';
+              } else if (shifts.length === 1) {
+                cellText = `<span class="${shifts[0].class}">${shifts[0].text}</span>`;
                 cellClass = '';
               } else {
                 cellText = '-';
                 cellClass = 'empty';
               }
-            }
+}
           }
 
           html += `<td class="${cellClass}">${cellText}</td>`;
@@ -1346,7 +1359,8 @@
               if (day.morning === emp) shifts.push(isKavLavan ? 'בוקר' : 'בוקר 9:00-16:00');
               if (day.middle === emp) shifts.push(isKavLavan ? 'אמצע' : 'אמצע 11:00-19:00');
               if (day.evening === emp) shifts.push(isKavLavan ? 'ערב' : 'ערב 15:00-21:30');
-              cellText = shifts.length > 0 ? shifts.join(', ') : '-';
+              if (shifts.length >= 2) cellText = 'כפולה';
+              else cellText = shifts.length > 0 ? shifts.join(', ') : '-';
             }
           }
 
@@ -1428,7 +1442,12 @@
         // Shift cells - color based on content
         else {
           const cellValue = ws[cellAddress].v || '';
-          if (cellValue.includes('בוקר')) {
+          
+          if (cellValue === 'כפולה') {
+            ws[cellAddress].s.fill = { fgColor: { rgb: 'F8CBAD' } }; // mild red
+            ws[cellAddress].s.font = { bold: true };
+          } else if (cellValue.includes('בוקר')) {
+
             ws[cellAddress].s.fill = { fgColor: { rgb: 'FFF3CD' } };
           } else if (cellValue.includes('אמצע')) {
             ws[cellAddress].s.fill = { fgColor: { rgb: 'FFD4A3' } };
