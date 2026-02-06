@@ -1374,6 +1374,11 @@
     // Create worksheet
     const ws = XLSX.utils.aoa_to_sheet(data);
 
+// RTL sheet (עברית)
+ws['!rtl'] = true;
+
+    
+
     // Set column widths (10 for all columns)
     const colCount = headerRow.length;
     ws['!cols'] = [];
