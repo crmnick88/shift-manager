@@ -1378,6 +1378,7 @@ th, td{
 
     // Create worksheet
     const ws = XLSX.utils.aoa_to_sheet(data);
+    ws['!merges'] = [];
 
 // RTL sheet (עברית)
 ws['!rtl'] = true;
@@ -1430,15 +1431,23 @@ ws['!rtl'] = true;
           };
         }
         // Department divider rows
-        else if (data[R][0] && data[R][0].startsWith('🏢')) {
-          ws[cellAddress].s.fill = {
-            fgColor: { rgb: '667EEA' }
-          };
-          ws[cellAddress].s.font = {
-            color: { rgb: 'FFFFFF' },
-            bold: true
-          };
-        }
+       else if (data[R][0] && data[R][0].startsWith('🏢')) {
+
+  // ⭐ איחוד כל התאים בשורה (כמו colspan)
+  ws['!merges'].push({
+    s: { r: R, c: 0 },
+    e: { r: R, c: headerRow.length - 1 }
+  });
+
+  ws[cellAddress].s.fill = {
+    fgColor: { rgb: '667EEA' }
+  };
+  ws[cellAddress].s.font = {
+    color: { rgb: 'FFFFFF' },
+    bold: true
+  };
+}
+
         // Employee name column
         else if (C === 0) {
           ws[cellAddress].s.fill = {
