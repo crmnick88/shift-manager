@@ -1378,7 +1378,18 @@ th, td{
 
     // Create worksheet
     const ws = XLSX.utils.aoa_to_sheet(data);
-    ws['!merges'] = [];
+
+// ✅ Merge department rows once (outside styling loops)
+ws['!merges'] = [];
+for (let r = 0; r < data.length; r++) {
+  if (data[r][0] && typeof data[r][0] === 'string' && data[r][0].startsWith('🏢')) {
+    ws['!merges'].push({
+      s: { r: r, c: 0 },
+      e: { r: r, c: headerRow.length - 1 }
+    });
+  }
+}
+
 
 // RTL sheet (עברית)
 ws['!rtl'] = true;
@@ -1432,28 +1443,16 @@ ws['!rtl'] = true;
         }
       
 // Department divider rows
-else if (data[R][0] && data[R][0].startsWith('🏢')) {
-
-  // ⭐ איחוד תאים פעם אחת בלבד לכל שורה (רק כשהעמודה הראשונה)
-  if (C === 0) {
-    ws['!merges'] = ws['!merges'] || [];
-    ws['!merges'].push({
-      s: { r: R, c: 0 },
-      e: { r: R, c: headerRow.length - 1 }
-    });
-  }
-
-  ws[cellAddress].s.fill = {
-    fgColor: { rgb: '667EEA' }
-  };
-  ws[cellAddress].s.font = {
-    color: { rgb: 'FFFFFF' },
-    bold: true
-  };
-}
-
-
-        // Employee name column
+        else if (data[R][0] && data[R][0].startsWith('🏢')) {
+          ws[cellAddress].s.fill = {
+            fgColor: { rgb: '667EEA' }
+          };
+          ws[cellAddress].s.font = {
+            color: { rgb: 'FFFFFF' },
+            bold: true
+          };
+        }
+// Employee name column
         else if (C === 0) {
           ws[cellAddress].s.fill = {
             fgColor: { rgb: '667EEA' }
