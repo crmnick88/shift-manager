@@ -1,5 +1,5 @@
-importScripts('https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js');
-importScripts('https://www.gstatic.com/firebasejs/9.22.0/firebase-messaging-compat.js');
+importScripts("https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js");
+importScripts("https://www.gstatic.com/firebasejs/9.22.0/firebase-messaging-compat.js");
 
 firebase.initializeApp({
   apiKey: "AIzaSyD-uaQ2aO87kGxbcc-m8_9fzJ3uhPv2zvk",
@@ -8,14 +8,11 @@ firebase.initializeApp({
   projectId: "shift-manager-c026e",
   storageBucket: "shift-manager-c026e.firebasestorage.app",
   messagingSenderId: "1091605398341",
-  appId: "1:1091605398341:web:cb6c14e7d832c3e8df342c"
+  appId: "1:1091605398341:web:cb6c14e7d832c3e8df342c",
 });
 
-const messaging = firebase.messaging();
+// חשוב: חייבים לאתחל Messaging, גם אם לא מטפלים ידנית בהתראות
+firebase.messaging();
 
-messaging.onBackgroundMessage(function(payload) {
-  self.registration.showNotification(payload.notification.title, {
-    body: payload.notification.body,
-    icon: './icon-192.png'
-  });
-});
+// ✅ Option A: לא מציגים showNotification כאן.
+// ה-FCM יציג את ההתראה בעצמו לפי webpush.notification ששלחנו מהשרת.
