@@ -12,7 +12,8 @@
   <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-database-compat.js"></script>
 
-  <!-- SheetJS -->
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-messaging-compat.js"></script>
+<!-- SheetJS -->
   <script src="./xlsx.bundle.js"></script>
 
 
@@ -296,7 +297,57 @@
   firebase.initializeApp(firebaseConfig);
   const db = firebase.database();
 
-  let currentEmployee = '';
+  
+  // =======================
+  // 🔔 PUSH NOTIFICATIONS
+  // =======================
+  let messaging = null;
+
+  async function initPushNotifications() {
+    try {
+      if (!('Notification' in window) || !('serviceWorker' in navigator)) return;
+
+      const permission = await Notification.requestPermission();
+      if (permission !== 'granted') return;
+
+      // Register SW (needed for FCM)
+      const swReg = await navigator.serviceWorker.register('./firebase-messaging-sw.js');
+
+      // Messaging instance (requires firebase-messaging-compat.js)
+      if (!messaging) messaging = firebase.messaging();
+
+      const token = await messaging.getToken({
+        vapidKey: 'BFtoipiPyC21A3_n-3OAKa276cp6hCg8x_bH4CPdHMD3M-ogMgorokpfvEiogsKjpiS08tZRdDVcYvQfyuq1ROA',
+        serviceWorkerRegistration: swReg
+      });
+
+      if (token && currentEmployee) {
+        await db.ref('pushTokens/' + currentEmployee).set(token);
+        console.log('Push token saved:', token);
+      } else {
+        console.log('Push token:', token);
+      }
+
+      // Foreground messages (while app is open)
+      messaging.onMessage((payload) => {
+        try {
+          const n = payload && payload.notification ? payload.notification : null;
+          if (n && Notification.permission === 'granted') {
+            new Notification(n.title || 'התראה', {
+              body: n.body || '',
+              icon: './icon-192.png'
+            });
+          }
+        } catch (e) {
+          console.log('onMessage error', e);
+        }
+      });
+
+    } catch (err) {
+      console.error('Push init error:', err);
+    }
+  }
+let currentEmployee = '';
   let currentSchedule = null;
 
   const USERS = {
@@ -415,7 +466,8 @@
 
       loadEmployeeConstraints();
       showMessage('התחברת בהצלחה', 'success');
-    } else {
+          initPushNotifications();
+} else {
       showMessage('שם משתמש או סיסמה שגויים', 'error');
     }
   }
