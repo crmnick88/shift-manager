@@ -1,45 +1,1695 @@
+<!DOCTYPE html>
+<html lang="he" dir="rtl">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <link rel="manifest" href="./manifest.json">
+  <link rel="icon" href="./icon-192.png">
+  <meta name="theme-color" content="#667eea" />
+  <title>מערכת ניהול משמרות</title>
 
-Project Console: https://console.firebase.google.com/project/shift-manager-c026e/overview
+  <!-- Firebase Compat -->
+  <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-database-compat.js"></script>
 
-C:\Users\crmni\Desktop\shift-manager-functions>firebase deploy --only functions
-(node:16516) [DEP0040] DeprecationWarning: The `punycode` module is deprecated. Please use a userland alternative instead.
-(Use `node --trace-deprecation ...` to show where the warning was created)
-
-=== Deploying to 'shift-manager-c026e'...
-
-i  deploying functions
-Running command: npm --prefix "$RESOURCE_DIR" run lint
-
-> lint
-> eslint .
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-messaging-compat.js"></script>
+<!-- SheetJS -->
+  <script src="./xlsx.bundle.js"></script>
 
 
-C:\Users\crmni\Desktop\shift-manager-functions\functions\index.js
-  98:38  error  Parsing error: Unexpected token .
+  <style>
+    * { margin:0; padding:0; box-sizing:border-box; }
+    body{
+      font-family:'Segoe UI',Tahoma,Geneva,Verdana,sans-serif;
+      background:linear-gradient(135deg,#667eea 0%,#764ba2 100%);
+      min-height:100vh; padding:20px;
+    }
+    .container{
+      max-width:900px; margin:0 auto; background:white; border-radius:20px;
+      box-shadow:0 20px 60px rgba(0,0,0,0.3); padding:30px;
+    }
+    h1{ text-align:center; color:#667eea; margin-bottom:30px; font-size:2.3em; }
+    .section{ display:none; }
+    .section.active{ display:block; }
 
-✖ 1 problem (1 error, 0 warnings)
+    .btn{
+      width:100%; padding:15px; background:#667eea; color:white; border:none;
+      border-radius:10px; font-size:18px; font-weight:bold; cursor:pointer;
+      transition:all 0.3s; margin-top:10px;
+    }
+    .btn:hover{ background:#5568d3; transform:translateY(-2px); }
 
-node:events:502
-      throw er; // Unhandled 'error' event
-      ^
+    .mode-btn{
+      padding:20px 40px; margin:10px; border:2px solid #667eea; background:white;
+      color:#667eea; border-radius:10px; cursor:pointer; font-size:20px;
+      font-weight:bold; transition:all 0.3s;
+    }
+    .mode-btn:hover{ background:#667eea; color:white; }
 
-Error: spawn npm --prefix "%RESOURCE_DIR%" run lint ENOENT
-    at notFoundError (C:\Users\crmni\AppData\Roaming\npm\node_modules\firebase-tools\node_modules\cross-spawn\lib\enoent.js:6:26)
-    at verifyENOENT (C:\Users\crmni\AppData\Roaming\npm\node_modules\firebase-tools\node_modules\cross-spawn\lib\enoent.js:40:16)
-    at cp.emit (C:\Users\crmni\AppData\Roaming\npm\node_modules\firebase-tools\node_modules\cross-spawn\lib\enoent.js:27:25)
-    at ChildProcess._handle.onexit (node:internal/child_process:293:12)
-Emitted 'error' event on ChildProcess instance at:
-    at cp.emit (C:\Users\crmni\AppData\Roaming\npm\node_modules\firebase-tools\node_modules\cross-spawn\lib\enoent.js:30:37)
-    at ChildProcess._handle.onexit (node:internal/child_process:293:12) {
-  code: 'ENOENT',
-  errno: 'ENOENT',
-  syscall: 'spawn npm --prefix "%RESOURCE_DIR%" run lint',
-  path: 'npm --prefix "%RESOURCE_DIR%" run lint',
-  spawnargs: []
+    input, select{
+      width:100%; padding:12px; border:2px solid #e0e0e0; border-radius:8px;
+      font-size:16px; margin-top:8px;
+    }
+    .form-group{ margin-bottom:15px; }
+    label{ display:block; margin-bottom:5px; font-weight:bold; color:#555; }
+
+    .constraint-item{
+      background:white; padding:15px; border-radius:8px; margin-bottom:15px;
+      border:2px solid #e0e0e0;
+    }
+    .constraint-card{ background:#fff3cd; padding:15px; border-radius:8px; margin-bottom:10px; }
+
+    .message{
+      padding:15px; border-radius:8px; margin-top:20px; text-align:center;
+      font-weight:bold; white-space:pre-line;
+    }
+    .message.success{ background:#d4edda; color:#155724; }
+    .message.error{ background:#f8d7da; color:#721c24; }
+
+    .employee-constraints{
+      background:white; padding:15px; border-radius:8px; margin-bottom:15px;
+      border-right:4px solid #667eea;
+    }
+
+    .schedule-table{
+      width:100%;
+      margin-top:20px;
+      border-collapse:collapse;
+      background:white;
+      border-radius:8px;
+      overflow:hidden;
+    }
+    .schedule-table th{
+      background:#667eea;
+      color:white;
+      padding:15px 10px;
+      text-align:center;
+      font-size:14px;
+      min-width:100px;
+    }
+    .schedule-table td{
+      padding:15px 10px;
+      text-align:center;
+      border:1px solid #e0e0e0;
+      vertical-align:middle;
+      min-width:100px;
+    }
+
+    .shift-morning, .shift-middle, .shift-evening, .shift-friday, .shift-saturday{
+      display:inline-block; padding:8px 12px; border-radius:6px;
+      font-size:13px; font-weight:bold; line-height:1.6;
+    }
+    .shift-morning{ background:#fff3cd; }
+    .shift-middle{ background:#ffd4a3; }
+    .shift-evening{ background:#d1ecf1; }
+    .shift-friday{ background:#d4edda; }
+    .shift-saturday{ background:#e7d4f5; }
+
+    
+
+    .shift-double{ background:#f8cbad; font-weight:bold; }
+.approval-buttons{ display:inline-flex; gap:10px; margin-right:10px; flex-wrap:wrap; }
+    .approve-btn, .reject-btn, .reset-btn{
+      padding:8px 14px; border:none; border-radius:6px; cursor:pointer; font-weight:bold;
+    }
+    .approve-btn{ background:#28a745; color:white; }
+    .reject-btn{ background:#dc3545; color:white; }
+    .reset-btn{ background:#6c757d; color:white; }
+
+    .status-pending, .status-approved, .status-rejected{
+      padding:5px 12px; border-radius:20px; font-size:14px; display:inline-block; margin-right:8px;
+    }
+    .status-pending{ background:#fff3cd; color:#856404; }
+    .status-approved{ background:#d4edda; color:#155724; }
+    .status-rejected{ background:#f8d7da; color:#721c24; }
+
+    .toolbar{
+      display:flex; gap:10px; flex-wrap:wrap; margin: 10px 0 20px 0;
+    }
+    .toolbar .btn{ width:auto; padding:10px 14px; font-size:14px; margin-top:0; }
+
+    .dept-divider td{
+      background:#667eea !important;
+      color:#fff !important;
+      font-weight:900;
+      text-align:center !important;
+      font-size:16px;
+      padding:12px !important;
+      border:0 !important;
+      letter-spacing:.3px;
+    }
+
+    .emp-header-row{
+      display:flex;
+      align-items:center;
+      justify-content:space-between;
+      gap:10px;
+      margin-bottom:8px;
+    }
+    .emp-header-row h4{
+      margin:0;
+    }
+    .emp-header-row .reset-btn{
+      white-space:nowrap;
+    }
+  </style>
+</head>
+
+<body>
+<div class="container">
+
+  <!-- Login Screen -->
+  <div id="login-screen" class="section active">
+    <h1>🗓️ מערכת ניהול משמרות</h1>
+    <div style="text-align:center; margin-top:40px;">
+      <button class="mode-btn" onclick="showLoginForm('employee')">👤 כניסת עובד</button>
+      <button class="mode-btn" onclick="showLoginForm('manager')">👔 כניסת מנהל</button>
+    </div>
+  </div>
+
+  <!-- Employee Login -->
+  <div id="employee-login" class="section">
+    <h1>🗓️ כניסת עובד</h1>
+    <div style="max-width:400px; margin:40px auto;">
+      <div class="form-group">
+        <label>שם משתמש:</label>
+        <input type="text" id="emp-username" placeholder="הזן שם משתמש">
+      </div>
+      <div class="form-group">
+        <label>סיסמה:</label>
+        <input type="password" id="emp-password" placeholder="הזן סיסמה">
+      </div>
+      <button class="btn" onclick="loginEmployee()">התחבר</button>
+      <button class="btn" onclick="backToLogin()" style="background:#6c757d;">חזור</button>
+    </div>
+  </div>
+
+  <!-- Manager Login -->
+  <div id="manager-login" class="section">
+    <h1>🗓️ כניסת מנהל</h1>
+    <div style="max-width:400px; margin:40px auto;">
+      <div class="form-group">
+        <label>שם משתמש:</label>
+        <input type="text" id="mgr-username" placeholder="הזן שם משתמש">
+      </div>
+      <div class="form-group">
+        <label>סיסמה:</label>
+        <input type="password" id="mgr-password" placeholder="הזן סיסמה">
+      </div>
+      <button class="btn" onclick="loginManager()">התחבר</button>
+      <button class="btn" onclick="backToLogin()" style="background:#6c757d;">חזור</button>
+    </div>
+  </div>
+
+  <!-- Employee Section -->
+  <div id="employee-section" class="section">
+    <div style="display:flex; justify-content:space-between; margin-bottom:20px;">
+      <h1>🗓️ משמרות</h1>
+      <button class="btn" onclick="logout()" style="width:auto; padding:10px 20px; background:#dc3545;">התנתק</button>
+    </div>
+    <h2 id="employee-welcome" style="color:#667eea; text-align:center; margin-bottom:30px;"></h2>
+
+    <div style="background:#f8f9fa; padding:20px; border-radius:12px;">
+      <h3>הגדרת אילוצים (עד 2)</h3>
+      <p style="color:#e74c3c; margin:10px 0;">⚠️ לא ניתן לבחור שישי או מוצ"ש</p>
+
+      <div class="constraint-item">
+        <h4>אילוץ 1</h4>
+        <div class="form-group">
+          <label>תאריך:</label>
+          <input type="date" id="c1-date">
+        </div>
+        <div class="form-group">
+          <label>סוג:</label>
+          <select id="c1-type">
+            <option value="">-- בחר --</option>
+            <option value="no-morning">לא בוקר</option>
+            <option value="no-evening">לא ערב</option>
+            <option value="day-off">חופש מלא</option>
+          </select>
+        </div>
+      </div>
+
+      <div class="constraint-item">
+        <h4>אילוץ 2</h4>
+        <div class="form-group">
+          <label>תאריך:</label>
+          <input type="date" id="c2-date">
+        </div>
+        <div class="form-group">
+          <label>סוג:</label>
+          <select id="c2-type">
+            <option value="">-- בחר --</option>
+            <option value="no-morning">לא בוקר</option>
+            <option value="no-evening">לא ערב</option>
+            <option value="day-off">חופש מלא</option>
+          </select>
+        </div>
+      </div>
+
+      <button class="btn" onclick="saveConstraints()">שמור אילוצים</button>
+    </div>
+
+    <div id="my-constraints" style="margin-top:20px;"></div>
+  </div>
+
+  <!-- Manager Section -->
+  <div id="manager-section" class="section">
+    <div style="display:flex; justify-content:space-between; margin-bottom:10px;">
+      <h1>🗓️ פאנל מנהל</h1>
+      <button class="btn" onclick="logout()" style="width:auto; padding:10px 20px; background:#dc3545;">התנתק</button>
+    </div>
+
+    <div class="toolbar">
+      <button class="btn" onclick="refreshAll()" style="background:#343a40;">🔁 רענן הכל</button>
+      <button class="btn" onclick="loadAllConstraints()" style="background:#17a2b8;">🔄 רענן אילוצים</button>
+      <button class="btn" onclick="generateSchedule()" style="background:#667eea;">🔄 רענן סידור</button>
+      <button class="btn" onclick="sendConstraintsReminderRequest()" style="background:#ff6f61;">🔔 שלח תזכורת להזנת אילוצים</button>
+      <button class="btn" onclick="resetAllConstraints()" style="background:#6c757d;">🧹 איפוס אילוצים לכל העובדים</button>
+    </div>
+
+    <div id="all-constraints"></div>
+
+    <button class="btn" onclick="generateSchedule()">צור סידור אוטומטי</button>
+
+    <div id="export-section" style="display:none; margin-top:10px;">
+      <button class="btn" onclick="exportToExcel()" style="background:#28a745;">📊 ייצא ל-Excel</button>
+      <button class="btn" onclick="exportToHTML()" style="background:#17a2b8;">📄 ייצא ל-HTML מעוצב</button>
+    </div>
+
+    <div id="schedule-result"></div>
+  </div>
+
+  <div id="message"></div>
+</div>
+
+<script>
+  // Firebase Config
+  const firebaseConfig = {
+    apiKey: "AIzaSyD-uaQ2aO87kGxbcc-m8_9fzJ3uhPv2zvk",
+    authDomain: "shift-manager-c026e.firebaseapp.com",
+    databaseURL: "https://shift-manager-c026e-default-rtdb.europe-west1.firebasedatabase.app",
+    projectId: "shift-manager-c026e",
+    storageBucket: "shift-manager-c026e.firebasestorage.app",
+    messagingSenderId: "1091605398341",
+    appId: "1:1091605398341:web:cb6c14e7d832c3e8df342c"
+  };
+
+  firebase.initializeApp(firebaseConfig);
+  const db = firebase.database();
+
+  
+  // =======================
+  // 🔔 PUSH NOTIFICATIONS
+  // =======================
+  let messaging = null;
+
+  // ✅ Save token without overriding (supports multiple devices per user)
+  async function savePushTokenForKey(userKey, token) {
+    if (!userKey || !token) return;
+
+    const userRef = db.ref(`pushTokens/${userKey}`);
+    const snap = await userRef.once("value");
+    const data = snap.val();
+
+    // If old format exists: pushTokens/{userKey} = "tokenString"
+    if (typeof data === "string") {
+      if (data === token) return; // already same
+      // Convert old format to new format (keep old token as a record)
+      await userRef.set(null);
+      await userRef.push({
+        token: data,
+        updatedAt: Date.now(),
+        ua: navigator.userAgent
+      });
+    }
+
+    // Dedupe: if token already saved, just update timestamp
+    const snap2 = await userRef.once("value");
+    const data2 = snap2.val();
+    if (data2 && typeof data2 === "object") {
+      for (const [k, v] of Object.entries(data2)) {
+        if (v && typeof v === "object" && v.token === token) {
+          await userRef.child(k).update({
+            updatedAt: Date.now(),
+            ua: navigator.userAgent
+          });
+          return;
+        }
+      }
+    }
+
+    // Add as a new device token
+    await userRef.push({
+      token,
+      updatedAt: Date.now(),
+      ua: navigator.userAgent
+    });
+  }
+
+
+  async function initPushNotifications() {
+    try {
+      if (!('Notification' in window) || !('serviceWorker' in navigator)) return;
+
+      const permission = await Notification.requestPermission();
+      if (permission !== 'granted') return;
+
+      // Register SW (needed for FCM)
+      const swReg = await navigator.serviceWorker.register('./firebase-messaging-sw.js');
+
+      // Messaging instance (requires firebase-messaging-compat.js)
+      if (!messaging) messaging = firebase.messaging();
+
+      const token = await messaging.getToken({
+        vapidKey: 'BFtoipiPyC21A3_n-3OAKa276cp6hCg8x_bH4CPdHMD3M-ogMgorokpfvEiogsKjpiS08tZRdDVcYvQfyuq1ROA',
+        serviceWorkerRegistration: swReg
+      });
+
+      if (token) {
+        // ✅ Save for employee OR manager (manager key = 'MANAGER')
+        const key = currentEmployee || 'MANAGER';
+        await savePushTokenForKey(key, token);
+        console.log('Push token saved for', key, token);
+      } else {
+        console.log('Push token:', token);
+      }
+
+      // Foreground messages (while app is open)
+      messaging.onMessage((payload) => {
+        try {
+          const n = payload && payload.notification ? payload.notification : null;
+          if (n && Notification.permission === 'granted') {
+            new Notification(n.title || 'התראה', {
+              body: n.body || '',
+              icon: './icon-192.png'
+            });
+          }
+        } catch (e) {
+          console.log('onMessage error', e);
+        }
+      });
+
+    } catch (err) {
+      console.error('Push init error:', err);
+    }
+  }
+
+  // =======================
+  // 🔔 MANAGER REMINDER REQUEST (writes to DB)
+  // =======================
+  async function sendConstraintsReminderRequest() {
+    try {
+      const payload = {
+        type: "constraints_reminder",
+        title: "תזכורת להזנת אילוצים",
+        body: "נא להזין אילוצים לשבוע הקרוב במערכת.",
+        createdAt: Date.now()
+      };
+
+      await db.ref("adminPushRequests").push(payload);
+      showMessage("✅ נשלחה בקשת תזכורת (נשמרה ב-Firebase)", "success");
+    } catch (e) {
+      console.error("sendConstraintsReminderRequest error:", e);
+      showMessage("❌ שגיאה בשליחת בקשת תזכורת", "error");
+    }
+  }
+
+let currentEmployee = '';
+  let currentSchedule = null;
+
+  const USERS = {
+    'ILAY': 'ILAY',
+    'ROVEN': 'ROVEN',
+    'HAI': 'HAI',
+    'NATALI': 'NATALI',
+    'INNA': 'INNA',
+    'TAMIR': 'TAMIR',
+    'ELIYA': 'ELIYA',
+    'LIOR': 'LIOR',
+    'AMANI': 'AMANI',
+    'SHIROT': 'SHIROT',
+    'AVI': 'AVI',
+    'MOHAMAD': 'MOHAMAD'
+  };
+
+  const DEPARTMENTS = {
+    'מחלקת מיחשוב': ['ILAY', 'ROVEN'],
+    'מחלקת קטנים': ['HAI', 'NATALI'],
+    'מחלקת מחסנאים': ['AVI', 'MOHAMAD'],
+    'מחלקת קו לבן': ['INNA', 'TAMIR', 'ELIYA'],
+    'נציגות שירות': ['LIOR', 'AMANI', 'SHIROT']
+  };
+
+  // מיפוי שמות תצוגה בעברית (רק לתצוגה בטבלה!)
+  const DISPLAY_NAMES = {
+    'ILAY': 'עילאי',
+    'ROVEN': 'ראובן',
+    'HAI': 'חי',
+    'NATALI': 'נטלי',
+    'AVI': 'אבי',
+    'MOHAMAD': 'מוחמד',
+    'INNA': 'אינה',
+    'TAMIR': 'תמיר',
+    'ELIYA': 'אליה',
+    'LIOR': 'ליאור',
+    'AMANI': 'אמאני',
+    'SHIROT': 'שירות'
+  };
+
+  const MANAGER = { username: 'SAGI', password: '102' };
+
+  // ======== התאמת אפשרויות אילוץ לפי מחלקה ========
+  function getDeptOfEmp(emp) {
+    for (const [dept, list] of Object.entries(DEPARTMENTS)) {
+      if (list.includes(emp)) return dept;
+    }
+    return null;
+  }
+
+  function buildConstraintOptionsForEmp(emp) {
+    const dept = getDeptOfEmp(emp);
+    const size = dept ? (DEPARTMENTS[dept]?.length || 0) : 0;
+
+    if (size === 3) {
+      return [
+        { value: "", label: "-- בחר --" },
+        { value: "want-morning", label: "✅ רוצה בוקר" },
+        { value: "want-middle",  label: "✅ רוצה אמצע" },
+        { value: "want-evening", label: "✅ רוצה ערב" },
+        { value: "day-off",      label: "🏖️ חופש מלא" }
+      ];
+    }
+
+    return [
+      { value: "", label: "-- בחר --" },
+      { value: "no-morning", label: "❌ לא בוקר" },
+      { value: "no-evening", label: "❌ לא ערב" },
+      { value: "day-off",    label: "🏖️ חופש מלא" }
+    ];
+  }
+
+  function applyConstraintOptions(emp) {
+    const options = buildConstraintOptionsForEmp(emp);
+
+    ["c1-type", "c2-type"].forEach(id => {
+      const sel = document.getElementById(id);
+      const current = sel.value;
+      sel.innerHTML = options.map(o => `<option value="${o.value}">${o.label}</option>`).join("");
+      if (options.some(o => o.value === current)) sel.value = current;
+    });
+  }
+
+  function showLoginForm(type) {
+    hideAll();
+    document.getElementById(type + '-login').classList.add('active');
+  }
+
+  function backToLogin() {
+    hideAll();
+    document.getElementById('login-screen').classList.add('active');
+    clearInputs();
+  }
+
+  function logout() {
+    currentEmployee = '';
+    backToLogin();
+    showMessage('התנתקת בהצלחה', 'success');
+  }
+
+  function loginEmployee() {
+    const username = document.getElementById('emp-username').value.trim().toUpperCase();
+    const password = document.getElementById('emp-password').value.trim();
+
+    if (!username || !password) return showMessage('אנא הזן שם משתמש וסיסמה', 'error');
+
+    if (USERS[username] && USERS[username] === password) {
+      currentEmployee = username;
+
+      hideAll();
+      document.getElementById('employee-section').classList.add('active');
+      document.getElementById('employee-welcome').textContent = `שלום ${username}! 👋`;
+
+      applyConstraintOptions(currentEmployee);
+
+      loadEmployeeConstraints();
+      showMessage('התחברת בהצלחה', 'success');
+          initPushNotifications();
+} else {
+      showMessage('שם משתמש או סיסמה שגויים', 'error');
+    }
+  }
+
+  function loginManager() {
+    const username = document.getElementById('mgr-username').value.trim().toUpperCase();
+    const password = document.getElementById('mgr-password').value.trim();
+
+    if (!username || !password) return showMessage('אנא הזן שם משתמש וסיסמה', 'error');
+
+    if (username === MANAGER.username && password === MANAGER.password) {
+      // ✅ Save push token for manager too (so manager devices receive reminders)
+      currentEmployee = 'MANAGER';
+
+      hideAll();
+      document.getElementById('manager-section').classList.add('active');
+      loadAllConstraints();
+      showMessage('התחברת בהצלחה', 'success');
+      initPushNotifications();
+    } else {
+      showMessage('שם משתמש או סיסמה שגויים', 'error');
+    }
+  }
+
+  async function loadEmployeeConstraints() {
+    if (currentEmployee) applyConstraintOptions(currentEmployee);
+
+    const snapshot = await db.ref('constraints/' + currentEmployee).once('value');
+    const data = snapshot.val() || {};
+
+    document.getElementById('c1-date').value = data.c1?.date || '';
+    document.getElementById('c1-type').value = data.c1?.type || '';
+
+    document.getElementById('c2-date').value = data.c2?.date || '';
+    document.getElementById('c2-type').value = data.c2?.type || '';
+
+    displayMyConstraints(data);
+  }
+
+  async function saveConstraints() {
+    if (!currentEmployee) return;
+
+    const c1Date = document.getElementById('c1-date').value;
+    const c1Type = document.getElementById('c1-type').value;
+    const c2Date = document.getElementById('c2-date').value;
+    const c2Type = document.getElementById('c2-type').value;
+
+    if (c1Date && !isValidWeekday(c1Date)) return showMessage('❌ לא ניתן לבחור שישי או שבת', 'error');
+    if (c2Date && !isValidWeekday(c2Date)) return showMessage('❌ לא ניתן לבחור שישי או שבת', 'error');
+
+    const constraints = {};
+    if (c1Date && c1Type) constraints.c1 = { date: c1Date, type: c1Type, status: c1Type === 'day-off' ? 'pending' : 'approved' };
+    if (c2Date && c2Type) constraints.c2 = { date: c2Date, type: c2Type, status: c2Type === 'day-off' ? 'pending' : 'approved' };
+
+    await db.ref('constraints/' + currentEmployee).set(constraints);
+
+    const hasDayOff = c1Type === 'day-off' || c2Type === 'day-off';
+    showMessage(hasDayOff ? 'נשמר! בקשות חופש ממתינות לאישור' : 'נשמר בהצלחה!', 'success');
+    displayMyConstraints(constraints);
+  }
+
+  function displayMyConstraints(data) {
+    const today = new Date(); today.setHours(0,0,0,0);
+    let html = '<h3 style="color:#667eea;">האילוצים שלי:</h3>';
+    let hasValid = false;
+
+    if (data.c1 && new Date(data.c1.date + 'T00:00:00') >= today) {
+      html += `<div class="constraint-card"><strong>אילוץ 1:</strong> ${formatDate(data.c1.date)} - ${formatType(data.c1.type)} ${getStatusBadge(data.c1)}</div>`;
+      hasValid = true;
+    }
+    if (data.c2 && new Date(data.c2.date + 'T00:00:00') >= today) {
+      html += `<div class="constraint-card"><strong>אילוץ 2:</strong> ${formatDate(data.c2.date)} - ${formatType(data.c2.type)} ${getStatusBadge(data.c2)}</div>`;
+      hasValid = true;
+    }
+    if (!hasValid) html += '<p style="color:#28a745;">אין אילוצים עתידיים</p>';
+    document.getElementById('my-constraints').innerHTML = html;
+  }
+
+  async function loadAllConstraints() {
+    const snapshot = await db.ref('constraints').once('value');
+    const allData = snapshot.val() || {};
+    const today = new Date(); today.setHours(0,0,0,0);
+
+    let html = '<h2>אילוצי העובדים</h2>';
+
+    for (const [dept, employees] of Object.entries(DEPARTMENTS)) {
+      html += `<div style="background:#f0f0f0; padding:15px; border-radius:10px; margin-bottom:20px;">
+        <h3 style="color:#667eea;">🏢 ${dept}</h3>`;
+
+      employees.forEach(emp => {
+        const data = allData[emp];
+
+        html += `<div class="employee-constraints">`;
+
+        html += `
+          <div class="emp-header-row">
+            <h4>${emp}</h4>
+            <button class="reset-btn" onclick="resetEmployeeConstraints('${emp}')">🧹 איפוס אילוצים לעובד</button>
+          </div>
+        `;
+
+        let hasValid = false;
+
+        if (data?.c1 && new Date(data.c1.date + 'T00:00:00') >= today) { html += formatConstraintForManager(emp,'c1',data.c1); hasValid = true; }
+        if (data?.c2 && new Date(data.c2.date + 'T00:00:00') >= today) { html += formatConstraintForManager(emp,'c2',data.c2); hasValid = true; }
+
+        if (!hasValid) html += '<p style="color:#28a745;">✅ אין אילוצים</p>';
+
+        html += '</div>';
+      });
+
+      html += '</div>';
+    }
+
+    document.getElementById('all-constraints').innerHTML = html;
+  }
+
+  function formatConstraintForManager(emp, key, c) {
+    let html = `<div style="margin:10px 0; padding:10px; background:#f8f9fa; border-radius:6px;">
+      📌 ${formatDate(c.date)} - ${formatType(c.type)}`;
+
+    if (c.type === 'day-off') {
+      const status = c.status || 'pending';
+      if (status === 'pending') {
+        html += `<div class="approval-buttons">
+          <button class="approve-btn" onclick="updateApproval('${emp}','${key}','approved')">✅ אשר</button>
+          <button class="reject-btn" onclick="updateApproval('${emp}','${key}','rejected')">❌ דחה</button>
+        </div>
+        <span class="status-pending">⏳ ממתין</span>`;
+      } else if (status === 'approved') {
+        html += `<span class="status-approved">✅ מאושר</span>`;
+      } else {
+        html += `<span class="status-rejected">❌ נדחה</span>`;
+      }
+    } else {
+      html += `<span class="status-approved">✅ פעיל</span>`;
+    }
+
+    html += `
+      <div class="approval-buttons" style="margin-top:8px;">
+        <button class="reset-btn" onclick="deleteSingleConstraint('${emp}','${key}')">🗑️ מחק אילוץ זה</button>
+      </div>
+    `;
+
+    return html + `</div>`;
+  }
+
+  async function updateApproval(emp, key, status) {
+    if (status === 'rejected') {
+      await db.ref(`constraints/${emp}/${key}`).set(null);
+      showMessage('בקשת החופש נדחתה ונמחקה', 'success');
+    } else {
+      await db.ref(`constraints/${emp}/${key}`).update({
+        status: "approved",
+        approvedAt: firebase.database.ServerValue.TIMESTAMP,
+        approvedBy: MANAGER.username
+      });
+      showMessage('בקשת החופש אושרה!', 'success');
+    }
+    await loadAllConstraints();
+  }
+
+  async function deleteSingleConstraint(emp, key){
+    const ok = confirm(`למחוק את ${key} עבור ${emp}?`);
+    if(!ok) return;
+    await db.ref(`constraints/${emp}/${key}`).set(null);
+    showMessage(`נמחק ${key} עבור ${emp}`, 'success');
+    await loadAllConstraints();
+
+    currentSchedule = null;
+    document.getElementById('schedule-result').innerHTML = '';
+    document.getElementById('export-section').style.display = 'none';
+  }
+
+  async function resetEmployeeConstraints(emp){
+    const ok = confirm(`לאפס את כל האילוצים של ${emp}? (ימחק c1+c2)`);
+    if(!ok) return;
+
+    await db.ref(`constraints/${emp}`).set(null);
+    showMessage(`אופסו האילוצים של ${emp}`, 'success');
+
+    await loadAllConstraints();
+
+    currentSchedule = null;
+    document.getElementById('schedule-result').innerHTML = '';
+    document.getElementById('export-section').style.display = 'none';
+  }
+
+  async function resetAllConstraints() {
+    const ok = confirm(`לאפס אילוצים לכל העובדים? פעולה זו מוחקת את כל האילוצים.`);
+    if (!ok) return;
+
+    await db.ref(`constraints`).set(null);
+    showMessage(`כל האילוצים אופסו`, 'success');
+
+    currentSchedule = null;
+    document.getElementById('schedule-result').innerHTML = '';
+    document.getElementById('export-section').style.display = 'none';
+
+    await loadAllConstraints();
+  }
+
+  async function refreshAll(){
+    await loadAllConstraints();
+    await generateSchedule();
+  }
+
+  async function generateSchedule() {
+    try {
+      const snapshot = await db.ref('constraints').once('value');
+      const constraints = snapshot.val() || {};
+
+      const conflicts = checkConflicts(constraints);
+      const schedule = await createSchedule(constraints);
+
+      if (conflicts.length > 0) {
+        let msg = '⚠️ קונפליקטים:\n\n';
+        conflicts.forEach(c => { msg += `🏢 ${c.dept}\n📅 ${formatDate(c.date)}: ${c.emps.join(' ו-')} - ${c.desc}\n\n`; });
+        showMessage(msg, 'error');
+        document.getElementById('schedule-result').innerHTML = `<div class="message error">${msg}</div>`;
+        document.getElementById('export-section').style.display = 'none';
+        return;
+      }
+
+      currentSchedule = schedule;
+      displaySchedule(schedule);
+      document.getElementById('export-section').style.display = 'block';
+      showMessage('הסידור נוצר בהצלחה!', 'success');
+
+    } catch (error) {
+      console.error(error);
+      showMessage(error.message || 'שגיאה ביצירת הסידור', 'error');
+      document.getElementById('schedule-result').innerHTML =
+        `<div class="message error">${error.message || 'שגיאה ביצירת הסידור'}</div>`;
+      document.getElementById('export-section').style.display = 'none';
+    }
+  }
+
+  function checkConflicts(constraints) {
+    const conflicts = [];
+    const today = new Date(); today.setHours(0,0,0,0);
+
+    const isApprovedForScheduling = (c) => {
+      if (!c) return false;
+      if (new Date(c.date + 'T00:00:00') < today) return false;
+
+      if (c.type === 'day-off') {
+        return c.status === 'approved' && !!c.approvedAt;
+      }
+      return !c.status || c.status === 'approved';
+    };
+
+    for (const [dept, emps] of Object.entries(DEPARTMENTS)) {
+      const allDates = [];
+
+      emps.forEach(emp => {
+        const data = constraints[emp];
+        if (!data) return;
+
+        const addIfApproved = (c) => {
+          if (!isApprovedForScheduling(c)) return;
+          allDates.push({ emp, ...c });
+        };
+
+        addIfApproved(data.c1);
+        addIfApproved(data.c2);
+      });
+
+      const byDate = {};
+      allDates.forEach(c => { (byDate[c.date] ||= []).push(c); });
+
+      Object.entries(byDate).forEach(([date, dateConstraints]) => {
+        const dayOffCount = dateConstraints.filter(c => c.type === 'day-off').length;
+
+        const noMorningCount = dateConstraints.filter(c => c.type === 'no-morning' || c.type === 'day-off').length;
+        const noEveningCount = dateConstraints.filter(c => c.type === 'no-evening' || c.type === 'day-off').length;
+
+        if (emps.length === 3) {
+          if (dayOffCount >= 2) {
+            conflicts.push({
+              dept, date,
+              emps: dateConstraints.filter(c => c.type === 'day-off').map(c => c.emp),
+              desc: 'יותר מעובד אחד ביקש חופש'
+            });
+          }
+
+          const wantMorning = dateConstraints.filter(c => c.type === 'want-morning').map(c => c.emp);
+          const wantMiddle  = dateConstraints.filter(c => c.type === 'want-middle').map(c => c.emp);
+          const wantEvening = dateConstraints.filter(c => c.type === 'want-evening').map(c => c.emp);
+
+          if (wantMorning.length > 1) conflicts.push({ dept, date, emps: wantMorning, desc: 'יותר מעובד אחד בחר משמרת בוקר' });
+          if (wantMiddle.length  > 1) conflicts.push({ dept, date, emps: wantMiddle,  desc: 'יותר מעובד אחד בחר משמרת אמצע' });
+          if (wantEvening.length > 1) conflicts.push({ dept, date, emps: wantEvening, desc: 'יותר מעובד אחד בחר משמרת ערב' });
+
+        } else {
+          if (dayOffCount === 2) conflicts.push({ dept, date, emps: dateConstraints.map(c => c.emp), desc: 'שניהם ביקשו חופש' });
+          else if (noMorningCount === 2) conflicts.push({ dept, date, emps: dateConstraints.map(c => c.emp), desc: 'שניהם לא יכולים בוקר' });
+          else if (noEveningCount === 2) conflicts.push({ dept, date, emps: dateConstraints.map(c => c.emp), desc: 'שניהם לא יכולים ערב' });
+        }
+      });
+    }
+
+    return conflicts;
+  }
+
+  async function createSchedule(constraints) {
+    const today = new Date(); today.setHours(0,0,0,0);
+    const nextSunday = new Date(today);
+    const dow = today.getDay();
+    nextSunday.setDate(today.getDate() + (dow === 0 ? 0 : 7 - dow));
+
+    const allSchedules = {};
+
+    // קריאת היסטוריית מוצ"ש מ-Firebase
+    const historySnapshot = await db.ref('saturdayHistory').once('value');
+    const saturdayHistory = historySnapshot.val() || {};
+
+    const isApprovedForScheduling = (c) => {
+      if (!c) return false;
+      if (new Date(c.date + 'T00:00:00') < today) return false;
+
+      if (c.type === 'day-off') {
+        return c.status === 'approved' && !!c.approvedAt;
+      }
+      return !c.status || c.status === 'approved';
+    };
+
+    const getApprovedConstraintOnDate = (emp, dateStr) => {
+      const data = constraints[emp];
+      if (!data) return null;
+      const c1 = data.c1 && isApprovedForScheduling(data.c1) && data.c1.date === dateStr ? data.c1 : null;
+      const c2 = data.c2 && isApprovedForScheduling(data.c2) && data.c2.date === dateStr ? data.c2 : null;
+      return c1 || c2;
+    };
+
+    const isDayOffApproved = (emp, dateStr) => {
+      const c = getApprovedConstraintOnDate(emp, dateStr);
+      return c && c.type === 'day-off';
+    };
+
+    const getWantedShift = (emp, dateStr) => {
+      const c = getApprovedConstraintOnDate(emp, dateStr);
+      if (!c) return null;
+      if (c.type === 'want-morning') return 'morning';
+      if (c.type === 'want-middle')  return 'middle';
+      if (c.type === 'want-evening') return 'evening';
+      return null;
+    };
+
+    const cannotMorning = (emp, dateStr) => {
+      const c = getApprovedConstraintOnDate(emp, dateStr);
+      return !!c && (c.type === 'no-morning' || c.type === 'day-off');
+    };
+    const cannotEvening = (emp, dateStr) => {
+      const c = getApprovedConstraintOnDate(emp, dateStr);
+      return !!c && (c.type === 'no-evening' || c.type === 'day-off');
+    };
+
+    for (const [dept, emps] of Object.entries(DEPARTMENTS)) {
+      const schedule = [];
+      const days = ['ראשון','שני','שלישי','רביעי','חמישי','שישי','שבת'];
+      const isThreeEmp = emps.length === 3;
+
+      // ✅ NEW: מונה משמרות לכל עובד למען הוגנות
+      const shiftCounts = {};
+      emps.forEach(emp => { shiftCounts[emp] = { morning: 0, middle: 0, evening: 0 }; });
+
+      // פונקציה לבחירת עובד עם הכי פחות משמרות מסוג מסוים
+      const pickLeastBurdenedEmp = (availableEmps, shift) => {
+        if (!availableEmps || availableEmps.length === 0) return null;
+        
+        // מיון לפי מספר משמרות מסוג זה
+        const sorted = availableEmps.slice().sort((a, b) => {
+          const countA = shiftCounts[a][shift];
+          const countB = shiftCounts[b][shift];
+          if (countA !== countB) return countA - countB;
+          // שובר שוויון - מי שיש לו פחות משמרות בכלל
+          const totalA = shiftCounts[a].morning + shiftCounts[a].middle + shiftCounts[a].evening;
+          const totalB = shiftCounts[b].morning + shiftCounts[b].middle + shiftCounts[b].evening;
+          if (totalA !== totalB) return totalA - totalB;
+          // שובר שוויון נוסף - רנדומלי!
+          return Math.random() - 0.5;
+        });
+        
+        // אם יש כמה עובדים עם אותו מספר משמרות, בחר רנדומלית ביניהם
+        const minCount = shiftCounts[sorted[0]][shift];
+        const candidates = sorted.filter(emp => shiftCounts[emp][shift] === minCount);
+        
+        if (candidates.length > 1) {
+          // בחר רנדומלית מבין המועמדים
+          return candidates[Math.floor(Math.random() * candidates.length)];
+        }
+        
+        return sorted[0];
+      };
+
+      for (let i=0;i<5;i++) {
+        const date = new Date(nextSunday);
+        date.setDate(nextSunday.getDate() + i);
+        const dateStr = toLocalDateStr(date);
+
+        if (isThreeEmp) {
+          const dayOffs = emps.filter(emp => isDayOffApproved(emp, dateStr));
+
+          if (dayOffs.length === 1) {
+            // עובד אחד בחופש - רק 2 עובדים עובדים (בוקר + ערב)
+            const working = emps.filter(emp => !dayOffs.includes(emp));
+            
+            const morningEmp = pickLeastBurdenedEmp(working, 'morning');
+            const eveningEmp = working.filter(e => e !== morningEmp)[0];
+            
+            schedule.push({ day: days[i], date: dateStr, morning: morningEmp, evening: eveningEmp, dept });
+            
+            shiftCounts[morningEmp].morning++;
+            shiftCounts[eveningEmp].evening++;
+
+          } else {
+            // יום רגיל - 3 משמרות
+            
+            // בדיקה אם יש בחירות "רוצה משמרת"
+            const wanted = { morning: null, middle: null, evening: null };
+            for (const emp of emps) {
+              const w = getWantedShift(emp, dateStr);
+              if (w) wanted[w] = emp;
+            }
+
+            const used = new Set();
+            const assign = { morning: null, middle: null, evening: null };
+
+            // קודם כל מכבדים את הבחירות
+            for (const shift of ['morning', 'middle', 'evening']) {
+              if (wanted[shift]) {
+                assign[shift] = wanted[shift];
+                used.add(wanted[shift]);
+              }
+            }
+
+            // עכשיו משלימים משמרות חסרות בצורה הוגנת
+            const availableEmps = emps.filter(e => !used.has(e));
+            
+            for (const shift of ['morning', 'middle', 'evening']) {
+              if (!assign[shift]) {
+                const emp = pickLeastBurdenedEmp(availableEmps, shift);
+                if (emp) {
+                  assign[shift] = emp;
+                  availableEmps.splice(availableEmps.indexOf(emp), 1);
+                  used.add(emp);
+                }
+              }
+            }
+
+            schedule.push({ day: days[i], date: dateStr, morning: assign.morning, middle: assign.middle, evening: assign.evening, dept });
+            
+            // עדכון מונים
+            shiftCounts[assign.morning].morning++;
+            shiftCounts[assign.middle].middle++;
+            shiftCounts[assign.evening].evening++;
+          }
+
+        } else {
+          // 2 עובדים
+          const a = emps[0], b = emps[1];
+          const aOff = isDayOffApproved(a, dateStr);
+          const bOff = isDayOffApproved(b, dateStr);
+
+          if (aOff && !bOff) schedule.push({ day: days[i], date: dateStr, morning: b, evening: b, dept });
+          else if (bOff && !aOff) schedule.push({ day: days[i], date: dateStr, morning: a, evening: a, dept });
+          else {
+            const m = (i % 2 === 0) ? a : b;
+            const e = (m === a) ? b : a;
+
+            const mCant = cannotMorning(m, dateStr);
+            const eCant = cannotEvening(e, dateStr);
+
+            let morning = mCant ? e : m;
+            let evening = eCant ? m : e;
+
+            if (morning === evening) {
+              if (mCant && !cannotEvening(m, dateStr)) {
+                evening = m;
+              } else if (eCant && !cannotMorning(e, dateStr)) {
+                morning = e;
+              }
+            }
+
+            schedule.push({ day: days[i], date: dateStr, morning, evening, dept });
+          }
+        }
+      }
+
+      // שישי ושבת - רוטציה עם שמירה ב-Firebase
+      const fri = new Date(nextSunday); fri.setDate(nextSunday.getDate() + 5);
+      const friStr = toLocalDateStr(fri);
+      const sat = new Date(nextSunday); sat.setDate(nextSunday.getDate() + 6);
+      const satStr = toLocalDateStr(sat);
+
+      if (isThreeEmp) {
+        const friOff = emps.find(emp => isDayOffApproved(emp, friStr));
+        const satOff = emps.find(emp => isDayOffApproved(emp, satStr));
+        
+        let satWorking = null;
+
+        if (satOff) {
+          // יש עובד בחופש בשבת
+          const available = emps.filter(e => e !== satOff);
+          
+          // בדיקה אם מי שעבד בפעם הקודמת זמין
+          const lastSatEmp = saturdayHistory[dept];
+          if (lastSatEmp && available.includes(lastSatEmp)) {
+            // העובד הקודם זמין - בוחר את השני
+            const nextIndex = (available.indexOf(lastSatEmp) + 1) % available.length;
+            satWorking = available[nextIndex];
+          } else {
+            // העובד הקודם לא זמין - בוחר רנדומלית
+            satWorking = available[Math.floor(Math.random() * available.length)];
+          }
+        } else {
+          // אין חופש - רוטציה רגילה
+          const lastSatEmp = saturdayHistory[dept];
+          
+          if (lastSatEmp && emps.includes(lastSatEmp)) {
+            // יש היסטוריה - בוחר את הבא בתור
+            const currentIndex = emps.indexOf(lastSatEmp);
+            const nextIndex = (currentIndex + 1) % emps.length;
+            satWorking = emps[nextIndex];
+          } else {
+            // אין היסטוריה - סידור ראשון, בוחר רנדומלית
+            satWorking = emps[Math.floor(Math.random() * emps.length)];
+          }
+        }
+
+        // שמירת מי עבד במוצ"ש הפעם
+        saturdayHistory[dept] = satWorking;
+
+        // שישי - מי שלא עובד בשבת
+        let friWorking;
+        if (friOff) {
+          // יש חופש בשישי - השניים האחרים
+          friWorking = emps.filter(x => x !== friOff);
+        } else {
+          // אין חופש - מי שלא עובד בשבת
+          friWorking = emps.filter(e => e !== satWorking);
+        }
+
+        schedule.push({ day:'שישי', date: friStr, friday: friWorking, dept });
+        schedule.push({ day:'מוצ"ש', date: satStr, saturday: satWorking, dept });
+        
+      } else {
+        // 2 עובדים - רוטציה כמו 3 עובדים!
+        const a = emps[0], b = emps[1];
+        const friOff = emps.find(emp => isDayOffApproved(emp, friStr));
+        const satOff = emps.find(emp => isDayOffApproved(emp, satStr));
+        
+        let satWorking = null;
+
+        if (satOff) {
+          // יש חופש בשבת - השני עובד
+          satWorking = satOff === a ? b : a;
+        } else {
+          // אין חופש - רוטציה לפי היסטוריה
+          const lastSatEmp = saturdayHistory[dept];
+          
+          if (lastSatEmp && emps.includes(lastSatEmp)) {
+            // יש היסטוריה - בוחר את השני
+            satWorking = lastSatEmp === a ? b : a;
+          } else {
+            // אין היסטוריה - סידור ראשון, בוחר רנדומלית
+            satWorking = Math.random() < 0.5 ? a : b;
+          }
+        }
+
+        // שמירת מי עבד במוצ"ש הפעם
+        saturdayHistory[dept] = satWorking;
+
+        // שישי - מי שלא עובד בשבת
+        let friWorking;
+        if (friOff) {
+          // יש חופש בשישי - השני עובד
+          friWorking = friOff === a ? b : a;
+        } else {
+          // אין חופש - מי שלא עובד בשבת
+          friWorking = satWorking === a ? b : a;
+        }
+
+        schedule.push({ day:'שישי', date: friStr, friday: friWorking, dept });
+        schedule.push({ day:'מוצ"ש', date: satStr, saturday: satWorking, dept });
+      }
+
+      allSchedules[dept] = schedule;
+    }
+
+    // שמירת היסטוריית מוצ"ש ב-Firebase
+    await db.ref('saturdayHistory').set(saturdayHistory);
+
+    return allSchedules;
+  }
+
+  function displaySchedule(allSchedules) {
+    const deptOrder = Object.keys(DEPARTMENTS);
+    const sampleDept = deptOrder.find(d => allSchedules[d] && allSchedules[d].length) || deptOrder[0];
+    const sampleSchedule = allSchedules[sampleDept] || [];
+    if (sampleSchedule.length === 0) { document.getElementById('schedule-result').innerHTML = ''; return; }
+
+    const dayCols = sampleSchedule.map(d => ({ day: d.day, date: d.date }));
+    const totalCols = dayCols.length + 1;
+
+    let html = `
+      <h2 style="color:#667eea; margin-top:30px;">📅 סידור שבועי - כל הסניף</h2>
+      <div style="background:#f8f9fa; padding:20px; border-radius:12px; margin-bottom:20px;">
+        <table class="schedule-table">
+          <tr>
+            <th>עובד</th>`;
+
+    dayCols.forEach(c => { html += `<th>${c.day}<br>${formatDate(c.date)}</th>`; });
+    html += `</tr>`;
+
+    deptOrder.forEach(dept => {
+      const employees = DEPARTMENTS[dept] || [];
+      const deptSchedule = allSchedules[dept] || [];
+
+      html += `<tr class="dept-divider"><td colspan="${totalCols}">🏢 ${dept}</td></tr>`;
+
+      employees.forEach(emp => {
+        html += `<tr>
+          <td style="background:#667eea; color:white; font-weight:bold;">${DISPLAY_NAMES[emp] || emp}</td>`;
+
+        dayCols.forEach(c => {
+          const day = deptSchedule.find(d => d.date === c.date);
+          if (!day) { html += `<td style="background:#f0f0f0;">-</td>`; return; }
+
+          const isThreeEmp = employees.length === 3;
+          const isKavLavan = dept === 'מחלקת קו לבן';
+
+          if (day.friday) {
+            if (isThreeEmp) {
+              const works = Array.isArray(day.friday) && day.friday.includes(emp);
+              html += works
+                ? (isKavLavan ? `<td><span class="shift-friday">עובד בשישי</span></td>` : `<td><span class="shift-friday">שישי<br>8:30-14:30</span></td>`)
+                : `<td style="background:#f0f0f0;">-</td>`;
+            } else {
+              html += (day.friday === emp) ? `<td><span class="shift-friday">בוקר<br>8:30-14:30</span></td>` : `<td style="background:#f0f0f0;">-</td>`;
+            }
+            return;
+          }
+
+          if (day.saturday) {
+            if (isThreeEmp) {
+              html += (day.saturday === emp)
+                ? (isKavLavan ? `<td><span class="shift-saturday">עובד במוצ"ש</span></td>` : `<td><span class="shift-saturday">מוצ"ש<br>מוצ"ש-22:30</span></td>`)
+                : `<td style="background:#f0f0f0;">-</td>`;
+            } else {
+              html += (day.saturday === emp) ? `<td><span class="shift-saturday">ערב<br>מוצ"ש-22:30</span></td>` : `<td style="background:#f0f0f0;">-</td>`;
+            }
+            return;
+          }
+
+          const shifts = [];
+          if (day.morning === emp) shifts.push(isKavLavan ? '<span class="shift-morning">בוקר</span>' : '<span class="shift-morning">בוקר<br>9:00-16:00</span>');
+          if (day.middle === emp) shifts.push(isKavLavan ? '<span class="shift-middle">אמצע</span>' : '<span class="shift-middle">אמצע<br>11:00-19:00</span>');
+          if (day.evening === emp) shifts.push(isKavLavan ? '<span class="shift-evening">ערב</span>' : '<span class="shift-evening">ערב<br>15:00-21:30</span>');
+
+          if (shifts.length >= 2) {
+            html += `<td><span class="shift-double">כפולה</span></td>`;
+          } else {
+            html += shifts.length ? `<td>${shifts.join('<br>')}</td>` : `<td style="background:#f0f0f0;">-</td>`;
+          }
+        });
+
+        html += `</tr>`;
+      });
+    });
+
+    html += `</table></div>`;
+    document.getElementById('schedule-result').innerHTML = html;
+  }
+
+  function exportToHTML() {
+    if (!currentSchedule) {
+      showMessage('אין סידור לייצא! יש ליצור סידור תחילה.', 'error');
+      return;
+    }
+
+    const deptOrder = Object.keys(DEPARTMENTS);
+    const sampleDept = deptOrder.find(d => currentSchedule[d] && currentSchedule[d].length) || deptOrder[0];
+    const sampleSchedule = currentSchedule[sampleDept] || [];
+
+    let html = `<!DOCTYPE html>
+<html lang="he" dir="rtl">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>סידור עבודה שבועי</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      padding: 30px 20px;
+      background: #f5f5f5;
+      margin: 0;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+    }
+    h1 {
+      text-align: center;
+      color: #667eea;
+      margin-bottom: 30px;
+    }
+    .table-container {
+      width: 95%;
+      max-width: 1200px;
+      background: white;
+      padding: 20px;
+      border-radius: 10px;
+      box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+    }
+    table{
+  border-collapse: collapse;
+  width: 100%;
+  table-layout: fixed;   /* ⭐ הכי חשוב – רוחב קבוע כמו אקסל */
 }
 
-Node.js v22.13.0
+th, td{
+  border:1px solid #ccc;
+  padding:2px;           /* פחות רווח פנימי */
+  text-align:center;
+  width:70px;            /* רוחב תא קטן */
+  height:32px;           /* גובה כמו באקסל */
+  font-size:11px;        /* טקסט קומפקטי */
+  white-space: nowrap;   /* לא לשבור שורות */
+}
 
-Error: functions predeploy error: Command terminated with non-zero exit code 1
+    thead th {
+      background: #667eea;
+      color: white;
+      font-weight: bold;
+    }
+    tbody td:first-child {
+      background: #667eea;
+      color: white;
+      font-weight: bold;
+    }
+    .morning { background: #fff3cd; font-weight: bold; }
+    .middle  { background: #ffd4a3; font-weight: bold; }
+    .evening { background: #d1ecf1; font-weight: bold; }
+    .friday  { background: #d4edda; font-weight: bold; }
+    .saturday{ background: #e7d4f5; font-weight: bold; }
+    
+    .double  { background: #f8cbad; font-weight: bold; }
+.empty   { background: #f0f0f0; color: #999; }
+    .dept-row td { background: #667eea; color: white; font-weight: bold; font-size: 16px; }
+  </style>
+</head>
+<body>
+  <h1>📅 סידור עבודה שבועי</h1>
+  <div class="table-container">
+  <table>
+    <thead>
+      <tr>
+        <th>עובד</th>`;
 
-C:\Users\crmni\Desktop\shift-manager-functions>
+    sampleSchedule.forEach(day => {
+      html += `<th>${day.day}<br>${formatDate(day.date)}</th>`;
+    });
+    html += `</tr></thead><tbody>`;
+
+    deptOrder.forEach((dept, deptIndex) => {
+      const employees = DEPARTMENTS[dept] || [];
+      const deptSchedule = currentSchedule[dept] || [];
+      const isThreeEmp = employees.length === 3;
+      const isKavLavan = dept === 'מחלקת קו לבן';
+
+      if (deptIndex > 0) {
+        html += `<tr class="dept-row"><td colspan="${sampleSchedule.length + 1}">🏢 ${dept}</td></tr>`;
+      }
+
+      employees.forEach(emp => {
+        html += `<tr>
+          <td>${DISPLAY_NAMES[emp] || emp}</td>`;
+
+        sampleSchedule.forEach(dayCol => {
+          const day = deptSchedule.find(d => d.date === dayCol.date);
+          let cellText = '-';
+          let cellClass = 'empty';
+
+          if (day) {
+            if (day.friday) {
+              if (isThreeEmp) {
+                if (Array.isArray(day.friday) && day.friday.includes(emp)) {
+                  cellText = isKavLavan ? 'עובד בשישי' : 'שישי<br>8:30-14:30';
+                  cellClass = 'friday';
+                } else {
+                  cellText = '-';
+                  cellClass = 'empty';
+                }
+              } else {
+                if (day.friday === emp) {
+                  cellText = 'בוקר<br>8:30-14:30';
+                  cellClass = 'friday';
+                } else {
+                  cellText = '-';
+                  cellClass = 'empty';
+                }
+              }
+            } else if (day.saturday) {
+              if (isThreeEmp) {
+                if (day.saturday === emp) {
+                  cellText = isKavLavan ? 'עובד במוצ"ש' : 'מוצ"ש<br>מוצ"ש-22:30';
+                  cellClass = 'saturday';
+                } else {
+                  cellText = '-';
+                  cellClass = 'empty';
+                }
+              } else {
+                if (day.saturday === emp) {
+                  cellText = 'ערב<br>מוצ"ש-22:30';
+                  cellClass = 'saturday';
+                } else {
+                  cellText = '-';
+                  cellClass = 'empty';
+                }
+              }
+            } else {
+              const shifts = [];
+              if (day.morning === emp) shifts.push({ text: isKavLavan ? 'בוקר' : 'בוקר<br>9:00-16:00', class: 'morning' });
+              if (day.middle === emp) shifts.push({ text: isKavLavan ? 'אמצע' : 'אמצע<br>11:00-19:00', class: 'middle' });
+              if (day.evening === emp) shifts.push({ text: isKavLavan ? 'ערב' : 'ערב<br>15:00-21:30', class: 'evening' });
+
+              
+              if (shifts.length >= 2) {
+                cellText = 'כפולה';
+                cellClass = 'double';
+              } else if (shifts.length === 1) {
+                cellText = `<span class="${shifts[0].class}">${shifts[0].text}</span>`;
+                cellClass = '';
+              } else {
+                cellText = '-';
+                cellClass = 'empty';
+              }
+}
+          }
+
+          html += `<td class="${cellClass}">${cellText}</td>`;
+        });
+
+        html += `</tr>`;
+      });
+    });
+
+    html += `</tbody></table></div></body></html>`;
+
+    const blob = new Blob([html], { type: 'text/html;charset=utf-8' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    const today = new Date();
+    a.download = `סידור_${today.getDate()}-${today.getMonth()+1}-${today.getFullYear()}.html`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+
+    showMessage('הקובץ יוצא בהצלחה! ✅', 'success');
+  }
+
+  function exportToExcel() {
+    // ✅ Ensure XLSX library is loaded (prevents "XLSX is not defined")
+    if (typeof window.XLSX === 'undefined') {
+      if (!window.__xlsxLoading) {
+        window.__xlsxLoading = true;
+        const s = document.createElement('script');
+        s.src = "https://cdn.jsdelivr.net/npm/xlsx-js-style@1.2.0/dist/xlsx.full.min.js";
+        s.onload = () => {
+          window.__xlsxLoading = false;
+          exportToExcel(); // retry after load
+        };
+        s.onerror = () => {
+          window.__xlsxLoading = false;
+          console.error("Failed to load XLSX library from CDN");
+          showMessage('❌ לא הצלחתי לטעון את ספריית האקסל. בדוק חיבור אינטרנט/חסימה של רשת.', 'error');
+        };
+        document.head.appendChild(s);
+      }
+      showMessage('טוען ספריית אקסל… נסה שוב בעוד שנייה', 'info');
+      return;
+    }
+
+    if (!currentSchedule) {
+      showMessage('אין סידור לייצא! יש ליצור סידור תחילה.', 'error');
+      return;
+    }
+
+    const wb = XLSX.utils.book_new();
+    const deptOrder = Object.keys(DEPARTMENTS);
+    const sampleDept = deptOrder.find(d => currentSchedule[d] && currentSchedule[d].length) || deptOrder[0];
+    const sampleSchedule = currentSchedule[sampleDept] || [];
+
+    // Build data array
+    const data = [];
+    
+    // Header row
+    const headerRow = ['עובד'];
+    sampleSchedule.forEach(day => {
+      headerRow.push(`${day.day} ${formatDate(day.date)}`);
+    });
+    data.push(headerRow);
+
+    // Data rows
+    deptOrder.forEach((dept, deptIndex) => {
+      const employees = DEPARTMENTS[dept] || [];
+      const deptSchedule = currentSchedule[dept] || [];
+      const isThreeEmp = employees.length === 3;
+      const isKavLavan = dept === 'מחלקת קו לבן';
+
+      // Department divider row
+      if (deptIndex > 0) {
+        const dividerRow = [`🏢 ${dept}`];
+        for (let i = 1; i < headerRow.length; i++) dividerRow.push(' ');
+        data.push(dividerRow);
+      }
+
+      // Employee rows
+      employees.forEach(emp => {
+        const row = [DISPLAY_NAMES[emp] || emp];
+
+        sampleSchedule.forEach(dayCol => {
+          const day = deptSchedule.find(d => d.date === dayCol.date);
+          let cellText = '-';
+
+          if (day) {
+            if (day.friday) {
+              if (isThreeEmp) {
+                if (Array.isArray(day.friday) && day.friday.includes(emp)) {
+                  cellText = isKavLavan ? 'עובד בשישי' : 'שישי 8:30-14:30';
+                } else {
+                  cellText = '-';
+                }
+              } else {
+                cellText = day.friday === emp ? 'בוקר 8:30-14:30' : '-';
+              }
+            } else if (day.saturday) {
+              if (isThreeEmp) {
+                cellText = day.saturday === emp 
+                  ? (isKavLavan ? 'עובד במוצ"ש' : 'מוצ"ש מוצ"ש-22:30')
+                  : '-';
+              } else {
+                cellText = day.saturday === emp ? 'ערב מוצ"ש-22:30' : '-';
+              }
+            } else {
+              const shifts = [];
+              if (day.morning === emp) shifts.push(isKavLavan ? 'בוקר' : 'בוקר 9:00-16:00');
+              if (day.middle === emp) shifts.push(isKavLavan ? 'אמצע' : 'אמצע 11:00-19:00');
+              if (day.evening === emp) shifts.push(isKavLavan ? 'ערב' : 'ערב 15:00-21:30');
+              if (shifts.length >= 2) cellText = 'כפולה';
+              else cellText = shifts.length > 0 ? shifts.join(', ') : '-';
+            }
+          }
+
+          row.push(cellText);
+        });
+
+        data.push(row);
+      });
+    });
+
+    // Create worksheet
+    const ws = XLSX.utils.aoa_to_sheet(data);
+
+// ✅ Merge department rows once (outside styling loops)
+ws['!merges'] = [];
+for (let r = 0; r < data.length; r++) {
+  if (data[r][0] && typeof data[r][0] === 'string' && data[r][0].startsWith('🏢')) {
+    ws['!merges'].push({
+      s: { r: r, c: 0 },
+      e: { r: r, c: headerRow.length - 1 }
+    });
+  }
+}
+
+
+// RTL sheet (עברית)
+ws['!rtl'] = true;
+
+    
+
+    // Set column widths (10 for all columns)
+    const colCount = headerRow.length;
+    ws['!cols'] = [];
+    for (let i = 0; i < colCount; i++) {
+      ws['!cols'].push({ wch: 12 });
+    }
+
+    // Set row heights (30 for all rows) and styling
+    ws['!rows'] = [];
+    for (let i = 0; i < data.length; i++) {
+      ws['!rows'].push({ hpt: 36 });
+    }
+
+    // Apply styling to all cells
+    const range = XLSX.utils.decode_range(ws['!ref']);
+    for (let R = range.s.r; R <= range.e.r; ++R) {
+      for (let C = range.s.c; C <= range.e.c; ++C) {
+        const cellAddress = XLSX.utils.encode_cell({ r: R, c: C });
+        if (!ws[cellAddress]) continue;
+
+        // Initialize cell style
+        ws[cellAddress].s = {
+          alignment: {
+            horizontal: 'center',
+            vertical: 'center',
+            wrapText: true
+          },
+          border: {
+            top: { style: 'thin', color: { rgb: 'DDDDDD' } },
+            bottom: { style: 'thin', color: { rgb: 'DDDDDD' } },
+            left: { style: 'thin', color: { rgb: 'DDDDDD' } },
+            right: { style: 'thin', color: { rgb: 'DDDDDD' } }
+          }
+        };
+
+        // Header row styling
+        if (R === 0) {
+          ws[cellAddress].s.fill = {
+            fgColor: { rgb: '667EEA' }
+          };
+          ws[cellAddress].s.font = {
+            color: { rgb: 'FFFFFF' },
+            bold: true
+          };
+        }
+      
+// Department divider rows
+        else if (data[R][0] && data[R][0].startsWith('🏢')) {
+          ws[cellAddress].s.fill = {
+            fgColor: { rgb: '667EEA' }
+          };
+          ws[cellAddress].s.font = {
+            color: { rgb: 'FFFFFF' },
+            bold: true
+          };
+        }
+// Employee name column
+        else if (C === 0) {
+          ws[cellAddress].s.fill = {
+            fgColor: { rgb: '667EEA' }
+          };
+          ws[cellAddress].s.font = {
+            color: { rgb: 'FFFFFF' },
+            bold: true
+          };
+        }
+        // Shift cells - color based on content
+        else {
+          const cellValue = ws[cellAddress].v || '';
+          
+          if (cellValue === 'כפולה') {
+            ws[cellAddress].s.fill = { fgColor: { rgb: 'F8CBAD' } }; // mild red
+            ws[cellAddress].s.font = { bold: true };
+          } else if (cellValue.includes('בוקר')) {
+
+            ws[cellAddress].s.fill = { fgColor: { rgb: 'FFF3CD' } };
+          } else if (cellValue.includes('אמצע')) {
+            ws[cellAddress].s.fill = { fgColor: { rgb: 'FFD4A3' } };
+          } else if (cellValue.includes('ערב') && !cellValue.includes('שישי') && !cellValue.includes('מוצ')) {
+            ws[cellAddress].s.fill = { fgColor: { rgb: 'D1ECF1' } };
+          } else if (cellValue.includes('שישי')) {
+            ws[cellAddress].s.fill = { fgColor: { rgb: 'D4EDDA' } };
+          } else if (cellValue.includes('מוצ')) {
+            ws[cellAddress].s.fill = { fgColor: { rgb: 'E7D4F5' } };
+          } else if (cellValue === '-') {
+            ws[cellAddress].s.fill = { fgColor: { rgb: 'F0F0F0' } };
+            ws[cellAddress].s.font = { color: { rgb: '999999' } };
+          }
+        }
+      }
+    }
+
+    // Add worksheet to workbook
+    XLSX.utils.book_append_sheet(wb, ws, 'סידור שבועי');
+    
+// ✅ RTL לכל הקובץ (הגיליון ייפתח מימין לשמאל)
+wb.Workbook = wb.Workbook || {};
+wb.Workbook.Views = [{ RTL: true }];
+
+
+    // Generate filename
+    const today = new Date();
+    const filename = `סידור_${today.getDate()}-${today.getMonth()+1}-${today.getFullYear()}.xlsx`;
+
+    // Export file
+    XLSX.writeFile(wb, filename);
+
+    showMessage('קובץ Excel יוצא בהצלחה! ✅', 'success');
+  }
+
+  // Helpers
+  function hideAll() {
+    document.querySelectorAll('.section').forEach(s => s.classList.remove('active'));
+    document.getElementById('message').innerHTML = '';
+  }
+  function clearInputs() {
+    document.getElementById('emp-username').value = '';
+    document.getElementById('emp-password').value = '';
+    document.getElementById('mgr-username').value = '';
+    document.getElementById('mgr-password').value = '';
+  }
+  function showMessage(text, type) {
+    const div = document.getElementById('message');
+    div.className = `message ${type}`;
+    div.textContent = text;
+    setTimeout(() => div.innerHTML = '', 8000);
+  }
+  function formatDate(dateStr) {
+    const d = new Date(dateStr + 'T00:00:00');
+    return `${String(d.getDate()).padStart(2,'0')}/${String(d.getMonth()+1).padStart(2,'0')}`;
+  }
+  function toLocalDateStr(d) {
+    const y = d.getFullYear();
+    const m = String(d.getMonth()+1).padStart(2,'0');
+    const day = String(d.getDate()).padStart(2,'0');
+    return `${y}-${m}-${day}`;
+  }
+
+  function formatType(type) {
+    const types = {
+      'no-morning':'❌ לא בוקר',
+      'no-evening':'❌ לא ערב',
+      'want-morning':'✅ רוצה בוקר',
+      'want-middle':'✅ רוצה אמצע',
+      'want-evening':'✅ רוצה ערב',
+      'day-off':'🏖️ חופש מלא'
+    };
+    return types[type] || type;
+  }
+
+  function isValidWeekday(dateStr) {
+    const d = new Date(dateStr + 'T00:00:00');
+    const day = d.getDay();
+    return day !== 5 && day !== 6;
+  }
+  function getStatusBadge(c) {
+    if (c.type !== 'day-off') return '';
+    const statuses = { 'pending':'⏳ ממתין', 'approved':'✅ מאושר', 'rejected':'❌ נדחה' };
+    const classes  = { 'pending':'status-pending', 'approved':'status-approved', 'rejected':'status-rejected' };
+    const status = c.status || 'pending';
+    return `<span class="${classes[status]}">${statuses[status]}</span>`;
+  }
+</script>
+  <script>
+  if ("serviceWorker" in navigator) {
+    window.addEventListener("load", () => {
+      navigator.serviceWorker.register("./service-worker.js");
+    });
+  }
+</script>
+
+</body>
+</html>
