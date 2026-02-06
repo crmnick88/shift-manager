@@ -1364,13 +1364,13 @@
     const colCount = headerRow.length;
     ws['!cols'] = [];
     for (let i = 0; i < colCount; i++) {
-      ws['!cols'].push({ wch: 10 });
+      ws['!cols'].push({ wch: 12 });
     }
 
     // Set row heights (30 for all rows) and styling
     ws['!rows'] = [];
     for (let i = 0; i < data.length; i++) {
-      ws['!rows'].push({ hpt: 30 });
+      ws['!rows'].push({ hpt: 36 });
     }
 
     // Apply styling to all cells
