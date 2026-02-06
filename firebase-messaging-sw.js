@@ -13,5 +13,6 @@ firebase.initializeApp({
 
 firebase.messaging();
 
-// Option A: לא מציגים פה showNotification.
+// Option A:
+// לא משתמשים כאן ב-onBackgroundMessage/showNotification.
 // ה-FCM יציג את ההתראה אוטומטית לפי webpush.notification שנשלח מהשרת.
