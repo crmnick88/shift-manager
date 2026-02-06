@@ -264,6 +264,7 @@
       <button class="btn" onclick="refreshAll()" style="background:#343a40;">🔁 רענן הכל</button>
       <button class="btn" onclick="loadAllConstraints()" style="background:#17a2b8;">🔄 רענן אילוצים</button>
       <button class="btn" onclick="generateSchedule()" style="background:#667eea;">🔄 רענן סידור</button>
+      <button class="btn" onclick="sendConstraintsReminderRequest()" style="background:#ff6f61;">🔔 שלח תזכורת להזנת אילוצים</button>
       <button class="btn" onclick="resetAllConstraints()" style="background:#6c757d;">🧹 איפוס אילוצים לכל העובדים</button>
     </div>
 
@@ -346,7 +347,29 @@
     } catch (err) {
       console.error('Push init error:', err);
     }
+  
+
+  // =======================
+  // 🔔 MANAGER REMINDER REQUEST (writes to DB)
+  // =======================
+  async function sendConstraintsReminderRequest() {
+    try {
+      const payload = {
+        type: "constraints_reminder",
+        title: "תזכורת להזנת אילוצים",
+        body: "נא להזין אילוצים לשבוע הקרוב במערכת.",
+        createdAt: Date.now()
+      };
+
+      await db.ref("adminPushRequests").push(payload);
+      showMessage("✅ נשלחה בקשת תזכורת (נשמרה ב-Firebase)", "success");
+    } catch (e) {
+      console.error("sendConstraintsReminderRequest error:", e);
+      showMessage("❌ שגיאה בשליחת בקשת תזכורת", "error");
+    }
   }
+
+}
 let currentEmployee = '';
   let currentSchedule = null;
 
