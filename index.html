@@ -1258,6 +1258,27 @@
   }
 
   function exportToExcel() {
+    // ✅ Ensure XLSX library is loaded (prevents "XLSX is not defined")
+    if (typeof window.XLSX === 'undefined') {
+      if (!window.__xlsxLoading) {
+        window.__xlsxLoading = true;
+        const s = document.createElement('script');
+        s.src = "https://cdn.jsdelivr.net/npm/xlsx-js-style@1.2.0/dist/xlsx.full.min.js";
+        s.onload = () => {
+          window.__xlsxLoading = false;
+          exportToExcel(); // retry after load
+        };
+        s.onerror = () => {
+          window.__xlsxLoading = false;
+          console.error("Failed to load XLSX library from CDN");
+          showMessage('❌ לא הצלחתי לטעון את ספריית האקסל. בדוק חיבור אינטרנט/חסימה של רשת.', 'error');
+        };
+        document.head.appendChild(s);
+      }
+      showMessage('טוען ספריית אקסל… נסה שוב בעוד שנייה', 'info');
+      return;
+    }
+
     if (!currentSchedule) {
       showMessage('אין סידור לייצא! יש ליצור סידור תחילה.', 'error');
       return;
