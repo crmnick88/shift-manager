@@ -1430,14 +1430,18 @@ ws['!rtl'] = true;
             bold: true
           };
         }
-        // Department divider rows
-       else if (data[R][0] && data[R][0].startsWith('🏢')) {
+      
+// Department divider rows
+else if (data[R][0] && data[R][0].startsWith('🏢')) {
 
-  // ⭐ איחוד כל התאים בשורה (כמו colspan)
-  ws['!merges'].push({
-    s: { r: R, c: 0 },
-    e: { r: R, c: headerRow.length - 1 }
-  });
+  // ⭐ איחוד תאים פעם אחת בלבד לכל שורה (רק כשהעמודה הראשונה)
+  if (C === 0) {
+    ws['!merges'] = ws['!merges'] || [];
+    ws['!merges'].push({
+      s: { r: R, c: 0 },
+      e: { r: R, c: headerRow.length - 1 }
+    });
+  }
 
   ws[cellAddress].s.fill = {
     fgColor: { rgb: '667EEA' }
@@ -1447,6 +1451,7 @@ ws['!rtl'] = true;
     bold: true
   };
 }
+
 
         // Employee name column
         else if (C === 0) {
