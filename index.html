@@ -334,6 +334,20 @@ html, body{
   }
 }
 
+
+@media (max-width: 700px){
+  .schedule-table{ min-width: 0 !important; width: 100% !important; }
+  .schedule-table th, .schedule-table td{
+    min-width: 70px !important;
+    padding: 10px 6px !important;
+    font-size: 12px !important;
+  }
+  .shift-morning, .shift-middle, .shift-evening, .shift-friday, .shift-saturday{
+    padding: 6px 8px !important;
+    font-size: 12px !important;
+  }
+}
+
 </style>
 </head>
 
@@ -920,7 +934,7 @@ async function approveCurrentSchedule(){
         html += `
           <div class="emp-header-row">
             <h4>${DISPLAY_NAMES[emp] || emp}</h4>
-            <button class="reset-btn" onclick="resetEmployeeConstraints('${DISPLAY_NAMES[emp] || emp}')">🧹 איפוס אילוצים לעובד</button>
+            <button class="reset-btn" onclick="resetEmployeeConstraints('${emp}')">🧹 איפוס אילוצים לעובד</button>
           </div>
         `;
 
@@ -965,7 +979,7 @@ async function approveCurrentSchedule(){
 
     html += `
       <div class="approval-buttons" style="margin-top:8px;">
-        <button class="reset-btn" onclick="deleteSingleConstraint('${DISPLAY_NAMES[emp] || emp}','${key}')">🗑️ מחק אילוץ זה</button>
+        <button class="reset-btn" onclick="deleteSingleConstraint('${emp}','${key}')">🗑️ מחק אילוץ זה</button>
       </div>
     `;
 
@@ -1468,7 +1482,7 @@ nextSunday.setDate(today.getDate() + (dow === 0 ? 7 : 7 - dow));
     let html = `
       <h2 style="color:#667eea; margin-top:30px;">📅 סידור שבועי - כל הסניף</h2>
       <div style="background:#f8f9fa; padding:20px; border-radius:12px; margin-bottom:20px;">
-        <table class="schedule-table">
+        <div class="schedule-table-wrap"><table class="schedule-table">
           <tr>
             <th>עובד</th>`;
 
@@ -1726,6 +1740,20 @@ html, body{
     max-width: 100%;
     margin: 0 auto;
     box-sizing: border-box;
+  }
+}
+
+
+@media (max-width: 700px){
+  .schedule-table{ min-width: 0 !important; width: 100% !important; }
+  .schedule-table th, .schedule-table td{
+    min-width: 70px !important;
+    padding: 10px 6px !important;
+    font-size: 12px !important;
+  }
+  .shift-morning, .shift-middle, .shift-evening, .shift-friday, .shift-saturday{
+    padding: 6px 8px !important;
+    font-size: 12px !important;
   }
 }
 
