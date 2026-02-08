@@ -884,15 +884,13 @@ let currentEmployee = '';
   }
 
   async function createSchedule(constraints) {
-    const today = new Date(); today.setHours(0,0,0,0);
-  const nextSunday = new Date(today);
+   const today = new Date(); today.setHours(0,0,0,0);
+const nextSunday = new Date(today);
 const dow = today.getDay();
 
-// ראשון הקרוב
-nextSunday.setDate(today.getDate() + (7 - dow));
+// ראשון הבא (השבוע הבא תמיד)
+nextSunday.setDate(today.getDate() + (dow === 0 ? 7 : 7 - dow));
 
-// ואז קופצים שבוע קדימה
-nextSunday.setDate(nextSunday.getDate() + 7);
 
 
     const allSchedules = {};
