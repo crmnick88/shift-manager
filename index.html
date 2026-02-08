@@ -719,7 +719,7 @@ async function approveCurrentSchedule(){
 
       hideAll();
       document.getElementById('employee-section').classList.add('active');
-      document.getElementById('employee-welcome').textContent = `שלום ${username}! 👋`;
+      document.getElementById('employee-welcome').textContent = `שלום ${DISPLAY_NAMES[username] || username}! 👋`;
 
       applyConstraintOptions(currentEmployee);
 
@@ -825,8 +825,8 @@ async function approveCurrentSchedule(){
 
         html += `
           <div class="emp-header-row">
-            <h4>${emp}</h4>
-            <button class="reset-btn" onclick="resetEmployeeConstraints('${emp}')">🧹 איפוס אילוצים לעובד</button>
+            <h4>${DISPLAY_NAMES[emp] || emp}</h4>
+            <button class="reset-btn" onclick="resetEmployeeConstraints('${DISPLAY_NAMES[emp] || emp}')">🧹 איפוס אילוצים לעובד</button>
           </div>
         `;
 
@@ -856,8 +856,8 @@ async function approveCurrentSchedule(){
       const status = c.status || 'pending';
       if (status === 'pending') {
         html += `<div class="approval-buttons">
-          <button class="approve-btn" onclick="updateApproval('${emp}','${key}','approved')">✅ אשר</button>
-          <button class="reject-btn" onclick="updateApproval('${emp}','${key}','rejected')">❌ דחה</button>
+          <button class="approve-btn" onclick="updateApproval('${DISPLAY_NAMES[emp] || emp}','${key}','approved')">✅ אשר</button>
+          <button class="reject-btn" onclick="updateApproval('${DISPLAY_NAMES[emp] || emp}','${key}','rejected')">❌ דחה</button>
         </div>
         <span class="status-pending">⏳ ממתין</span>`;
       } else if (status === 'approved') {
@@ -871,7 +871,7 @@ async function approveCurrentSchedule(){
 
     html += `
       <div class="approval-buttons" style="margin-top:8px;">
-        <button class="reset-btn" onclick="deleteSingleConstraint('${emp}','${key}')">🗑️ מחק אילוץ זה</button>
+        <button class="reset-btn" onclick="deleteSingleConstraint('${DISPLAY_NAMES[emp] || emp}','${key}')">🗑️ מחק אילוץ זה</button>
       </div>
     `;
 
@@ -894,10 +894,10 @@ async function approveCurrentSchedule(){
   }
 
   async function deleteSingleConstraint(emp, key){
-    const ok = confirm(`למחוק את ${key} עבור ${emp}?`);
+    const ok = confirm(`למחוק את ${key} עבור ${DISPLAY_NAMES[emp] || emp}?`);
     if(!ok) return;
     await db.ref(`constraints/${emp}/${key}`).set(null);
-    showMessage(`נמחק ${key} עבור ${emp}`, 'success');
+    showMessage(`נמחק ${key} עבור ${DISPLAY_NAMES[emp] || emp}`, 'success');
     await loadAllConstraints();
 
     currentSchedule = null;
@@ -906,11 +906,11 @@ async function approveCurrentSchedule(){
   }
 
   async function resetEmployeeConstraints(emp){
-    const ok = confirm(`לאפס את כל האילוצים של ${emp}? (ימחק c1+c2)`);
+    const ok = confirm(`לאפס את כל האילוצים של ${DISPLAY_NAMES[emp] || emp}? (ימחק c1+c2)`);
     if(!ok) return;
 
     await db.ref(`constraints/${emp}`).set(null);
-    showMessage(`אופסו האילוצים של ${emp}`, 'success');
+    showMessage(`אופסו האילוצים של ${DISPLAY_NAMES[emp] || emp}`, 'success');
 
     await loadAllConstraints();
 
@@ -1982,4 +1982,3 @@ document.addEventListener('DOMContentLoaded', () => {
 
 </body>
 </html>
-
