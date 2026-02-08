@@ -152,6 +152,62 @@
     .emp-header-row .reset-btn{
       white-space:nowrap;
     }
+  
+
+    /* =======================
+       📦 Manager constraints - compact grid layout
+       ======================= */
+    .dept-grid{
+      column-count:2;
+      column-gap:14px;
+      margin-top:12px;
+    }
+    .dept-card{
+      background:#f0f0f0;
+      padding:12px;
+      border-radius:12px;
+      margin:0 0 14px 0 !important;
+      display:inline-block;
+      width:100%;
+      break-inside:avoid;
+      vertical-align:top;
+    }
+
+    @media (max-width: 900px){
+      .dept-grid{ column-count:1; }
+    }
+    @media (min-width: 1400px){
+      .dept-grid{ column-count:3; }
+    }
+    .dept-card h3{
+      margin:0 0 10px 0 !important;
+    }
+
+    /* Make employee blocks more compact */
+    .employee-constraints{
+      padding:10px !important;
+      margin-bottom:10px !important;
+    }
+    .emp-header-row{
+      margin-bottom:6px !important;
+    }
+    .emp-header-row h4{
+      font-size:14px;
+    }
+    /* constraint rows inside employee card */
+    .employee-constraints > div[style*="margin:10px 0"]{
+      margin:8px 0 !important;
+      padding:8px !important;
+    }
+
+    @media (max-width: 520px){
+      .dept-grid{
+      column-count:2;
+      column-gap:14px;
+      margin-top:12px;
+    }
+    }
+
   </style>
 </head>
 
@@ -269,11 +325,13 @@
       <button class="btn" onclick="generateSchedule()" style="background:#667eea;">🔄 רענן סידור</button>
       <button class="btn" onclick="sendConstraintsReminderRequest()" style="background:#ff6f61;">🔔 שלח תזכורת להזנת אילוצים</button>
       <button class="btn" onclick="resetAllConstraints()" style="background:#6c757d;">🧹 איפוס אילוצים לכל העובדים</button>
+
+      <button class="btn" onclick="generateSchedule()">צור סידור אוטומטי</button>
     </div>
 
     <div id="all-constraints"></div>
 
-    <button class="btn" onclick="generateSchedule()">צור סידור אוטומטי</button>
+
 
     <div id="export-section" style="display:none; margin-top:10px;">
       <button class="btn" onclick="exportToExcel()" style="background:#28a745;">📊 ייצא ל-Excel</button>
@@ -722,10 +780,10 @@ async function approveCurrentSchedule(){
     const allData = snapshot.val() || {};
     const today = new Date(); today.setHours(0,0,0,0);
 
-    let html = '<h2>אילוצי העובדים</h2>';
+    let html = '<h2>אילוצי העובדים</h2><div class="dept-grid">';
 
     for (const [dept, employees] of Object.entries(DEPARTMENTS)) {
-      html += `<div style="background:#f0f0f0; padding:15px; border-radius:10px; margin-bottom:20px;">
+      html += `<div class="dept-card">
         <h3 style="color:#667eea;">🏢 ${dept}</h3>`;
 
       employees.forEach(emp => {
@@ -752,6 +810,8 @@ async function approveCurrentSchedule(){
 
       html += '</div>';
     }
+
+    html += '</div>';
 
     document.getElementById('all-constraints').innerHTML = html;
   }
