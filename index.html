@@ -550,11 +550,13 @@ let currentEmployee = '';
     clearInputs();
   }
 
-  function logout() {
-    currentEmployee = '';
-    backToLogin();
-    showMessage('התנתקת בהצלחה', 'success');
-  }
+ function logout() {
+  currentEmployee = '';
+  localStorage.removeItem('currentEmployee'); // ⬅️ חדש: מוחק זיכרון התחברות קבוע
+  backToLogin();
+  showMessage('התנתקת בהצלחה', 'success');
+}
+
 
   function loginEmployee() {
     const username = document.getElementById('emp-username').value.trim().toUpperCase();
@@ -564,6 +566,8 @@ let currentEmployee = '';
 
     if (USERS[username] && USERS[username] === password) {
       currentEmployee = username;
+      localStorage.setItem('currentEmployee', currentEmployee);
+
 
       hideAll();
       document.getElementById('employee-section').classList.add('active');
@@ -588,6 +592,8 @@ let currentEmployee = '';
     if (username === MANAGER.username && password === MANAGER.password) {
       // ✅ Save push token for manager too (so manager devices receive reminders)
       currentEmployee = 'MANAGER';
+      localStorage.setItem('currentEmployee', currentEmployee);
+
 
       hideAll();
       document.getElementById('manager-section').classList.add('active');
