@@ -2,9 +2,8 @@
 <html lang="he" dir="rtl">
 <head>
   <meta charset="UTF-8" />
-
-<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
-<link rel="manifest" href="./manifest.json">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <link rel="manifest" href="./manifest.json">
   <link rel="icon" href="./icon-192.png">
   <meta name="theme-color" content="#667eea" />
   <title>מערכת ניהול משמרות</title>
@@ -26,14 +25,9 @@
       min-height:100vh; padding:20px;
     }
     .container{
-  width: 100%;
-  max-width: 1100px;
-  margin: 0 auto;
-  background:white;
-  border-radius:20px;
-  box-shadow:0 20px 60px rgba(0,0,0,0.3);
-  padding:30px;
-}
+      max-width:900px; margin:0 auto; background:white; border-radius:20px;
+      box-shadow:0 20px 60px rgba(0,0,0,0.3); padding:30px;
+    }
     h1{ text-align:center; color:#667eea; margin-bottom:30px; font-size:2.3em; }
     .section{ display:none; }
     .section.active{ display:block; }
@@ -158,197 +152,7 @@
     .emp-header-row .reset-btn{
       white-space:nowrap;
     }
-  
-
-    /* =======================
-       📦 Manager constraints - compact grid layout
-       ======================= */
-    .dept-grid{
-      column-count:2;
-      column-gap:14px;
-      margin-top:12px;
-    }
-    .dept-card{
-      background:#f0f0f0;
-      padding:12px;
-      border-radius:12px;
-      margin:0 0 14px 0 !important;
-      display:inline-block;
-      width:100%;
-      break-inside:avoid;
-      vertical-align:top;
-    }
-
-    @media (max-width: 900px){
-      .dept-grid{ column-count:1; }
-    }
-    @media (min-width: 1400px){
-      .dept-grid{ column-count:3; }
-    }
-    .dept-card h3{
-      margin:0 0 10px 0 !important;
-    }
-
-    /* Make employee blocks more compact */
-    .employee-constraints{
-      padding:10px !important;
-      margin-bottom:10px !important;
-    }
-    .emp-header-row{
-      margin-bottom:6px !important;
-    }
-    .emp-header-row h4{
-      font-size:14px;
-    }
-    /* constraint rows inside employee card */
-    .employee-constraints > div[style*="margin:10px 0"]{
-      margin:8px 0 !important;
-      padding:8px !important;
-    }
-
-    @media (max-width: 520px){
-      .dept-grid{
-      column-count:2;
-      column-gap:14px;
-      margin-top:12px;
-    }
-    }
-
-  
-/* =======================
-   🔵 BIGGER LOGIN SCREEN (mobile friendly)
-   ======================= */
-#login-screen .mode-btn{
-  font-size:22px;
-  padding:22px 30px;
-  width:90%;
-  max-width:360px;
-  margin:12px auto;
-}
-
-#employee-login input,
-#manager-login input{
-  font-size:18px;
-  padding:16px;
-}
-
-#employee-login .btn,
-#manager-login .btn{
-  font-size:18px;
-  padding:16px;
-}
-
-@media (max-width:600px){
-  #employee-login > div,
-  #manager-login > div{
-    max-width:95% !important;
-    margin:20px auto !important;
-  }
-}
-
-
-/* =======================
-   🟦 LOGIN BIG (strong override)
-   ======================= */
-#employee-login, #manager-login{
-  padding: 16px !important;
-}
-
-#employee-login > div, #manager-login > div{
-  width: min(520px, 96vw) !important;
-  max-width: 96vw !important;   /* overrides inline max-width:400px */
-  margin: 18px auto !important;
-}
-
-#employee-login label, #manager-login label{
-  font-size: 18px !important;
-}
-
-#emp-username, #emp-password, #mgr-username, #mgr-password{
-  width: 100% !important;
-  font-size: 20px !important;   /* 16+ prevents mobile zoom, 20 is comfy */
-  padding: 18px 16px !important;
-  border-radius: 14px !important;
-}
-
-#employee-login .btn, #manager-login .btn{
-  width: 100% !important;
-  font-size: 20px !important;
-  padding: 16px 16px !important;
-  border-radius: 14px !important;
-  margin-top: 10px;
-}
-
-/* bigger headings on phone */
-@media (max-width: 600px){
-  #employee-login h1, #manager-login h1{
-    font-size: 26px !important;
-  }
-}
-
-
-    /* =======================
-       📱 Small screens - make container fill more space
-       ======================= */
-    @media (max-width: 600px){
-      body{ padding: 10px !important; }
-      .container{
-        width: 98vw !important;
-        padding: 18px !important;
-        border-radius: 16px !important;
-      }
-    }
-
-
-/* 🔥 Mobile full width – important for Chrome */
-@media (max-width: 700px){
-  body{
-    padding: 6px !important;
-  }
-
-  .container{
-    width: 100vw !important;
-    max-width: 100vw !important;
-    padding: 16px !important;
-    border-radius: 14px !important;
-  }
-}
-
-
-/* =======================
-   ✅ Chrome mobile fix (minimal, safe)
-   ======================= */
-html, body{
-  width: 100%;
-  max-width: 100%;
-  overflow-x: hidden;
-}
-
-@media (max-width: 900px){
-  body{ padding: 8px; } /* nudge so the white card isn't clipped */
-  .container{
-    width: 100%;
-    max-width: 100%;
-    margin: 0 auto;
-    box-sizing: border-box;
-  }
-}
-
-
-@media (max-width: 700px){
-  .schedule-table{ min-width: 0 !important; width: 100% !important; }
-  .schedule-table th, .schedule-table td{
-    min-width: 70px !important;
-    padding: 10px 6px !important;
-    font-size: 12px !important;
-  }
-  .shift-morning, .shift-middle, .shift-evening, .shift-friday, .shift-saturday{
-    padding: 6px 8px !important;
-    font-size: 12px !important;
-  }
-}
-
-</style>
+  </style>
 </head>
 
 <body>
@@ -357,7 +161,7 @@ html, body{
   <!-- Login Screen -->
   <div id="login-screen" class="section active">
     <h1>🗓️ מערכת ניהול משמרות</h1>
-    <div style="text-align:center; margin-top:28px;">
+    <div style="text-align:center; margin-top:40px;">
       <button class="mode-btn" onclick="showLoginForm('employee')">👤 כניסת עובד</button>
       <button class="mode-btn" onclick="showLoginForm('manager')">👔 כניסת מנהל</button>
     </div>
@@ -366,7 +170,7 @@ html, body{
   <!-- Employee Login -->
   <div id="employee-login" class="section">
     <h1>🗓️ כניסת עובד</h1>
-    <div style="width:95%; margin:24px auto;">
+    <div style="max-width:400px; margin:40px auto;">
       <div class="form-group">
         <label>שם משתמש:</label>
         <input type="text" id="emp-username" placeholder="הזן שם משתמש">
@@ -383,7 +187,7 @@ html, body{
   <!-- Manager Login -->
   <div id="manager-login" class="section">
     <h1>🗓️ כניסת מנהל</h1>
-    <div style="width:95%; margin:24px auto;">
+    <div style="max-width:400px; margin:40px auto;">
       <div class="form-group">
         <label>שם משתמש:</label>
         <input type="text" id="mgr-username" placeholder="הזן שם משתמש">
@@ -458,20 +262,18 @@ html, body{
 
     <div class="toolbar">
       <button class="btn" id="approve-schedule-btn" onclick="approveCurrentSchedule()" style="background:#28a745; display:none;">✅ אשר סידור</button>
-      <button class="btn" onclick="exportApprovedScheduleToExcel()" style="background:#17a2b8;">📥 ייצא סידור מאושר לאקסל</button>
+      <button class="btn" onclick="loadApprovedScheduleToScreen()" style="background:#17a2b8;">📥 טען סידור מאושר</button>
 
       <button class="btn" onclick="refreshAll()" style="background:#343a40;">🔁 רענן הכל</button>
       <button class="btn" onclick="loadAllConstraints()" style="background:#17a2b8;">🔄 רענן אילוצים</button>
       <button class="btn" onclick="generateSchedule()" style="background:#667eea;">🔄 רענן סידור</button>
       <button class="btn" onclick="sendConstraintsReminderRequest()" style="background:#ff6f61;">🔔 שלח תזכורת להזנת אילוצים</button>
       <button class="btn" onclick="resetAllConstraints()" style="background:#6c757d;">🧹 איפוס אילוצים לכל העובדים</button>
-
-      <button class="btn" onclick="generateSchedule()">צור סידור אוטומטי</button>
     </div>
 
     <div id="all-constraints"></div>
 
-
+    <button class="btn" onclick="generateSchedule()">צור סידור אוטומטי</button>
 
     <div id="export-section" style="display:none; margin-top:10px;">
       <button class="btn" onclick="exportToExcel()" style="background:#28a745;">📊 ייצא ל-Excel</button>
@@ -633,84 +435,26 @@ let currentEmployee = '';
     if(b) b.style.display = v ? 'inline-block' : 'none';
   }
 
-async function approveCurrentSchedule(){
-  if(!currentSchedule) return;
-
-  const k = currentWeekKey || getNextSundayKey();
-
-  const payload = {
-    data: currentSchedule,
-    approvedAt: Date.now(),
-    approvedBy: 'MANAGER'
-  };
-
-  // ✅ שומר לפי שבוע
-  await db.ref('approvedSchedules/' + k).set(payload);
-
-  // ✅ מצביע ל"אחרון שאושר"
-  await db.ref('approvedSchedulesLatest').set({
-    weekKey: k,
-    approvedAt: payload.approvedAt,
-    approvedBy: payload.approvedBy
-  });
-
-  showMessage('✅ הסידור נשמר כמאושר', 'success');
-}
-
-  async function exportApprovedScheduleToExcel(){
-  // טוען את "האחרון שאושר" (או את השבוע הרלוונטי)
-  const latestSnap = await db.ref('approvedSchedulesLatest').once('value');
-  const latest = latestSnap.val();
-
-  if(!latest || !latest.weekKey){
-    return showMessage('אין סידור מאושר אחרון לייצוא', 'error');
+  async function approveCurrentSchedule(){
+    if(!currentSchedule) return;
+    const k = currentWeekKey || getNextSundayKey();
+    await db.ref('approvedSchedules/' + k).set({
+      data: currentSchedule,
+      approvedAt: Date.now(),
+      approvedBy: 'MANAGER'
+    });
+    showMessage('✅ הסידור נשמר כמאושר', 'success');
   }
 
-  const k = latest.weekKey;
-
-  const snap = await db.ref('approvedSchedules/' + k + '/data').once('value');
-  const approved = snap.val();
-
-  if(!approved){
-    return showMessage('הסידור המאושר לא נמצא ב-DB', 'error');
+  async function loadApprovedScheduleToScreen(){
+    const k = getNextSundayKey();
+    const snap = await db.ref('approvedSchedules/' + k + '/data').once('value');
+    const d = snap.val();
+    if(!d) return showMessage('אין סידור מאושר', 'error');
+    currentSchedule = d;
+    displaySchedule(d);
+    showMessage('📥 נטען סידור מאושר', 'success');
   }
-
-  // ✅ שומרים את מה שעבדת עליו כרגע
-  const liveSchedule = currentSchedule;
-
-  // ✅ מייצאים את המאושר בלי להציג אותו באתר
-  currentSchedule = approved;
-  exportToExcel();
-
-  // ✅ מחזירים את הסידור שאתה עובד עליו (כדי שלא יידרס)
-  currentSchedule = liveSchedule;
-
-  showMessage(`📊 ייצאתי את הסידור המאושר לאקסל (${k})`, 'success');
-}
-
-
- async function loadApprovedScheduleToScreen(){
-  const latestSnap = await db.ref('approvedSchedulesLatest').once('value');
-  const latest = latestSnap.val();
-
-  if(!latest || !latest.weekKey){
-    return showMessage('אין סידור מאושר אחרון לטעינה', 'error');
-  }
-
-  const k = latest.weekKey;
-
-  const snap = await db.ref('approvedSchedules/' + k + '/data').once('value');
-  const d = snap.val();
-
-  if(!d) return showMessage('הסידור האחרון לא נמצא ב-DB', 'error');
-
-  currentSchedule = d;
-  displaySchedule(d);
-  currentWeekKey = k;
-
-  showMessage(`📥 נטען הסידור המאושר האחרון (${k})`, 'success');
-}
-
 
 
   const USERS = {
@@ -827,7 +571,7 @@ async function approveCurrentSchedule(){
 
       hideAll();
       document.getElementById('employee-section').classList.add('active');
-      document.getElementById('employee-welcome').textContent = `שלום ${DISPLAY_NAMES[username] || username}! 👋`;
+      document.getElementById('employee-welcome').textContent = `שלום ${username}! 👋`;
 
       applyConstraintOptions(currentEmployee);
 
@@ -920,10 +664,10 @@ async function approveCurrentSchedule(){
     const allData = snapshot.val() || {};
     const today = new Date(); today.setHours(0,0,0,0);
 
-    let html = '<h2>אילוצי העובדים</h2><div class="dept-grid">';
+    let html = '<h2>אילוצי העובדים</h2>';
 
     for (const [dept, employees] of Object.entries(DEPARTMENTS)) {
-      html += `<div class="dept-card">
+      html += `<div style="background:#f0f0f0; padding:15px; border-radius:10px; margin-bottom:20px;">
         <h3 style="color:#667eea;">🏢 ${dept}</h3>`;
 
       employees.forEach(emp => {
@@ -933,7 +677,7 @@ async function approveCurrentSchedule(){
 
         html += `
           <div class="emp-header-row">
-            <h4>${DISPLAY_NAMES[emp] || emp}</h4>
+            <h4>${emp}</h4>
             <button class="reset-btn" onclick="resetEmployeeConstraints('${emp}')">🧹 איפוס אילוצים לעובד</button>
           </div>
         `;
@@ -951,8 +695,6 @@ async function approveCurrentSchedule(){
       html += '</div>';
     }
 
-    html += '</div>';
-
     document.getElementById('all-constraints').innerHTML = html;
   }
 
@@ -964,8 +706,8 @@ async function approveCurrentSchedule(){
       const status = c.status || 'pending';
       if (status === 'pending') {
         html += `<div class="approval-buttons">
-          <button class="approve-btn" onclick="updateApproval('${DISPLAY_NAMES[emp] || emp}','${key}','approved')">✅ אשר</button>
-          <button class="reject-btn" onclick="updateApproval('${DISPLAY_NAMES[emp] || emp}','${key}','rejected')">❌ דחה</button>
+          <button class="approve-btn" onclick="updateApproval('${emp}','${key}','approved')">✅ אשר</button>
+          <button class="reject-btn" onclick="updateApproval('${emp}','${key}','rejected')">❌ דחה</button>
         </div>
         <span class="status-pending">⏳ ממתין</span>`;
       } else if (status === 'approved') {
@@ -1002,10 +744,10 @@ async function approveCurrentSchedule(){
   }
 
   async function deleteSingleConstraint(emp, key){
-    const ok = confirm(`למחוק את ${key} עבור ${DISPLAY_NAMES[emp] || emp}?`);
+    const ok = confirm(`למחוק את ${key} עבור ${emp}?`);
     if(!ok) return;
     await db.ref(`constraints/${emp}/${key}`).set(null);
-    showMessage(`נמחק ${key} עבור ${DISPLAY_NAMES[emp] || emp}`, 'success');
+    showMessage(`נמחק ${key} עבור ${emp}`, 'success');
     await loadAllConstraints();
 
     currentSchedule = null;
@@ -1014,11 +756,11 @@ async function approveCurrentSchedule(){
   }
 
   async function resetEmployeeConstraints(emp){
-    const ok = confirm(`לאפס את כל האילוצים של ${DISPLAY_NAMES[emp] || emp}? (ימחק c1+c2)`);
+    const ok = confirm(`לאפס את כל האילוצים של ${emp}? (ימחק c1+c2)`);
     if(!ok) return;
 
     await db.ref(`constraints/${emp}`).set(null);
-    showMessage(`אופסו האילוצים של ${DISPLAY_NAMES[emp] || emp}`, 'success');
+    showMessage(`אופסו האילוצים של ${emp}`, 'success');
 
     await loadAllConstraints();
 
@@ -1482,7 +1224,7 @@ nextSunday.setDate(today.getDate() + (dow === 0 ? 7 : 7 - dow));
     let html = `
       <h2 style="color:#667eea; margin-top:30px;">📅 סידור שבועי - כל הסניף</h2>
       <div style="background:#f8f9fa; padding:20px; border-radius:12px; margin-bottom:20px;">
-        <div class="schedule-table-wrap"><table class="schedule-table">
+        <table class="schedule-table">
           <tr>
             <th>עובד</th>`;
 
@@ -1563,7 +1305,7 @@ nextSunday.setDate(today.getDate() + (dow === 0 ? 7 : 7 - dow));
 <html lang="he" dir="rtl">
 <head>
   <meta charset="UTF-8">
-  
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>סידור עבודה שבועי</title>
   <style>
     body {
@@ -1623,141 +1365,7 @@ th, td{
     .double  { background: #f8cbad; font-weight: bold; }
 .empty   { background: #f0f0f0; color: #999; }
     .dept-row td { background: #667eea; color: white; font-weight: bold; font-size: 16px; }
-  
-/* =======================
-   🔵 BIGGER LOGIN SCREEN (mobile friendly)
-   ======================= */
-#login-screen .mode-btn{
-  font-size:22px;
-  padding:22px 30px;
-  width:90%;
-  max-width:360px;
-  margin:12px auto;
-}
-
-#employee-login input,
-#manager-login input{
-  font-size:18px;
-  padding:16px;
-}
-
-#employee-login .btn,
-#manager-login .btn{
-  font-size:18px;
-  padding:16px;
-}
-
-@media (max-width:600px){
-  #employee-login > div,
-  #manager-login > div{
-    max-width:95% !important;
-    margin:20px auto !important;
-  }
-}
-
-
-/* =======================
-   🟦 LOGIN BIG (strong override)
-   ======================= */
-#employee-login, #manager-login{
-  padding: 16px !important;
-}
-
-#employee-login > div, #manager-login > div{
-  width: min(520px, 96vw) !important;
-  max-width: 96vw !important;   /* overrides inline max-width:400px */
-  margin: 18px auto !important;
-}
-
-#employee-login label, #manager-login label{
-  font-size: 18px !important;
-}
-
-#emp-username, #emp-password, #mgr-username, #mgr-password{
-  width: 100% !important;
-  font-size: 20px !important;   /* 16+ prevents mobile zoom, 20 is comfy */
-  padding: 18px 16px !important;
-  border-radius: 14px !important;
-}
-
-#employee-login .btn, #manager-login .btn{
-  width: 100% !important;
-  font-size: 20px !important;
-  padding: 16px 16px !important;
-  border-radius: 14px !important;
-  margin-top: 10px;
-}
-
-/* bigger headings on phone */
-@media (max-width: 600px){
-  #employee-login h1, #manager-login h1{
-    font-size: 26px !important;
-  }
-}
-
-
-    /* =======================
-       📱 Small screens - make container fill more space
-       ======================= */
-    @media (max-width: 600px){
-      body{ padding: 10px !important; }
-      .container{
-        width: 98vw !important;
-        padding: 18px !important;
-        border-radius: 16px !important;
-      }
-    }
-
-
-/* 🔥 Mobile full width – important for Chrome */
-@media (max-width: 700px){
-  body{
-    padding: 6px !important;
-  }
-
-  .container{
-    width: 100vw !important;
-    max-width: 100vw !important;
-    padding: 16px !important;
-    border-radius: 14px !important;
-  }
-}
-
-
-/* =======================
-   ✅ Chrome mobile fix (minimal, safe)
-   ======================= */
-html, body{
-  width: 100%;
-  max-width: 100%;
-  overflow-x: hidden;
-}
-
-@media (max-width: 900px){
-  body{ padding: 8px; } /* nudge so the white card isn't clipped */
-  .container{
-    width: 100%;
-    max-width: 100%;
-    margin: 0 auto;
-    box-sizing: border-box;
-  }
-}
-
-
-@media (max-width: 700px){
-  .schedule-table{ min-width: 0 !important; width: 100% !important; }
-  .schedule-table th, .schedule-table td{
-    min-width: 70px !important;
-    padding: 10px 6px !important;
-    font-size: 12px !important;
-  }
-  .shift-morning, .shift-middle, .shift-evening, .shift-friday, .shift-saturday{
-    padding: 6px 8px !important;
-    font-size: 12px !important;
-  }
-}
-
-</style>
+  </style>
 </head>
 <body>
   <h1>📅 סידור עבודה שבועי</h1>
@@ -2160,7 +1768,7 @@ wb.Workbook.Views = [{ RTL: true }];
       navigator.serviceWorker.register("./service-worker.js");
     });
   }
-    // =======================
+// =======================
 // 🔁 Restore login after refresh
 // =======================
 document.addEventListener('DOMContentLoaded', () => {
@@ -2192,4 +1800,3 @@ document.addEventListener('DOMContentLoaded', () => {
 
 </body>
 </html>
-
