@@ -240,6 +240,46 @@
   }
 }
 
+
+/* =======================
+   🟦 LOGIN BIG (strong override)
+   ======================= */
+#employee-login, #manager-login{
+  padding: 16px !important;
+}
+
+#employee-login > div, #manager-login > div{
+  width: min(520px, 96vw) !important;
+  max-width: 96vw !important;   /* overrides inline max-width:400px */
+  margin: 18px auto !important;
+}
+
+#employee-login label, #manager-login label{
+  font-size: 18px !important;
+}
+
+#emp-username, #emp-password, #mgr-username, #mgr-password{
+  width: 100% !important;
+  font-size: 20px !important;   /* 16+ prevents mobile zoom, 20 is comfy */
+  padding: 18px 16px !important;
+  border-radius: 14px !important;
+}
+
+#employee-login .btn, #manager-login .btn{
+  width: 100% !important;
+  font-size: 20px !important;
+  padding: 16px 16px !important;
+  border-radius: 14px !important;
+  margin-top: 10px;
+}
+
+/* bigger headings on phone */
+@media (max-width: 600px){
+  #employee-login h1, #manager-login h1{
+    font-size: 26px !important;
+  }
+}
+
 </style>
 </head>
 
@@ -1544,6 +1584,46 @@ th, td{
   #manager-login > div{
     max-width:95% !important;
     margin:20px auto !important;
+  }
+}
+
+
+/* =======================
+   🟦 LOGIN BIG (strong override)
+   ======================= */
+#employee-login, #manager-login{
+  padding: 16px !important;
+}
+
+#employee-login > div, #manager-login > div{
+  width: min(520px, 96vw) !important;
+  max-width: 96vw !important;   /* overrides inline max-width:400px */
+  margin: 18px auto !important;
+}
+
+#employee-login label, #manager-login label{
+  font-size: 18px !important;
+}
+
+#emp-username, #emp-password, #mgr-username, #mgr-password{
+  width: 100% !important;
+  font-size: 20px !important;   /* 16+ prevents mobile zoom, 20 is comfy */
+  padding: 18px 16px !important;
+  border-radius: 14px !important;
+}
+
+#employee-login .btn, #manager-login .btn{
+  width: 100% !important;
+  font-size: 20px !important;
+  padding: 16px 16px !important;
+  border-radius: 14px !important;
+  margin-top: 10px;
+}
+
+/* bigger headings on phone */
+@media (max-width: 600px){
+  #employee-login h1, #manager-login h1{
+    font-size: 26px !important;
   }
 }
 
