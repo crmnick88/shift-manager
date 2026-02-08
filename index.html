@@ -1768,6 +1768,34 @@ wb.Workbook.Views = [{ RTL: true }];
       navigator.serviceWorker.register("./service-worker.js");
     });
   }
+    // =======================
+// 🔁 Restore login after refresh
+// =======================
+document.addEventListener('DOMContentLoaded', () => {
+  const saved = localStorage.getItem('currentEmployee');
+
+  if (!saved) {
+    backToLogin();
+    return;
+  }
+
+  currentEmployee = saved;
+
+  if (saved === 'MANAGER') {
+    hideAll();
+    document.getElementById('manager-section').classList.add('active');
+    loadAllConstraints();
+  } else {
+    hideAll();
+    document.getElementById('employee-section').classList.add('active');
+    document.getElementById('employee-welcome').textContent = `שלום ${saved}! 👋`;
+    applyConstraintOptions(currentEmployee);
+    loadEmployeeConstraints();
+  }
+
+  initPushNotifications();
+});
+
 </script>
 
 </body>
