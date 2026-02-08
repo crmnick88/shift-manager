@@ -895,6 +895,11 @@ let currentEmployee = '';
     const historySnapshot = await db.ref('saturdayHistory').once('value');
     const saturdayHistory = historySnapshot.val() || {};
 
+    // ✅ NEW: היסטוריה למחלקות של 2 עובדים (מי פותח את השבוע)
+    const weekdaySnap = await db.ref('weekdayStartHistory').once('value');
+    const weekdayStartHistory = weekdaySnap.val() || {};
+
+
     const isApprovedForScheduling = (c) => {
       if (!c) return false;
       if (new Date(c.date + 'T00:00:00') < today) return false;
@@ -941,7 +946,15 @@ let currentEmployee = '';
       const days = ['ראשון','שני','שלישי','רביעי','חמישי','שישי','שבת'];
       const isThreeEmp = emps.length === 3;
 
-      // ✅ NEW: מונה משמרות לכל עובד למען הוגנות
+      
+
+      // ✅ NEW: במחלקה של 2 עובדים - קובע מי פותח את השבוע (ראשון בבוקר)
+      let weekdayStartEmp = null;
+      if (!isThreeEmp) {
+        const a = emps[0], b = emps[1];
+        weekdayStartEmp = weekdayStartHistory[dept] || (Math.random() < 0.5 ? a : b);
+      }
+// ✅ NEW: מונה משמרות לכל עובד למען הוגנות
       const shiftCounts = {};
       emps.forEach(emp => { shiftCounts[emp] = { morning: 0, middle: 0, evening: 0 }; });
 
@@ -1038,20 +1051,20 @@ let currentEmployee = '';
           }
 
         } else {
-          // 2 עובדים – רוטציה היסטורית
+          // 2 עובדים – רוטציה היסטורית (מתחשב בשבוע הקודם)
           const a = emps[0], b = emps[1];
 
-          const histSnap = await db.ref('weekdayStartHistory').once('value');
-          const weekdayHistory = histSnap.val() || {};
-          let startEmp = weekdayHistory[dept] || (Math.random() < 0.5 ? a : b);
+          // מי פותח את השבוע (ראשון בבוקר) נקבע פעם אחת למחלקה (weekdayStartEmp)
+          let startEmp = weekdayStartEmp || (Math.random() < 0.5 ? a : b);
+          const otherEmp = (startEmp === a) ? b : a;
           const aOff = isDayOffApproved(a, dateStr);
           const bOff = isDayOffApproved(b, dateStr);
 
           if (aOff && !bOff) schedule.push({ day: days[i], date: dateStr, morning: b, evening: b, dept });
           else if (bOff && !aOff) schedule.push({ day: days[i], date: dateStr, morning: a, evening: a, dept });
           else {
-            const m = (i % 2 === 0) ? a : b;
-            const e = (m === a) ? b : a;
+            const m = (i % 2 === 0) ? startEmp : otherEmp;
+            const e = (m === startEmp) ? otherEmp : startEmp;
 
             const mCant = cannotMorning(m, dateStr);
             const eCant = cannotEvening(e, dateStr);
@@ -1070,6 +1083,13 @@ let currentEmployee = '';
             schedule.push({ day: days[i], date: dateStr, morning, evening, dept });
           }
         }
+      }
+
+
+      // ✅ NEW: במחלקה של 2 עובדים - בשבוע הבא העובד השני יפתח את השבוע
+      if (!isThreeEmp && weekdayStartEmp) {
+        const a = emps[0], b = emps[1];
+        weekdayStartHistory[dept] = (weekdayStartEmp === a) ? b : a;
       }
 
       // שישי ושבת - רוטציה עם שמירה ב-Firebase
@@ -1175,6 +1195,9 @@ let currentEmployee = '';
 
     // שמירת היסטוריית מוצ"ש ב-Firebase
     await db.ref('saturdayHistory').set(saturdayHistory);
+
+    // ✅ Save weekday start history (2-employee departments)
+    await db.ref('weekdayStartHistory').set(weekdayStartHistory);
 
     return allSchedules;
   }
