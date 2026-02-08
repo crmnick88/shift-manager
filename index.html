@@ -435,26 +435,53 @@ let currentEmployee = '';
     if(b) b.style.display = v ? 'inline-block' : 'none';
   }
 
-  async function approveCurrentSchedule(){
-    if(!currentSchedule) return;
-    const k = currentWeekKey || getNextSundayKey();
-    await db.ref('approvedSchedules/' + k).set({
-      data: currentSchedule,
-      approvedAt: Date.now(),
-      approvedBy: 'MANAGER'
-    });
-    showMessage('✅ הסידור נשמר כמאושר', 'success');
+async function approveCurrentSchedule(){
+  if(!currentSchedule) return;
+
+  const k = currentWeekKey || getNextSundayKey();
+
+  const payload = {
+    data: currentSchedule,
+    approvedAt: Date.now(),
+    approvedBy: 'MANAGER'
+  };
+
+  // ✅ שומר לפי שבוע
+  await db.ref('approvedSchedules/' + k).set(payload);
+
+  // ✅ מצביע ל"אחרון שאושר"
+  await db.ref('approvedSchedulesLatest').set({
+    weekKey: k,
+    approvedAt: payload.approvedAt,
+    approvedBy: payload.approvedBy
+  });
+
+  showMessage('✅ הסידור נשמר כמאושר', 'success');
+}
+
+
+ async function loadApprovedScheduleToScreen(){
+  const latestSnap = await db.ref('approvedSchedulesLatest').once('value');
+  const latest = latestSnap.val();
+
+  if(!latest || !latest.weekKey){
+    return showMessage('אין סידור מאושר אחרון לטעינה', 'error');
   }
 
-  async function loadApprovedScheduleToScreen(){
-    const k = getNextSundayKey();
-    const snap = await db.ref('approvedSchedules/' + k + '/data').once('value');
-    const d = snap.val();
-    if(!d) return showMessage('אין סידור מאושר', 'error');
-    currentSchedule = d;
-    displaySchedule(d);
-    showMessage('📥 נטען סידור מאושר', 'success');
-  }
+  const k = latest.weekKey;
+
+  const snap = await db.ref('approvedSchedules/' + k + '/data').once('value');
+  const d = snap.val();
+
+  if(!d) return showMessage('הסידור האחרון לא נמצא ב-DB', 'error');
+
+  currentSchedule = d;
+  displaySchedule(d);
+  currentWeekKey = k;
+
+  showMessage(`📥 נטען הסידור המאושר האחרון (${k})`, 'success');
+}
+
 
 
   const USERS = {
