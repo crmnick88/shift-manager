@@ -262,7 +262,7 @@
 
     <div class="toolbar">
       <button class="btn" id="approve-schedule-btn" onclick="approveCurrentSchedule()" style="background:#28a745; display:none;">✅ אשר סידור</button>
-      <button class="btn" onclick="loadApprovedScheduleToScreen()" style="background:#17a2b8;">📥 טען סידור מאושר</button>
+      <button class="btn" onclick="exportApprovedScheduleToExcel()" style="background:#17a2b8;">📥 טען סידור מאושר</button>
 
       <button class="btn" onclick="refreshAll()" style="background:#343a40;">🔁 רענן הכל</button>
       <button class="btn" onclick="loadAllConstraints()" style="background:#17a2b8;">🔄 רענן אילוצים</button>
@@ -457,6 +457,37 @@ async function approveCurrentSchedule(){
   });
 
   showMessage('✅ הסידור נשמר כמאושר', 'success');
+}
+
+  async function exportApprovedScheduleToExcel(){
+  // טוען את "האחרון שאושר" (או את השבוע הרלוונטי)
+  const latestSnap = await db.ref('approvedSchedulesLatest').once('value');
+  const latest = latestSnap.val();
+
+  if(!latest || !latest.weekKey){
+    return showMessage('אין סידור מאושר אחרון לייצוא', 'error');
+  }
+
+  const k = latest.weekKey;
+
+  const snap = await db.ref('approvedSchedules/' + k + '/data').once('value');
+  const approved = snap.val();
+
+  if(!approved){
+    return showMessage('הסידור המאושר לא נמצא ב-DB', 'error');
+  }
+
+  // ✅ שומרים את מה שעבדת עליו כרגע
+  const liveSchedule = currentSchedule;
+
+  // ✅ מייצאים את המאושר בלי להציג אותו באתר
+  currentSchedule = approved;
+  exportToExcel();
+
+  // ✅ מחזירים את הסידור שאתה עובד עליו (כדי שלא יידרס)
+  currentSchedule = liveSchedule;
+
+  showMessage(`📊 ייצאתי את הסידור המאושר לאקסל (${k})`, 'success');
 }
 
 
