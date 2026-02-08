@@ -261,6 +261,9 @@
     </div>
 
     <div class="toolbar">
+      <button class="btn" id="approve-schedule-btn" onclick="approveCurrentSchedule()" style="background:#28a745; display:none;">✅ אשר סידור</button>
+      <button class="btn" onclick="exportApprovedScheduleToExcel()" style="background:#17a2b8;">📥 ייצא סידור מאושר לאקסל</button>
+
       <button class="btn" onclick="refreshAll()" style="background:#343a40;">🔁 רענן הכל</button>
       <button class="btn" onclick="loadAllConstraints()" style="background:#17a2b8;">🔄 רענן אילוצים</button>
       <button class="btn" onclick="generateSchedule()" style="background:#667eea;">🔄 רענן סידור</button>
@@ -417,6 +420,100 @@
 
 let currentEmployee = '';
   let currentSchedule = null;
+  let currentWeekKey = null;
+
+  function getNextSundayKey() {
+    const t = new Date(); t.setHours(0,0,0,0);
+    const n = new Date(t);
+    const d = t.getDay();
+    n.setDate(t.getDate() + (d === 0 ? 0 : 7 - d));
+    return toLocalDateStr(n);
+  }
+
+  function setApproveButtonVisible(v){
+    const b = document.getElementById('approve-schedule-btn');
+    if(b) b.style.display = v ? 'inline-block' : 'none';
+  }
+
+async function approveCurrentSchedule(){
+  if(!currentSchedule) return;
+
+  const k = currentWeekKey || getNextSundayKey();
+
+  const payload = {
+    data: currentSchedule,
+    approvedAt: Date.now(),
+    approvedBy: 'MANAGER'
+  };
+
+  // ✅ שומר לפי שבוע
+  await db.ref('approvedSchedules/' + k).set(payload);
+
+  // ✅ מצביע ל"אחרון שאושר"
+  await db.ref('approvedSchedulesLatest').set({
+    weekKey: k,
+    approvedAt: payload.approvedAt,
+    approvedBy: payload.approvedBy
+  });
+
+  showMessage('✅ הסידור נשמר כמאושר', 'success');
+}
+
+  async function exportApprovedScheduleToExcel(){
+  // טוען את "האחרון שאושר" (או את השבוע הרלוונטי)
+  const latestSnap = await db.ref('approvedSchedulesLatest').once('value');
+  const latest = latestSnap.val();
+
+  if(!latest || !latest.weekKey){
+    return showMessage('אין סידור מאושר אחרון לייצוא', 'error');
+  }
+
+  const k = latest.weekKey;
+
+  const snap = await db.ref('approvedSchedules/' + k + '/data').once('value');
+  const approved = snap.val();
+
+  if(!approved){
+    return showMessage('הסידור המאושר לא נמצא ב-DB', 'error');
+  }
+
+  // ✅ שומרים את מה שעבדת עליו כרגע
+  const liveSchedule = currentSchedule;
+
+  // ✅ מייצאים את המאושר בלי להציג אותו באתר
+  currentSchedule = approved;
+  exportToExcel();
+
+  // ✅ מחזירים את הסידור שאתה עובד עליו (כדי שלא יידרס)
+  currentSchedule = liveSchedule;
+
+  showMessage(`📊 ייצאתי את הסידור המאושר לאקסל (${k})`, 'success');
+}
+
+
+ async function loadApprovedScheduleToScreen(){
+  const latestSnap = await db.ref('approvedSchedulesLatest').once('value');
+  const latest = latestSnap.val();
+
+  if(!latest || !latest.weekKey){
+    return showMessage('אין סידור מאושר אחרון לטעינה', 'error');
+  }
+
+  const k = latest.weekKey;
+
+  const snap = await db.ref('approvedSchedules/' + k + '/data').once('value');
+  const d = snap.val();
+
+  if(!d) return showMessage('הסידור האחרון לא נמצא ב-DB', 'error');
+
+  currentSchedule = d;
+  displaySchedule(d);
+  currentWeekKey = k;
+
+  showMessage(`📥 נטען הסידור המאושר האחרון (${k})`, 'success');
+}
+
+
 
   const USERS = {
     'ILAY': 'ILAY',
@@ -511,11 +608,13 @@ let currentEmployee = '';
     clearInputs();
   }
 
-  function logout() {
-    currentEmployee = '';
-    backToLogin();
-    showMessage('התנתקת בהצלחה', 'success');
-  }
+ function logout() {
+  currentEmployee = '';
+  localStorage.removeItem('currentEmployee'); // ⬅️ חדש: מוחק זיכרון התחברות קבוע
+  backToLogin();
+  showMessage('התנתקת בהצלחה', 'success');
+}
+
 
   function loginEmployee() {
     const username = document.getElementById('emp-username').value.trim().toUpperCase();
@@ -525,6 +624,8 @@ let currentEmployee = '';
 
     if (USERS[username] && USERS[username] === password) {
       currentEmployee = username;
+      localStorage.setItem('currentEmployee', currentEmployee);
+
 
       hideAll();
       document.getElementById('employee-section').classList.add('active');
@@ -549,6 +650,8 @@ let currentEmployee = '';
     if (username === MANAGER.username && password === MANAGER.password) {
       // ✅ Save push token for manager too (so manager devices receive reminders)
       currentEmployee = 'MANAGER';
+      localStorage.setItem('currentEmployee', currentEmployee);
+
 
       hideAll();
       document.getElementById('manager-section').classList.add('active');
@@ -764,6 +867,9 @@ let currentEmployee = '';
       displaySchedule(schedule);
       document.getElementById('export-section').style.display = 'block';
       showMessage('הסידור נוצר בהצלחה!', 'success');
+      currentWeekKey = getNextSundayKey();
+      setApproveButtonVisible(true);
+
 
     } catch (error) {
       console.error(error);
@@ -842,16 +948,25 @@ let currentEmployee = '';
   }
 
   async function createSchedule(constraints) {
-    const today = new Date(); today.setHours(0,0,0,0);
-    const nextSunday = new Date(today);
-    const dow = today.getDay();
-    nextSunday.setDate(today.getDate() + (dow === 0 ? 0 : 7 - dow));
+   const today = new Date(); today.setHours(0,0,0,0);
+const nextSunday = new Date(today);
+const dow = today.getDay();
+
+// ראשון הבא (השבוע הבא תמיד)
+nextSunday.setDate(today.getDate() + (dow === 0 ? 7 : 7 - dow));
+
+
 
     const allSchedules = {};
 
     // קריאת היסטוריית מוצ"ש מ-Firebase
     const historySnapshot = await db.ref('saturdayHistory').once('value');
     const saturdayHistory = historySnapshot.val() || {};
+
+    // ✅ NEW: היסטוריה למחלקות של 2 עובדים (מי פותח את השבוע)
+    const weekdaySnap = await db.ref('weekdayStartHistory').once('value');
+    const weekdayStartHistory = weekdaySnap.val() || {};
+
 
     const isApprovedForScheduling = (c) => {
       if (!c) return false;
@@ -899,7 +1014,15 @@ let currentEmployee = '';
       const days = ['ראשון','שני','שלישי','רביעי','חמישי','שישי','שבת'];
       const isThreeEmp = emps.length === 3;
 
-      // ✅ NEW: מונה משמרות לכל עובד למען הוגנות
+      
+
+      // ✅ NEW: במחלקה של 2 עובדים - קובע מי פותח את השבוע (ראשון בבוקר)
+      let weekdayStartEmp = null;
+      if (!isThreeEmp) {
+        const a = emps[0], b = emps[1];
+        weekdayStartEmp = weekdayStartHistory[dept] || (Math.random() < 0.5 ? a : b);
+      }
+// ✅ NEW: מונה משמרות לכל עובד למען הוגנות
       const shiftCounts = {};
       emps.forEach(emp => { shiftCounts[emp] = { morning: 0, middle: 0, evening: 0 }; });
 
@@ -996,16 +1119,20 @@ let currentEmployee = '';
           }
 
         } else {
-          // 2 עובדים
+          // 2 עובדים – רוטציה היסטורית (מתחשב בשבוע הקודם)
           const a = emps[0], b = emps[1];
+
+          // מי פותח את השבוע (ראשון בבוקר) נקבע פעם אחת למחלקה (weekdayStartEmp)
+          let startEmp = weekdayStartEmp || (Math.random() < 0.5 ? a : b);
+          const otherEmp = (startEmp === a) ? b : a;
           const aOff = isDayOffApproved(a, dateStr);
           const bOff = isDayOffApproved(b, dateStr);
 
           if (aOff && !bOff) schedule.push({ day: days[i], date: dateStr, morning: b, evening: b, dept });
           else if (bOff && !aOff) schedule.push({ day: days[i], date: dateStr, morning: a, evening: a, dept });
           else {
-            const m = (i % 2 === 0) ? a : b;
-            const e = (m === a) ? b : a;
+            const m = (i % 2 === 0) ? startEmp : otherEmp;
+            const e = (m === startEmp) ? otherEmp : startEmp;
 
             const mCant = cannotMorning(m, dateStr);
             const eCant = cannotEvening(e, dateStr);
@@ -1024,6 +1151,13 @@ let currentEmployee = '';
             schedule.push({ day: days[i], date: dateStr, morning, evening, dept });
           }
         }
+      }
+
+
+      // ✅ NEW: במחלקה של 2 עובדים - בשבוע הבא העובד השני יפתח את השבוע
+      if (!isThreeEmp && weekdayStartEmp) {
+        const a = emps[0], b = emps[1];
+        weekdayStartHistory[dept] = (weekdayStartEmp === a) ? b : a;
       }
 
       // שישי ושבת - רוטציה עם שמירה ב-Firebase
@@ -1129,6 +1263,9 @@ let currentEmployee = '';
 
     // שמירת היסטוריית מוצ"ש ב-Firebase
     await db.ref('saturdayHistory').set(saturdayHistory);
+
+    // ✅ Save weekday start history (2-employee departments)
+    await db.ref('weekdayStartHistory').set(weekdayStartHistory);
 
     return allSchedules;
   }
@@ -1689,6 +1826,34 @@ wb.Workbook.Views = [{ RTL: true }];
       navigator.serviceWorker.register("./service-worker.js");
     });
   }
+    // =======================
+// 🔁 Restore login after refresh
+// =======================
+document.addEventListener('DOMContentLoaded', () => {
+  const saved = localStorage.getItem('currentEmployee');
+
+  if (!saved) {
+    backToLogin();
+    return;
+  }
+
+  currentEmployee = saved;
+
+  if (saved === 'MANAGER') {
+    hideAll();
+    document.getElementById('manager-section').classList.add('active');
+    loadAllConstraints();
+  } else {
+    hideAll();
+    document.getElementById('employee-section').classList.add('active');
+    document.getElementById('employee-welcome').textContent = `שלום ${saved}! 👋`;
+    applyConstraintOptions(currentEmployee);
+    loadEmployeeConstraints();
+  }
+
+  initPushNotifications();
+});
+
 </script>
 
 </body>
