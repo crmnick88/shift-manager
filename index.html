@@ -2,8 +2,9 @@
 <html lang="he" dir="rtl">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <link rel="manifest" href="./manifest.json">
+
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+<link rel="manifest" href="./manifest.json">
   <link rel="icon" href="./icon-192.png">
   <meta name="theme-color" content="#667eea" />
   <title>מערכת ניהול משמרות</title>
@@ -25,9 +26,14 @@
       min-height:100vh; padding:20px;
     }
     .container{
-      max-width:900px; margin:0 auto; background:white; border-radius:20px;
-      box-shadow:0 20px 60px rgba(0,0,0,0.3); padding:30px;
-    }
+  width: 100%;
+  max-width: 1100px;
+  margin: 0 auto;
+  background:white;
+  border-radius:20px;
+  box-shadow:0 20px 60px rgba(0,0,0,0.3);
+  padding:30px;
+}
     h1{ text-align:center; color:#667eea; margin-bottom:30px; font-size:2.3em; }
     .section{ display:none; }
     .section.active{ display:block; }
@@ -208,7 +214,127 @@
     }
     }
 
-  </style>
+  
+/* =======================
+   🔵 BIGGER LOGIN SCREEN (mobile friendly)
+   ======================= */
+#login-screen .mode-btn{
+  font-size:22px;
+  padding:22px 30px;
+  width:90%;
+  max-width:360px;
+  margin:12px auto;
+}
+
+#employee-login input,
+#manager-login input{
+  font-size:18px;
+  padding:16px;
+}
+
+#employee-login .btn,
+#manager-login .btn{
+  font-size:18px;
+  padding:16px;
+}
+
+@media (max-width:600px){
+  #employee-login > div,
+  #manager-login > div{
+    max-width:95% !important;
+    margin:20px auto !important;
+  }
+}
+
+
+/* =======================
+   🟦 LOGIN BIG (strong override)
+   ======================= */
+#employee-login, #manager-login{
+  padding: 16px !important;
+}
+
+#employee-login > div, #manager-login > div{
+  width: min(520px, 96vw) !important;
+  max-width: 96vw !important;   /* overrides inline max-width:400px */
+  margin: 18px auto !important;
+}
+
+#employee-login label, #manager-login label{
+  font-size: 18px !important;
+}
+
+#emp-username, #emp-password, #mgr-username, #mgr-password{
+  width: 100% !important;
+  font-size: 20px !important;   /* 16+ prevents mobile zoom, 20 is comfy */
+  padding: 18px 16px !important;
+  border-radius: 14px !important;
+}
+
+#employee-login .btn, #manager-login .btn{
+  width: 100% !important;
+  font-size: 20px !important;
+  padding: 16px 16px !important;
+  border-radius: 14px !important;
+  margin-top: 10px;
+}
+
+/* bigger headings on phone */
+@media (max-width: 600px){
+  #employee-login h1, #manager-login h1{
+    font-size: 26px !important;
+  }
+}
+
+
+    /* =======================
+       📱 Small screens - make container fill more space
+       ======================= */
+    @media (max-width: 600px){
+      body{ padding: 10px !important; }
+      .container{
+        width: 98vw !important;
+        padding: 18px !important;
+        border-radius: 16px !important;
+      }
+    }
+
+
+/* 🔥 Mobile full width – important for Chrome */
+@media (max-width: 700px){
+  body{
+    padding: 6px !important;
+  }
+
+  .container{
+    width: 100vw !important;
+    max-width: 100vw !important;
+    padding: 16px !important;
+    border-radius: 14px !important;
+  }
+}
+
+
+/* =======================
+   ✅ Chrome mobile fix (minimal, safe)
+   ======================= */
+html, body{
+  width: 100%;
+  max-width: 100%;
+  overflow-x: hidden;
+}
+
+@media (max-width: 900px){
+  body{ padding: 8px; } /* nudge so the white card isn't clipped */
+  .container{
+    width: 100%;
+    max-width: 100%;
+    margin: 0 auto;
+    box-sizing: border-box;
+  }
+}
+
+</style>
 </head>
 
 <body>
@@ -217,7 +343,7 @@
   <!-- Login Screen -->
   <div id="login-screen" class="section active">
     <h1>🗓️ מערכת ניהול משמרות</h1>
-    <div style="text-align:center; margin-top:40px;">
+    <div style="text-align:center; margin-top:28px;">
       <button class="mode-btn" onclick="showLoginForm('employee')">👤 כניסת עובד</button>
       <button class="mode-btn" onclick="showLoginForm('manager')">👔 כניסת מנהל</button>
     </div>
@@ -226,7 +352,7 @@
   <!-- Employee Login -->
   <div id="employee-login" class="section">
     <h1>🗓️ כניסת עובד</h1>
-    <div style="max-width:400px; margin:40px auto;">
+    <div style="width:95%; margin:24px auto;">
       <div class="form-group">
         <label>שם משתמש:</label>
         <input type="text" id="emp-username" placeholder="הזן שם משתמש">
@@ -243,7 +369,7 @@
   <!-- Manager Login -->
   <div id="manager-login" class="section">
     <h1>🗓️ כניסת מנהל</h1>
-    <div style="max-width:400px; margin:40px auto;">
+    <div style="width:95%; margin:24px auto;">
       <div class="form-group">
         <label>שם משתמש:</label>
         <input type="text" id="mgr-username" placeholder="הזן שם משתמש">
@@ -687,7 +813,7 @@ async function approveCurrentSchedule(){
 
       hideAll();
       document.getElementById('employee-section').classList.add('active');
-      document.getElementById('employee-welcome').textContent = `שלום ${username}! 👋`;
+      document.getElementById('employee-welcome').textContent = `שלום ${DISPLAY_NAMES[username] || username}! 👋`;
 
       applyConstraintOptions(currentEmployee);
 
@@ -793,8 +919,8 @@ async function approveCurrentSchedule(){
 
         html += `
           <div class="emp-header-row">
-            <h4>${emp}</h4>
-            <button class="reset-btn" onclick="resetEmployeeConstraints('${emp}')">🧹 איפוס אילוצים לעובד</button>
+            <h4>${DISPLAY_NAMES[emp] || emp}</h4>
+            <button class="reset-btn" onclick="resetEmployeeConstraints('${DISPLAY_NAMES[emp] || emp}')">🧹 איפוס אילוצים לעובד</button>
           </div>
         `;
 
@@ -824,8 +950,8 @@ async function approveCurrentSchedule(){
       const status = c.status || 'pending';
       if (status === 'pending') {
         html += `<div class="approval-buttons">
-          <button class="approve-btn" onclick="updateApproval('${emp}','${key}','approved')">✅ אשר</button>
-          <button class="reject-btn" onclick="updateApproval('${emp}','${key}','rejected')">❌ דחה</button>
+          <button class="approve-btn" onclick="updateApproval('${DISPLAY_NAMES[emp] || emp}','${key}','approved')">✅ אשר</button>
+          <button class="reject-btn" onclick="updateApproval('${DISPLAY_NAMES[emp] || emp}','${key}','rejected')">❌ דחה</button>
         </div>
         <span class="status-pending">⏳ ממתין</span>`;
       } else if (status === 'approved') {
@@ -839,7 +965,7 @@ async function approveCurrentSchedule(){
 
     html += `
       <div class="approval-buttons" style="margin-top:8px;">
-        <button class="reset-btn" onclick="deleteSingleConstraint('${emp}','${key}')">🗑️ מחק אילוץ זה</button>
+        <button class="reset-btn" onclick="deleteSingleConstraint('${DISPLAY_NAMES[emp] || emp}','${key}')">🗑️ מחק אילוץ זה</button>
       </div>
     `;
 
@@ -862,10 +988,10 @@ async function approveCurrentSchedule(){
   }
 
   async function deleteSingleConstraint(emp, key){
-    const ok = confirm(`למחוק את ${key} עבור ${emp}?`);
+    const ok = confirm(`למחוק את ${key} עבור ${DISPLAY_NAMES[emp] || emp}?`);
     if(!ok) return;
     await db.ref(`constraints/${emp}/${key}`).set(null);
-    showMessage(`נמחק ${key} עבור ${emp}`, 'success');
+    showMessage(`נמחק ${key} עבור ${DISPLAY_NAMES[emp] || emp}`, 'success');
     await loadAllConstraints();
 
     currentSchedule = null;
@@ -874,11 +1000,11 @@ async function approveCurrentSchedule(){
   }
 
   async function resetEmployeeConstraints(emp){
-    const ok = confirm(`לאפס את כל האילוצים של ${emp}? (ימחק c1+c2)`);
+    const ok = confirm(`לאפס את כל האילוצים של ${DISPLAY_NAMES[emp] || emp}? (ימחק c1+c2)`);
     if(!ok) return;
 
     await db.ref(`constraints/${emp}`).set(null);
-    showMessage(`אופסו האילוצים של ${emp}`, 'success');
+    showMessage(`אופסו האילוצים של ${DISPLAY_NAMES[emp] || emp}`, 'success');
 
     await loadAllConstraints();
 
@@ -1423,7 +1549,7 @@ nextSunday.setDate(today.getDate() + (dow === 0 ? 7 : 7 - dow));
 <html lang="he" dir="rtl">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  
   <title>סידור עבודה שבועי</title>
   <style>
     body {
@@ -1483,7 +1609,127 @@ th, td{
     .double  { background: #f8cbad; font-weight: bold; }
 .empty   { background: #f0f0f0; color: #999; }
     .dept-row td { background: #667eea; color: white; font-weight: bold; font-size: 16px; }
-  </style>
+  
+/* =======================
+   🔵 BIGGER LOGIN SCREEN (mobile friendly)
+   ======================= */
+#login-screen .mode-btn{
+  font-size:22px;
+  padding:22px 30px;
+  width:90%;
+  max-width:360px;
+  margin:12px auto;
+}
+
+#employee-login input,
+#manager-login input{
+  font-size:18px;
+  padding:16px;
+}
+
+#employee-login .btn,
+#manager-login .btn{
+  font-size:18px;
+  padding:16px;
+}
+
+@media (max-width:600px){
+  #employee-login > div,
+  #manager-login > div{
+    max-width:95% !important;
+    margin:20px auto !important;
+  }
+}
+
+
+/* =======================
+   🟦 LOGIN BIG (strong override)
+   ======================= */
+#employee-login, #manager-login{
+  padding: 16px !important;
+}
+
+#employee-login > div, #manager-login > div{
+  width: min(520px, 96vw) !important;
+  max-width: 96vw !important;   /* overrides inline max-width:400px */
+  margin: 18px auto !important;
+}
+
+#employee-login label, #manager-login label{
+  font-size: 18px !important;
+}
+
+#emp-username, #emp-password, #mgr-username, #mgr-password{
+  width: 100% !important;
+  font-size: 20px !important;   /* 16+ prevents mobile zoom, 20 is comfy */
+  padding: 18px 16px !important;
+  border-radius: 14px !important;
+}
+
+#employee-login .btn, #manager-login .btn{
+  width: 100% !important;
+  font-size: 20px !important;
+  padding: 16px 16px !important;
+  border-radius: 14px !important;
+  margin-top: 10px;
+}
+
+/* bigger headings on phone */
+@media (max-width: 600px){
+  #employee-login h1, #manager-login h1{
+    font-size: 26px !important;
+  }
+}
+
+
+    /* =======================
+       📱 Small screens - make container fill more space
+       ======================= */
+    @media (max-width: 600px){
+      body{ padding: 10px !important; }
+      .container{
+        width: 98vw !important;
+        padding: 18px !important;
+        border-radius: 16px !important;
+      }
+    }
+
+
+/* 🔥 Mobile full width – important for Chrome */
+@media (max-width: 700px){
+  body{
+    padding: 6px !important;
+  }
+
+  .container{
+    width: 100vw !important;
+    max-width: 100vw !important;
+    padding: 16px !important;
+    border-radius: 14px !important;
+  }
+}
+
+
+/* =======================
+   ✅ Chrome mobile fix (minimal, safe)
+   ======================= */
+html, body{
+  width: 100%;
+  max-width: 100%;
+  overflow-x: hidden;
+}
+
+@media (max-width: 900px){
+  body{ padding: 8px; } /* nudge so the white card isn't clipped */
+  .container{
+    width: 100%;
+    max-width: 100%;
+    margin: 0 auto;
+    box-sizing: border-box;
+  }
+}
+
+</style>
 </head>
 <body>
   <h1>📅 סידור עבודה שבועי</h1>
@@ -1918,3 +2164,4 @@ document.addEventListener('DOMContentLoaded', () => {
 
 </body>
 </html>
+
