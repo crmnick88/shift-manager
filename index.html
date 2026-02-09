@@ -152,6 +152,51 @@
     .emp-header-row .reset-btn{
       white-space:nowrap;
     }
+
+/* =======================
+   שיפור מסך בחירה - שלב 1
+   ======================= */
+#login-screen.active {
+  display: flex !important;
+  flex-direction: column !important;
+  align-items: center !important;
+  justify-content: center !important;
+  min-height: 60vh !important;
+  padding: 20px !important;
+}
+
+#login-screen h1 {
+  margin-bottom: 40px !important;
+  font-size: 2.5em !important;
+  text-align: center !important;
+}
+
+#login-screen .mode-btn {
+  display: block !important;
+  font-size: 26px !important;
+  padding: 28px 40px !important;
+  width: 100% !important;
+  max-width: 420px !important;
+  margin: 16px auto !important;
+  border: 3px solid #667eea !important;
+  box-shadow: 0 4px 12px rgba(102, 126, 234, 0.2) !important;
+}
+
+#login-screen .mode-btn:hover {
+  transform: translateY(-3px) !important;
+  box-shadow: 0 8px 24px rgba(102, 126, 234, 0.4) !important;
+}
+
+@media (max-width: 600px) {
+  #login-screen h1 {
+    font-size: 2em !important;
+  }
+  
+  #login-screen .mode-btn {
+    font-size: 22px !important;
+    padding: 24px 35px !important;
+  }
+}
   </style>
 </head>
 
@@ -736,7 +781,6 @@ async function approveCurrentSchedule(){
         html += `
           <div class="emp-header-row">
             <h4>${emp}</h4>
-            <button class="reset-btn" onclick="resetEmployeeConstraints('${emp}')">🧹 איפוס אילוצים לעובד</button>
           </div>
         `;
 
