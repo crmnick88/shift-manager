@@ -380,6 +380,14 @@
       <button class="btn" onclick="generateSchedule()" style="background:#667eea;">🔄 רענן סידור</button>
       <button class="btn" onclick="sendConstraintsReminderRequest()" style="background:#ff6f61;">🔔 שלח תזכורת להזנת אילוצים</button>
       <button class="btn" onclick="resetAllConstraints()" style="background:#6c757d;">🧹 איפוס אילוצים לכל העובדים</button>
+      <div style="display:flex; align-items:center; gap:10px; padding:10px 12px; border:2px solid #e0e0e0; border-radius:10px; background:#ffffff; width:100%; max-width:520px;">
+        <label style="display:flex; align-items:center; gap:10px; cursor:pointer; font-weight:700;">
+          <input type="checkbox" id="shirot-active-toggle" style="width:18px; height:18px;" />
+          <span>נציגות שירות: עובד "שירות" פעיל</span>
+        </label>
+        <span style="font-size:12px; opacity:.8;">כיבוי = המחלקה תתנהג כמו 2 עובדים</span>
+      </div>
+
     </div>
 
     <div id="all-constraints"></div>
@@ -662,6 +670,50 @@ async function approveCurrentSchedule(){
     'נציגות שירות': ['LIOR', 'AMANI', 'SHIROT']
   };
 
+  // ======== נציגות שירות: הפעלה/כיבוי עובד "שירות" (SHIROT) ========
+  const SHIROT_TOGGLE_KEY = 'shirotActive';
+  function isShirotActive() {
+    const v = localStorage.getItem(SHIROT_TOGGLE_KEY);
+    return v === null ? true : v === 'true';
+  }
+  function setShirotActive(v) {
+    localStorage.setItem(SHIROT_TOGGLE_KEY, v ? 'true' : 'false');
+  }
+  function getDeptEmployees(dept) {
+    const list = (DEPARTMENTS[dept] || []).slice();
+    if (dept === 'נציגות שירות' && !isShirotActive()) {
+      return list.filter(e => e !== 'SHIROT');
+    }
+    return list;
+  }
+  function getDeptSizeForRules(dept) {
+    return getDeptEmployees(dept).length;
+  }
+
+
+  function initShirotToggleUI() {
+    const el = document.getElementById('shirot-active-toggle');
+    if (!el) return;
+
+    el.checked = isShirotActive();
+
+    el.onchange = async () => {
+      setShirotActive(el.checked);
+
+      // רענון תצוגה בהתאם למצב (לא נוגעים בלוגיקת משתמשים/סיסמאות)
+      try { await loadAllConstraints(); } catch(e) {}
+      try { if (currentSchedule) displaySchedule(currentSchedule); } catch(e) {}
+
+      showMessage(
+        el.checked
+          ? '✅ "שירות" פעיל: נציגות שירות מתנהגת כמו 3 עובדים'
+          : '⚠️ "שירות" לא פעיל: נציגות שירות מתנהגת כמו 2 עובדים',
+        'success'
+      );
+    };
+  }
+
+
   // מיפוי שמות תצוגה בעברית (רק לתצוגה בטבלה!)
   const DISPLAY_NAMES = {
     'ILAY': 'עילאי',
@@ -690,7 +742,7 @@ async function approveCurrentSchedule(){
 
   function buildConstraintOptionsForEmp(emp) {
     const dept = getDeptOfEmp(emp);
-    const size = dept ? (DEPARTMENTS[dept]?.length || 0) : 0;
+    const size = dept ? (getDeptSizeForRules(dept) || 0) : 0;
 
     if (size === 3) {
       return [
@@ -779,6 +831,7 @@ async function approveCurrentSchedule(){
 
       hideAll();
       document.getElementById('manager-section').classList.add('active');
+      initShirotToggleUI();
       loadAllConstraints();
       showMessage('התחברת בהצלחה', 'success');
       initPushNotifications();
@@ -848,7 +901,8 @@ async function approveCurrentSchedule(){
 
     let html = '<h2>אילוצי העובדים</h2>';
 
-    for (const [dept, employees] of Object.entries(DEPARTMENTS)) {
+    for (const [dept] of Object.entries(DEPARTMENTS)) {
+      const employees = getDeptEmployees(dept);
       html += `<div style="background:#f0f0f0; padding:15px; border-radius:10px; margin-bottom:20px;">
         <h3 style="color:#667eea;">🏢 ${dept}</h3>`;
 
@@ -1017,7 +1071,8 @@ async function approveCurrentSchedule(){
       return !c.status || c.status === 'approved';
     };
 
-    for (const [dept, emps] of Object.entries(DEPARTMENTS)) {
+    for (const [dept] of Object.entries(DEPARTMENTS)) {
+      const emps = getDeptEmployees(dept);
       const allDates = [];
 
       emps.forEach(emp => {
@@ -1132,7 +1187,8 @@ nextSunday.setDate(today.getDate() + (dow === 0 ? 7 : 7 - dow));
       return !!c && (c.type === 'no-evening' || c.type === 'day-off');
     };
 
-    for (const [dept, emps] of Object.entries(DEPARTMENTS)) {
+    for (const [dept] of Object.entries(DEPARTMENTS)) {
+      const emps = getDeptEmployees(dept);
       const schedule = [];
       const days = ['ראשון','שני','שלישי','רביעי','חמישי','שישי','שבת'];
       const isThreeEmp = emps.length === 3;
@@ -1413,7 +1469,7 @@ nextSunday.setDate(today.getDate() + (dow === 0 ? 7 : 7 - dow));
     html += `</tr>`;
 
     deptOrder.forEach(dept => {
-      const employees = DEPARTMENTS[dept] || [];
+      const employees = getDeptEmployees(dept);
       const deptSchedule = allSchedules[dept] || [];
 
       html += `<tr class="dept-divider"><td colspan="${totalCols}">🏢 ${dept}</td></tr>`;
@@ -1562,7 +1618,7 @@ th, td{
     html += `</tr></thead><tbody>`;
 
     deptOrder.forEach((dept, deptIndex) => {
-      const employees = DEPARTMENTS[dept] || [];
+      const employees = getDeptEmployees(dept);
       const deptSchedule = currentSchedule[dept] || [];
       const isThreeEmp = employees.length === 3;
       const isKavLavan = dept === 'מחלקת קו לבן';
@@ -1704,7 +1760,7 @@ th, td{
 
     // Data rows
     deptOrder.forEach((dept, deptIndex) => {
-      const employees = DEPARTMENTS[dept] || [];
+      const employees = getDeptEmployees(dept);
       const deptSchedule = currentSchedule[dept] || [];
       const isThreeEmp = employees.length === 3;
       const isKavLavan = dept === 'מחלקת קו לבן';
@@ -1965,6 +2021,7 @@ document.addEventListener('DOMContentLoaded', () => {
   if (saved === 'MANAGER') {
     hideAll();
     document.getElementById('manager-section').classList.add('active');
+    initShirotToggleUI();
     loadAllConstraints();
   } else {
     hideAll();
