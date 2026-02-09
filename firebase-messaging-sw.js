@@ -16,7 +16,7 @@ const messaging = firebase.messaging();
 /**
  * ✅ Consistent notifications (even when logged out):
  * We rely on DATA-only payloads sent from Cloud Functions:
- * payload.data = { title, body, icon, url, tag }
+ * payload.data = { title, body, icon, url, tag, notificationId }
  */
 messaging.onBackgroundMessage((payload) => {
   try {
@@ -26,6 +26,7 @@ messaging.onBackgroundMessage((payload) => {
     const icon = data.icon || "/icon-192.png";
     const url = data.url || "/";
     const tag = data.tag || "constraints_reminder";
+    const notificationId = data.notificationId || ""; // ✨ NEW: for tracking
 
     const options = {
       body,
@@ -33,7 +34,10 @@ messaging.onBackgroundMessage((payload) => {
       badge: icon,
       tag,
       renotify: true,
-      data: { url },
+      data: { 
+        url,
+        notificationId, // ✨ NEW: pass it to click handler
+      },
     };
 
     self.registration.showNotification(title, options);
@@ -54,6 +58,12 @@ self.addEventListener("notificationclick", (event) => {
   event.notification.close();
 
   const url = (event.notification && event.notification.data && event.notification.data.url) || "/";
+  const notificationId = (event.notification && event.notification.data && event.notification.data.notificationId) || "";
+
+  // ✨ NEW: Record that user clicked the notification
+  if (notificationId) {
+    recordNotificationClick(notificationId);
+  }
 
   event.waitUntil((async () => {
     const allClients = await clients.matchAll({ type: "window", includeUncontrolled: true });
@@ -70,3 +80,35 @@ self.addEventListener("notificationclick", (event) => {
     return clients.openWindow(url);
   })());
 });
+
+/**
+ * ✨ NEW: Record notification click in Firebase Database
+ * @param {string} notificationId
+ */
+function recordNotificationClick(notificationId) {
+  // Get all open clients (tabs/windows) of this app
+  clients.matchAll({ type: "window", includeUncontrolled: true }).then((clientList) => {
+    if (clientList.length > 0) {
+      // Send message to main app to record click
+      clientList.forEach((client) => {
+        client.postMessage({
+          type: "NOTIFICATION_CLICKED",
+          notificationId: notificationId,
+          clickedAt: Date.now(),
+        });
+      });
+    } else {
+      // No open clients - record anonymous click via REST API
+      const dbUrl = "https://shift-manager-c026e-default-rtdb.europe-west1.firebasedatabase.app";
+      fetch(`${dbUrl}/notificationHistory/${notificationId}/clickedBy/UNKNOWN.json`, {
+        method: "PUT",
+        body: JSON.stringify({
+          clickedAt: Date.now(),
+          device: "unknown",
+        }),
+      }).catch((err) => {
+        console.log("Failed to record click:", err);
+      });
+    }
+  });
+}
