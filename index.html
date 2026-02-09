@@ -753,7 +753,7 @@ async function approveCurrentSchedule(){
 
       hideAll();
       document.getElementById('employee-section').classList.add('active');
-      document.getElementById('employee-welcome').textContent = `שלום ${username}! 👋`;
+      document.getElementById('employee-welcome').textContent = `שלום ${DISPLAY_NAMES[username] || username}! 👋`;
 
       applyConstraintOptions(currentEmployee);
 
@@ -859,7 +859,7 @@ async function approveCurrentSchedule(){
 
         html += `
           <div class="emp-header-row">
-            <h4>${emp}</h4>
+            <h4>${DISPLAY_NAMES[emp] || emp}</h4>
           </div>
         `;
 
@@ -925,10 +925,10 @@ async function approveCurrentSchedule(){
   }
 
   async function deleteSingleConstraint(emp, key){
-    const ok = confirm(`למחוק את ${key} עבור ${emp}?`);
+    const ok = confirm(`למחוק את ${key} עבור ${DISPLAY_NAMES[emp] || emp}?`);
     if(!ok) return;
     await db.ref(`constraints/${emp}/${key}`).set(null);
-    showMessage(`נמחק ${key} עבור ${emp}`, 'success');
+    showMessage(`נמחק ${key} עבור ${DISPLAY_NAMES[emp] || emp}`, 'success');
     await loadAllConstraints();
 
     currentSchedule = null;
@@ -937,11 +937,11 @@ async function approveCurrentSchedule(){
   }
 
   async function resetEmployeeConstraints(emp){
-    const ok = confirm(`לאפס את כל האילוצים של ${emp}? (ימחק c1+c2)`);
+    const ok = confirm(`לאפס את כל האילוצים של ${DISPLAY_NAMES[emp] || emp}? (ימחק c1+c2)`);
     if(!ok) return;
 
     await db.ref(`constraints/${emp}`).set(null);
-    showMessage(`אופסו האילוצים של ${emp}`, 'success');
+    showMessage(`אופסו האילוצים של ${DISPLAY_NAMES[emp] || emp}`, 'success');
 
     await loadAllConstraints();
 
@@ -1969,7 +1969,7 @@ document.addEventListener('DOMContentLoaded', () => {
   } else {
     hideAll();
     document.getElementById('employee-section').classList.add('active');
-    document.getElementById('employee-welcome').textContent = `שלום ${saved}! 👋`;
+    document.getElementById('employee-welcome').textContent = `שלום ${DISPLAY_NAMES[saved] || saved}! 👋`;
     applyConstraintOptions(currentEmployee);
     loadEmployeeConstraints();
   }
