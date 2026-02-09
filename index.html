@@ -490,19 +490,32 @@
       }
 
       // Foreground messages (while app is open)
-      messaging.onMessage((payload) => {
-        try {
-          const n = payload && payload.notification ? payload.notification : null;
-          if (n && Notification.permission === 'granted') {
-            new Notification(n.title || 'התראה', {
-              body: n.body || '',
-              icon: './icon-192.png'
-            });
-          }
-        } catch (e) {
-          console.log('onMessage error', e);
-        }
-      });
+    // ✅ Foreground notifications (DATA + NOTIFICATION support)
+messaging.onMessage((payload) => {
+  try {
+    const title =
+      payload?.notification?.title ||
+      payload?.data?.title ||
+      "🔔 הודעה";
+
+    const body =
+      payload?.notification?.body ||
+      payload?.data?.body ||
+      "";
+
+    const icon =
+      payload?.notification?.icon ||
+      payload?.data?.icon ||
+      "./icon-192.png";
+
+    if (Notification.permission === "granted") {
+      new Notification(title, { body, icon });
+    }
+  } catch (e) {
+    console.log("onMessage error", e);
+  }
+});
+
 
     } catch (err) {
       console.error('Push init error:', err);
