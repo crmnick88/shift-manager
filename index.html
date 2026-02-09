@@ -224,11 +224,32 @@
   padding: 10px !important;
   border-radius: 10px !important;
   margin-bottom: 15px !important;
+  
+  /* הפיכה לרשת */
+  display: grid !important;
+  grid-template-columns: repeat(2, 1fr) !important;
+  gap: 10px !important;
 }
 
+/* כותרת המחלקה תיפרס על כל הרוחב */
 #all-constraints h3 {
   font-size: 16px !important;
   margin-bottom: 8px !important;
+  grid-column: 1 / -1 !important;
+}
+
+/* במסכים קטנים מאוד - חזרה לעמודה אחת */
+@media (max-width: 500px) {
+  #all-constraints > div {
+    grid-template-columns: 1fr !important;
+  }
+}
+
+/* במסכים גדולים - 3 עמודות */
+@media (min-width: 900px) {
+  #all-constraints > div {
+    grid-template-columns: repeat(3, 1fr) !important;
+  }
 }
 
 /* הקטנת האילוצים עצמם */
