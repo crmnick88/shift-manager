@@ -1522,7 +1522,47 @@ nextSunday.setDate(today.getDate() + (dow === 0 ? 7 : 7 - dow));
           }
 
         } else {
+
+
           // 2 עובדים – רוטציה היסטורית (מתחשב בשבוע הקודם)
+
+
+          // ✅ חריג למחלקת מחסנאים: אבי תמיד בוקר, מוחמד תמיד ערב (א'-ה'), ואם יש חופש מאושר - השני עושה כפולה
+
+
+          if (dept === 'מחלקת מחסנאים' && emps.includes('AVI') && emps.includes('MOHAMAD')) {
+
+
+            const a = 'AVI', b = 'MOHAMAD';
+
+
+            const aOff = isDayOffApproved(a, dateStr);
+
+
+            const bOff = isDayOffApproved(b, dateStr);
+
+
+        
+
+
+            if (aOff && !bOff) schedule.push({ day: days[i], date: dateStr, morning: b, evening: b, dept });
+
+
+            else if (bOff && !aOff) schedule.push({ day: days[i], date: dateStr, morning: a, evening: a, dept });
+
+
+            else schedule.push({ day: days[i], date: dateStr, morning: a, evening: b, dept });
+
+
+            continue;
+
+
+          }
+
+
+        
+
+
           const a = emps[0], b = emps[1];
 
           // מי פותח את השבוע (ראשון בבוקר) נקבע פעם אחת למחלקה (weekdayStartEmp)
@@ -1558,7 +1598,7 @@ nextSunday.setDate(today.getDate() + (dow === 0 ? 7 : 7 - dow));
 
 
       // ✅ NEW: במחלקה של 2 עובדים - בשבוע הבא העובד השני יפתח את השבוע
-      if (!isThreeEmp && weekdayStartEmp) {
+      if (!isThreeEmp && weekdayStartEmp && dept !== 'מחלקת מחסנאים') {
         const a = emps[0], b = emps[1];
         weekdayStartHistory[dept] = (weekdayStartEmp === a) ? b : a;
       }
@@ -1621,8 +1661,75 @@ nextSunday.setDate(today.getDate() + (dow === 0 ? 7 : 7 - dow));
         schedule.push({ day:'מוצ"ש', date: satStr, saturday: satWorking, dept });
         
       } else {
+
+        
         // 2 עובדים - רוטציה כמו 3 עובדים!
-        const a = emps[0], b = emps[1];
+
+        
+        // ✅ חריג למחלקת מחסנאים: שישי תמיד אבי, מוצ"ש תמיד מוחמד; אם חופש מאושר - השני מחפה
+
+        
+        if (dept === 'מחלקת מחסנאים' && emps.includes('AVI') && emps.includes('MOHAMAD')) {
+
+        
+          const a = 'AVI', b = 'MOHAMAD';
+
+        
+          const friOffA = isDayOffApproved(a, friStr);
+
+        
+          const friOffB = isDayOffApproved(b, friStr);
+
+        
+          const satOffA = isDayOffApproved(a, satStr);
+
+        
+          const satOffB = isDayOffApproved(b, satStr);
+
+        
+      
+
+        
+          // שישי: ברירת מחדל אבי
+
+        
+          let friWorking = a;
+
+        
+          if (friOffA && !friOffB) friWorking = b;
+
+        
+          else if (friOffB && !friOffA) friWorking = a;
+
+        
+      
+
+        
+          // מוצ"ש: ברירת מחדל מוחמד
+
+        
+          let satWorking = b;
+
+        
+          if (satOffB && !satOffA) satWorking = a;
+
+        
+          else if (satOffA && !satOffB) satWorking = b;
+
+        
+      
+
+        
+          schedule.push({ day:'שישי', date: friStr, friday: friWorking, dept });
+
+        
+          schedule.push({ day:'מוצ"ש', date: satStr, saturday: satWorking, dept });
+
+        
+        } else {
+
+        
+          const a = emps[0], b = emps[1];
         const friOff = emps.find(emp => isDayOffApproved(emp, friStr));
         const satOff = emps.find(emp => isDayOffApproved(emp, satStr));
         
@@ -1659,6 +1766,7 @@ nextSunday.setDate(today.getDate() + (dow === 0 ? 7 : 7 - dow));
 
         schedule.push({ day:'שישי', date: friStr, friday: friWorking, dept });
         schedule.push({ day:'מוצ"ש', date: satStr, saturday: satWorking, dept });
+        }
       }
 
       allSchedules[dept] = schedule;
