@@ -1735,10 +1735,11 @@ nextSunday.setDate(today.getDate() + (dow === 0 ? 7 : 7 - dow));
           const shifts = [];
           const isService = dept === 'נציגות שירות';
           const isTwoEmpKavLavan = (dept === 'מחלקת קו לבן') && (employees.length === 2);
+          const isWarehouse = dept === 'מחלקת מחסנאים';
 
           if (day.morning === emp) shifts.push(
             isService ? '<span class="shift-morning">בוקר<br>9:00-17:00</span>'
-            : (isTwoEmpKavLavan ? '<span class="shift-morning">בוקר<br>9:00-19:00</span>' : (isKavLavan ? '<span class="shift-morning">בוקר</span>' : '<span class="shift-morning">בוקר<br>9:00-16:00</span>'))
+            : (isTwoEmpKavLavan ? '<span class="shift-morning">בוקר<br>9:00-19:00</span>' : (isKavLavan ? '<span class=\"shift-morning\">בוקר</span>' : (isWarehouse ? '<span class=\"shift-morning\">בוקר<br>9:00-17:00</span>' : '<span class=\"shift-morning\">בוקר<br>9:00-16:00</span>')))
           );
           if (day.middle === emp) shifts.push(
             isService ? '<span class="shift-middle">אמצע<br>11:00-19:00</span>'
@@ -1746,7 +1747,7 @@ nextSunday.setDate(today.getDate() + (dow === 0 ? 7 : 7 - dow));
           );
           if (day.evening === emp) shifts.push(
             isService ? '<span class="shift-evening">ערב<br>13:00-21:30</span>'
-            : (isTwoEmpKavLavan ? '<span class="shift-evening">ערב<br>11:00-21:30</span>' : (isKavLavan ? '<span class="shift-evening">ערב</span>' : '<span class="shift-evening">ערב<br>15:00-21:30</span>'))
+            : (isTwoEmpKavLavan ? '<span class="shift-evening">ערב<br>11:00-21:30</span>' : (isKavLavan ? '<span class=\"shift-evening\">ערב</span>' : (isWarehouse ? '<span class=\"shift-evening\">ערב<br>13:30-21:30</span>' : '<span class=\"shift-evening\">ערב<br>15:00-21:30</span>')))
           );
 if (shifts.length >= 2) {
             html += `<td><span class="shift-double">כפולה</span></td>`;
