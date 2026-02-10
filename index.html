@@ -1463,6 +1463,36 @@ nextSunday.setDate(today.getDate() + (dow === 0 ? 7 : 7 - dow));
         date.setDate(nextSunday.getDate() + i);
         const dateStr = toLocalDateStr(date);
 
+
+        // ======== מחסנאים: קיבוע משמרות (אבי בוקר, מוחמד ערב) + כיסוי כפולה בחופש מאושר ========
+        if (dept === 'מחלקת מחסנאים') {
+          const AVI = 'AVI';
+          const MOH = 'MOHAMAD';
+
+          const aviOff = isDayOffApproved(AVI, dateStr);
+          const mohOff = isDayOffApproved(MOH, dateStr);
+
+          if (aviOff && mohOff) {
+            // שניהם בחופש מאושר - אין שיבוץ למחסנאים ביום הזה
+            schedule.push({ day: days[i], date: dateStr, dept });
+          } else if (aviOff) {
+            // אבי בחופש -> מוחמד עושה כפולה
+            schedule.push({ day: days[i], date: dateStr, morning: MOH, evening: MOH, dept });
+            shiftCounts[MOH].morning++;
+            shiftCounts[MOH].evening++;
+          } else if (mohOff) {
+            // מוחמד בחופש -> אבי עושה כפולה
+            schedule.push({ day: days[i], date: dateStr, morning: AVI, evening: AVI, dept });
+            shiftCounts[AVI].morning++;
+            shiftCounts[AVI].evening++;
+          } else {
+            // רגיל
+            schedule.push({ day: days[i], date: dateStr, morning: AVI, evening: MOH, dept });
+            shiftCounts[AVI].morning++;
+            shiftCounts[MOH].evening++;
+          }
+          continue;
+        }
         if (isThreeEmp) {
           const dayOffs = emps.filter(emp => isDayOffApproved(emp, dateStr));
 
@@ -1569,6 +1599,40 @@ nextSunday.setDate(today.getDate() + (dow === 0 ? 7 : 7 - dow));
       const sat = new Date(nextSunday); sat.setDate(nextSunday.getDate() + 6);
       const satStr = toLocalDateStr(sat);
 
+
+      // ======== מחסנאים: קיבוע שישי (אבי) + מוצ"ש (מוחמד) עם כיסוי בחופש מאושר ========
+      if (dept === 'מחלקת מחסנאים') {
+        const AVI = 'AVI';
+        const MOH = 'MOHAMAD';
+
+        const aviFriOff = isDayOffApproved(AVI, friStr);
+        const mohFriOff = isDayOffApproved(MOH, friStr);
+        const aviSatOff = isDayOffApproved(AVI, satStr);
+        const mohSatOff = isDayOffApproved(MOH, satStr);
+
+        // שישי: אבי קבוע, אם אבי בחופש -> מוחמד (אם לא בחופש)
+        if (aviFriOff && mohFriOff) {
+          schedule.push({ day: 'שישי', date: friStr, dept });
+        } else if (aviFriOff) {
+          schedule.push({ day: 'שישי', date: friStr, friday: MOH, dept });
+        } else {
+          schedule.push({ day: 'שישי', date: friStr, friday: AVI, dept });
+        }
+
+        // מוצ"ש: מוחמד קבוע, אם מוחמד בחופש -> אבי (אם לא בחופש)
+        if (mohSatOff && aviSatOff) {
+          schedule.push({ day: 'מוצ"ש', date: satStr, dept });
+          saturdayHistory[dept] = null;
+        } else if (mohSatOff) {
+          schedule.push({ day: 'מוצ"ש', date: satStr, saturday: AVI, dept });
+          saturdayHistory[dept] = AVI;
+        } else {
+          schedule.push({ day: 'מוצ"ש', date: satStr, saturday: MOH, dept });
+          saturdayHistory[dept] = MOH;
+        }
+
+        continue;
+      }
       if (isThreeEmp) {
         const friOff = emps.find(emp => isDayOffApproved(emp, friStr));
         const satOff = emps.find(emp => isDayOffApproved(emp, satStr));
