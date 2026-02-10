@@ -1369,8 +1369,24 @@ function initShirotToggleUI() {
       Object.entries(byDate).forEach(([date, dateConstraints]) => {
         const dayOffCount = dateConstraints.filter(c => c.type === 'day-off').length;
 
-        const noMorningCount = dateConstraints.filter(c => c.type === 'no-morning' || c.type === 'day-off').length;
-        const noEveningCount = dateConstraints.filter(c => c.type === 'no-evening' || c.type === 'day-off').length;
+        // ספירת "לא יכול" — במצב 2 עובדים, גם אילוצי "רוצה" משפיעים (תאימות למחלקה שירדה מ-3 ל-2)
+        const noMorningCount = (emps.length === 2)
+          ? dateConstraints.filter(c =>
+              c.type === 'no-morning' ||
+              c.type === 'day-off' ||
+              c.type === 'want-evening' || // רוצה ערב => בפועל לא יכול בוקר
+              c.type === 'want-middle'      // אין אמצע במצב 2 עובדים => חוסם גם בוקר
+            ).length
+          : dateConstraints.filter(c => c.type === 'no-morning' || c.type === 'day-off').length;
+
+        const noEveningCount = (emps.length === 2)
+          ? dateConstraints.filter(c =>
+              c.type === 'no-evening' ||
+              c.type === 'day-off' ||
+              c.type === 'want-morning' || // רוצה בוקר => בפועל לא יכול ערב
+              c.type === 'want-middle'      // אין אמצע במצב 2 עובדים => חוסם גם ערב
+            ).length
+          : dateConstraints.filter(c => c.type === 'no-evening' || c.type === 'day-off').length;
 
         if (emps.length === 3) {
           if (dayOffCount >= 2) {
@@ -1455,11 +1471,39 @@ nextSunday.setDate(today.getDate() + (dow === 0 ? 7 : 7 - dow));
 
     const cannotMorning = (emp, dateStr) => {
       const c = getApprovedConstraintOnDate(emp, dateStr);
-      return !!c && (c.type === 'no-morning' || c.type === 'day-off');
+      if (!c) return false;
+
+      // ✅ תאימות: אם מחלקה ירדה מ-3 עובדים ל-2 (למשל נציגות שירות כש"שירות" כבוי),
+      // אילוצים מסוג "רוצה" צריכים עדיין להשפיע.
+      const dept = getDeptOfEmp(emp);
+      const size = dept ? getDeptSizeForRules(dept) : 0;
+
+      if (size === 2) {
+        // רוצה ערב => בפועל "לא יכול בוקר"
+        if (c.type === 'want-evening') return true;
+        // רוצה אמצע => אין אמצע במצב 2 עובדים, נתייחס כ"חסום בוקר"
+        if (c.type === 'want-middle') return true;
+      }
+
+      return (c.type === 'no-morning' || c.type === 'day-off');
     };
     const cannotEvening = (emp, dateStr) => {
       const c = getApprovedConstraintOnDate(emp, dateStr);
-      return !!c && (c.type === 'no-evening' || c.type === 'day-off');
+      if (!c) return false;
+
+      // ✅ תאימות: אם מחלקה ירדה מ-3 עובדים ל-2 (למשל נציגות שירות כש"שירות" כבוי),
+      // אילוצים מסוג "רוצה" צריכים עדיין להשפיע.
+      const dept = getDeptOfEmp(emp);
+      const size = dept ? getDeptSizeForRules(dept) : 0;
+
+      if (size === 2) {
+        // רוצה בוקר => בפועל "לא יכול ערב"
+        if (c.type === 'want-morning') return true;
+        // רוצה אמצע => אין אמצע במצב 2 עובדים, נתייחס כ"חסום ערב"
+        if (c.type === 'want-middle') return true;
+      }
+
+      return (c.type === 'no-evening' || c.type === 'day-off');
     };
 
     for (const [dept] of Object.entries(DEPARTMENTS)) {
