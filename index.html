@@ -2080,6 +2080,35 @@ ${css}
       right:  { style: "thin", color: { rgb: "E0E0E0" } }
     };
 
+    // ✅ זיהוי שורות מחלקה (colspan) – כדי לצבוע את כל התאים בשורה בכחול
+    const deptRows = new Set();
+    rows.forEach((tr, idx) => {
+      const cells = Array.from(tr.querySelectorAll('th,td'));
+      if (cells.length === 1 && (cells[0].getAttribute('colspan') || '').toString() !== '') {
+        deptRows.add(idx);
+      }
+    });
+
+    // ✅ זיהוי תאי שמות עובדים – בודק אם ב-DOM יש לתא רקע כחול (style inline) או class מיוחד
+    const empNameCells = new Set();
+    rows.forEach((tr, idx) => {
+      if (idx === 0 || deptRows.has(idx)) return;
+      const cells = Array.from(tr.querySelectorAll('th,td'));
+      if (cells.length > 0) {
+        const firstCell = cells[0];
+        const bg = (firstCell.style.background || firstCell.style.backgroundColor || '').toLowerCase();
+        // זיהוי רקע כחול באינליין או font-weight bold + color white
+        if (bg.includes('667eea') || bg.includes('rgb(102, 126, 234)') || bg.includes('#667eea')) {
+          empNameCells.add(idx);
+        }
+        // גם אם אין inline style, בדיקת className
+        const cls = (firstCell.className || '').toString();
+        if (cls.includes('emp-name') || cls.includes('employee-name')) {
+          empNameCells.add(idx);
+        }
+      }
+    });
+
     const fillByClass = (cls, value) => {
       const c = (cls || '').toLowerCase();
       if (c.includes('dept-divider')) return '667EEA';
@@ -2093,38 +2122,71 @@ ${css}
       return null;
     };
 
+    // ✅ בניית סט שמות עובדים לזיהוי עמודה ראשונה
+    const allEmpDisplayNames = new Set(Object.values(DISPLAY_NAMES));
+
     for (let r = range.s.r; r <= range.e.r; r++) {
       for (let c = range.s.c; c <= range.e.c; c++) {
         const addr = XLSX.utils.encode_cell({ r, c });
-        if (!ws[addr]) continue;
+        if (!ws[addr]) {
+          // ✅ יצירת תא ריק עבור שורות מחלקה כדי שכל השורה תהיה כחולה
+          if (deptRows.has(r)) {
+            ws[addr] = { v: '', t: 's', s: {} };
+          } else {
+            continue;
+          }
+        }
 
         const value = (ws[addr].v || '').toString();
         const cls = (classMap[r] && classMap[r][c]) ? classMap[r][c] : '';
 
         const isHeaderRow = (r === 0);
+        const isDeptRow = deptRows.has(r);
         const isFirstCol = (c === 0);
 
         ws[addr].s = ws[addr].s || {};
         ws[addr].s.border = border;
         ws[addr].s.alignment = { vertical: "center", horizontal: "center", wrapText: true };
 
+        // ✅ שורת כותרת (ימים)
         if (isHeaderRow) {
           ws[addr].s.fill = { fgColor: { rgb: "667EEA" } };
-          ws[addr].s.font = { bold: true, color: { rgb: "FFFFFF" } };
-        } else if (isFirstCol) {
-          ws[addr].s.font = ws[addr].s.font || {};
-          ws[addr].s.font.bold = true;
+          ws[addr].s.font = { bold: true, color: { rgb: "FFFFFF" }, sz: 12 };
+        }
+        // ✅ שורת מחלקה – כל התאים בשורה כחולים עם טקסט לבן
+        else if (isDeptRow) {
+          ws[addr].s.fill = { fgColor: { rgb: "667EEA" } };
+          ws[addr].s.font = { bold: true, color: { rgb: "FFFFFF" }, sz: 13 };
+          ws[addr].s.border = {
+            top:    { style: "thin", color: { rgb: "667EEA" } },
+            bottom: { style: "thin", color: { rgb: "667EEA" } },
+            left:   { style: "thin", color: { rgb: "667EEA" } },
+            right:  { style: "thin", color: { rgb: "667EEA" } }
+          };
+        }
+        // ✅ עמודת שם עובד – רקע כחול + טקסט לבן (כמו באתר)
+        else if (isFirstCol && !isHeaderRow && !isDeptRow) {
+          const cellVal = value.trim();
+          if (cellVal && cellVal !== '-' && (allEmpDisplayNames.has(cellVal) || empNameCells.has(r))) {
+            ws[addr].s.fill = { fgColor: { rgb: "667EEA" } };
+            ws[addr].s.font = { bold: true, color: { rgb: "FFFFFF" }, sz: 12 };
+          } else {
+            ws[addr].s.font = { bold: true };
+          }
         }
 
-        const fill = fillByClass(cls, value);
-        if (fill && !isHeaderRow) {
-          ws[addr].s.fill = { fgColor: { rgb: fill } };
-          if (fill === '667EEA') {
-            ws[addr].s.font = { bold: true, color: { rgb: "FFFFFF" } };
-          } else if (fill === 'F8CBAD') {
-            ws[addr].s.font = { bold: true };
-          } else if (fill === 'F0F0F0') {
-            ws[addr].s.font = { color: { rgb: "999999" } };
+        // ✅ צבעי משמרות
+        if (!isHeaderRow && !isDeptRow && !(isFirstCol && allEmpDisplayNames.has(value.trim()))) {
+          const fill = fillByClass(cls, value);
+          if (fill) {
+            ws[addr].s.fill = { fgColor: { rgb: fill } };
+            if (fill === '667EEA') {
+              ws[addr].s.font = { bold: true, color: { rgb: "FFFFFF" } };
+            } else if (fill === 'F8CBAD') {
+              ws[addr].s.font = { bold: true, color: { rgb: "8B4513" } };
+            } else if (fill === 'F0F0F0') {
+              ws[addr].s.font = { color: { rgb: "999999" } };
+            }
           }
         }
       }
