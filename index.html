@@ -540,7 +540,15 @@
         <span style="font-size:12px; opacity:.8;">כיבוי = המחלקה תתנהג כמו 2 עובדים</span>
       </div>
 
-    </div>
+    
+      <div style="display:flex; align-items:center; gap:10px; padding:10px 12px; border:2px solid #e0e0e0; border-radius:10px; background:#ffffff; width:100%; max-width:520px;">
+        <label style="display:flex; align-items:center; gap:10px; cursor:pointer; font-weight:700;">
+          <input type="checkbox" id="eliya-active-toggle" style="width:18px; height:18px;" />
+          <span>קו לבן: עובד "אליה" פעיל</span>
+        </label>
+        <span style="font-size:12px; opacity:.8;">כיבוי = המחלקה תתנהג כמו 2 עובדים</span>
+      </div>
+</div>
 
     <div id="all-constraints"></div>
 
@@ -851,10 +859,23 @@ async function approveCurrentSchedule(){
   function setShirotActive(v) {
     localStorage.setItem(SHIROT_TOGGLE_KEY, v ? 'true' : 'false');
   }
+  // ======== קו לבן: הפעלה/כיבוי עובד "אליה" (ELIYA) ========
+  const ELIYA_TOGGLE_KEY = 'eliyaActive';
+  function isEliyaActive() {
+    const v = localStorage.getItem(ELIYA_TOGGLE_KEY);
+    return v === null ? true : v === 'true';
+  }
+  function setEliyaActive(v) {
+    localStorage.setItem(ELIYA_TOGGLE_KEY, v ? 'true' : 'false');
+  }
+
   function getDeptEmployees(dept) {
     const list = (DEPARTMENTS[dept] || []).slice();
     if (dept === 'נציגות שירות' && !isShirotActive()) {
       return list.filter(e => e !== 'SHIROT');
+    }
+    if (dept === 'מחלקת קו לבן' && !isEliyaActive()) {
+      return list.filter(e => e !== 'ELIYA');
     }
     return list;
   }
@@ -880,6 +901,28 @@ async function approveCurrentSchedule(){
         el.checked
           ? '✅ "שירות" פעיל: נציגות שירות מתנהגת כמו 3 עובדים'
           : '⚠️ "שירות" לא פעיל: נציגות שירות מתנהגת כמו 2 עובדים',
+        'success'
+      );
+    };
+  }
+
+  function initEliyaToggleUI() {
+    const el = document.getElementById('eliya-active-toggle');
+    if (!el) return;
+
+    el.checked = isEliyaActive();
+
+    el.onchange = async () => {
+      setEliyaActive(el.checked);
+
+      // רענון תצוגה בהתאם למצב
+      try { await loadAllConstraints(); } catch(e) {}
+      try { if (currentSchedule) displaySchedule(currentSchedule); } catch(e) {}
+
+      showMessage(
+        el.checked
+          ? '✅ "אליה" פעיל: קו לבן מתנהג כמו 3 עובדים'
+          : '⚠️ "אליה" לא פעיל: קו לבן מתנהג כמו 2 עובדים',
         'success'
       );
     };
@@ -1004,6 +1047,7 @@ async function approveCurrentSchedule(){
       hideAll();
       document.getElementById('manager-section').classList.add('active');
       initShirotToggleUI();
+      initEliyaToggleUI();
       loadAllConstraints();
       showMessage('התחברת בהצלחה', 'success');
       initPushNotifications();
