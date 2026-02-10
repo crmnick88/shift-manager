@@ -2192,6 +2192,15 @@ ${css}
       }
     }
 
+    // ✅ מיזוג תאים בשורות מחלקה כדי שהטקסט יהיה ממורכז על כל הרוחב (כמו באתר)
+    if (!ws['!merges']) ws['!merges'] = [];
+    deptRows.forEach(r => {
+      ws['!merges'].push({
+        s: { r: r, c: 0 },
+        e: { r: r, c: colCount - 1 }
+      });
+    });
+
     XLSX.utils.book_append_sheet(wb, ws, 'סידור שבועי');
 
     // ✅ RTL לכל הקובץ (הגיליון ייפתח מימין לשמאל)
