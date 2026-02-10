@@ -531,6 +531,8 @@
       <button class="btn" onclick="sendConstraintsReminderRequest()" style="background:#ff6f61;">🔔 שלח תזכורת להזנת אילוצים</button>
       <button class="btn" onclick="showNotificationHistory()" style="background:#17a2b8;">📊 היסטוריית התראות</button>
 
+      <button class="btn" onclick="openManualConstraints()" style="background:#6f42c1;">✍️ הזנת אילוצים ידנית</button>
+
       <button class="btn" onclick="resetAllConstraints()" style="background:#6c757d;">🧹 איפוס אילוצים לכל העובדים</button>
       <div style="display:flex; align-items:center; gap:10px; padding:10px 12px; border:2px solid #e0e0e0; border-radius:10px; background:#ffffff; width:100%; max-width:520px;">
         <label style="display:flex; align-items:center; gap:10px; cursor:pointer; font-weight:700;">
@@ -559,6 +561,55 @@
     </div>
 
     <div id="schedule-result"></div>
+  </div>
+
+
+
+  <!-- Manual Constraints Section -->
+  <div id="manual-constraints-section" class="section">
+    <div style="display:flex; justify-content:space-between; margin-bottom:10px;">
+      <h1>✍️ הזנת אילוצים ידנית</h1>
+      <button class="btn" onclick="backToManagerFromManualConstraints()" style="width:auto; padding:10px 20px; background:#6c757d;">חזור</button>
+    </div>
+
+    <div style="background:#f8f9fa; padding:20px; border-radius:12px;">
+      <p style="color:#e74c3c; margin:0 0 10px 0;">⚠️ גם כאן לא ניתן לבחור שישי או שבת</p>
+
+      <div class="form-group">
+        <label>בחר עובד:</label>
+        <select id="mc-employee" onchange="loadManualConstraintsForSelected()">
+          <option value="">-- בחר עובד --</option>
+        </select>
+      </div>
+
+      <div class="constraint-item">
+        <h4>אילוץ 1</h4>
+        <div class="form-group">
+          <label>תאריך:</label>
+          <input type="date" id="mc-c1-date">
+        </div>
+        <div class="form-group">
+          <label>סוג:</label>
+          <select id="mc-c1-type"></select>
+        </div>
+      </div>
+
+      <div class="constraint-item">
+        <h4>אילוץ 2</h4>
+        <div class="form-group">
+          <label>תאריך:</label>
+          <input type="date" id="mc-c2-date">
+        </div>
+        <div class="form-group">
+          <label>סוג:</label>
+          <select id="mc-c2-type"></select>
+        </div>
+      </div>
+
+      <button class="btn" onclick="saveManualConstraints()" style="background:#6f42c1;">💾 שמור אילוצים לעובד</button>
+    </div>
+
+    <div id="mc-preview" style="margin-top:20px;"></div>
   </div>
 
 
@@ -1416,14 +1467,19 @@ nextSunday.setDate(today.getDate() + (dow === 0 ? 7 : 7 - dow));
       const schedule = [];
       const days = ['ראשון','שני','שלישי','רביעי','חמישי','שישי','שבת'];
       const isThreeEmp = emps.length === 3;
+          const isStockroomDept = (dept === 'מחלקת מחסנאים') && (emps.length === 2) && emps.includes('AVI') && emps.includes('MOHAMAD');
+      const isServiceRepsTwoDept = (dept === 'נציגות שירות') && (emps.length === 2) && emps.includes('LIOR') && emps.includes('AMANI');
 
       
 
       // ✅ NEW: במחלקה של 2 עובדים - קובע מי פותח את השבוע (ראשון בבוקר)
       let weekdayStartEmp = null;
-      if (!isThreeEmp) {
+      if (!isThreeEmp && !isStockroomDept) {
         const a = emps[0], b = emps[1];
         weekdayStartEmp = weekdayStartHistory[dept] || (Math.random() < 0.5 ? a : b);
+      } else if (isStockroomDept) {
+        // מחלקת מחסנאים: קיבוע אבי בוקר ומוחמד ערב (אין צורך בהיסטוריה שבועית)
+        weekdayStartEmp = 'AVI';
       }
 // ✅ NEW: מונה משמרות לכל עובד למען הוגנות
       const shiftCounts = {};
@@ -1462,6 +1518,23 @@ nextSunday.setDate(today.getDate() + (dow === 0 ? 7 : 7 - dow));
         const date = new Date(nextSunday);
         date.setDate(nextSunday.getDate() + i);
         const dateStr = toLocalDateStr(date);
+
+        // מחלקת מחסנאים: א'-ה' קבוע (אבי בוקר, מוחמד ערב). אם אחד בחופש מאושר – השני כפולה.
+        if (isStockroomDept) {
+          const a = 'AVI', b = 'MOHAMAD';
+          const aOff = isDayOffApproved(a, dateStr);
+          const bOff = isDayOffApproved(b, dateStr);
+          if (aOff && bOff) {
+            schedule.push({ day: days[i], date: dateStr, morning: null, evening: null, dept });
+          } else if (aOff && !bOff) {
+            schedule.push({ day: days[i], date: dateStr, morning: b, evening: b, dept });
+          } else if (bOff && !aOff) {
+            schedule.push({ day: days[i], date: dateStr, morning: a, evening: a, dept });
+          } else {
+            schedule.push({ day: days[i], date: dateStr, morning: a, evening: b, dept });
+          }
+          continue;
+        }
 
         if (isThreeEmp) {
           const dayOffs = emps.filter(emp => isDayOffApproved(emp, dateStr));
@@ -1558,7 +1631,7 @@ nextSunday.setDate(today.getDate() + (dow === 0 ? 7 : 7 - dow));
 
 
       // ✅ NEW: במחלקה של 2 עובדים - בשבוע הבא העובד השני יפתח את השבוע
-      if (!isThreeEmp && weekdayStartEmp) {
+      if (!isThreeEmp && weekdayStartEmp && !isStockroomDept) {
         const a = emps[0], b = emps[1];
         weekdayStartHistory[dept] = (weekdayStartEmp === a) ? b : a;
       }
@@ -1569,7 +1642,36 @@ nextSunday.setDate(today.getDate() + (dow === 0 ? 7 : 7 - dow));
       const sat = new Date(nextSunday); sat.setDate(nextSunday.getDate() + 6);
       const satStr = toLocalDateStr(sat);
 
-      if (isThreeEmp) {
+      // מחלקת מחסנאים: שישי קבוע אבי, מוצ"ש קבוע מוחמד. אם אחד בחופש מאושר – השני מחליף. אין שמירת היסטוריה.
+      if (isStockroomDept) {
+        const a = 'AVI', b = 'MOHAMAD';
+        const aFriOff = isDayOffApproved(a, friStr);
+        const bFriOff = isDayOffApproved(b, friStr);
+        const aSatOff = isDayOffApproved(a, satStr);
+        const bSatOff = isDayOffApproved(b, satStr);
+
+        // חשוב: בשאר הקוד friday הוא "עובד אחד" (מחרוזת) ולא מערך.
+        // לכן נשמור עקביות כדי שהתצוגה/ייצוא לא ייפגעו.
+        const friWorking = (aFriOff && bFriOff) ? null : (aFriOff ? b : a);
+        const satWorking = (aSatOff && bSatOff) ? null : (bSatOff ? a : b);
+
+        schedule.push({ day:'שישי', date: friStr, friday: friWorking, dept });
+        schedule.push({ day:'מוצ"ש', date: satStr, saturday: satWorking, dept });
+      } else if (isServiceRepsTwoDept) {
+        // נציגות שירות במצב 2 עובדים: ליאור קבוע בשישי, אמאני קבוע במוצ"ש.
+        // אם העובד הקבוע בחופש מאושר – השני מחליף. אם שניהם בחופש – null.
+        const lior = 'LIOR', amani = 'AMANI';
+        const liorFriOff = isDayOffApproved(lior, friStr);
+        const amaniFriOff = isDayOffApproved(amani, friStr);
+        const liorSatOff = isDayOffApproved(lior, satStr);
+        const amaniSatOff = isDayOffApproved(amani, satStr);
+
+        const friWorking = (liorFriOff && amaniFriOff) ? null : (liorFriOff ? amani : lior);
+        const satWorking = (liorSatOff && amaniSatOff) ? null : (amaniSatOff ? lior : amani);
+
+        schedule.push({ day:'שישי', date: friStr, friday: friWorking, dept });
+        schedule.push({ day:'מוצ"ש', date: satStr, saturday: satWorking, dept });
+      } else if (isThreeEmp) {
         const friOff = emps.find(emp => isDayOffApproved(emp, friStr));
         const satOff = emps.find(emp => isDayOffApproved(emp, satStr));
         
@@ -2429,6 +2531,176 @@ function backToManager() {
   hideAll();
   document.getElementById('manager-section').classList.add('active');
 }
+
+
+// =======================
+// ✍️ MANUAL CONSTRAINTS (MANAGER)
+// =======================
+function openManualConstraints(){
+  hideAll();
+  document.getElementById('manual-constraints-section').classList.add('active');
+  populateManualEmployeeList();
+  document.getElementById('mc-preview').innerHTML = '';
+  // Initialize selects with default options (2-emp style) until employee chosen
+  setManualConstraintOptions(null);
+}
+
+function backToManagerFromManualConstraints(){
+  hideAll();
+  document.getElementById('manager-section').classList.add('active');
+}
+
+// Builds employee list dynamically (respects SHIROT/ELIYA toggles)
+function populateManualEmployeeList(){
+  const sel = document.getElementById('mc-employee');
+  if(!sel) return;
+
+  const seen = new Set();
+  const emps = [];
+  for (const dept of Object.keys(DEPARTMENTS)) {
+    const list = getDeptEmployees(dept);
+    list.forEach(e => {
+      if(!seen.has(e)) { seen.add(e); emps.push(e); }
+    });
+  }
+
+  // Sort by display name (Hebrew), fallback to key
+  emps.sort((a,b)=>{
+    const da = DISPLAY_NAMES[a] || a;
+    const dbn = DISPLAY_NAMES[b] || b;
+    return da.localeCompare(dbn, 'he');
+  });
+
+  const current = sel.value;
+  sel.innerHTML = `<option value="">-- בחר עובד --</option>` + emps
+    .map(e => `<option value="${e}">${DISPLAY_NAMES[e] || e}</option>`).join('');
+  if (current && emps.includes(current)) sel.value = current;
+}
+
+function loadManualConstraintsForSelected(){
+  const emp = document.getElementById('mc-employee')?.value || '';
+  if(!emp){
+    document.getElementById('mc-c1-date').value = '';
+    document.getElementById('mc-c2-date').value = '';
+    setManualConstraintOptions(null);
+    document.getElementById('mc-preview').innerHTML = '';
+    return;
+  }
+  setManualConstraintOptions(emp);
+  loadManualConstraintsForEmp(emp);
+}
+
+// Set options based on employee dept size rules (same as employee page)
+function setManualConstraintOptions(emp){
+  const options = emp ? buildConstraintOptionsForEmp(emp) : [
+    { value: "", label: "-- בחר --" },
+    { value: "no-morning", label: "❌ לא בוקר" },
+    { value: "no-evening", label: "❌ לא ערב" },
+    { value: "day-off",    label: "🏖️ חופש מלא" }
+  ];
+
+  ["mc-c1-type","mc-c2-type"].forEach(id=>{
+    const sel = document.getElementById(id);
+    if(!sel) return;
+    const cur = sel.value;
+    sel.innerHTML = options.map(o => `<option value="${o.value}">${o.label}</option>`).join("");
+    if (options.some(o => o.value === cur)) sel.value = cur;
+  });
+}
+
+async function loadManualConstraintsForEmp(emp){
+  try{
+    const snapshot = await db.ref('constraints/' + emp).once('value');
+    const data = snapshot.val() || {};
+
+    document.getElementById('mc-c1-date').value = data.c1?.date || '';
+    document.getElementById('mc-c1-type').value = data.c1?.type || '';
+
+    document.getElementById('mc-c2-date').value = data.c2?.date || '';
+    document.getElementById('mc-c2-type').value = data.c2?.type || '';
+
+    displayManualPreview(emp, data);
+  } catch(e){
+    console.error('loadManualConstraintsForEmp error', e);
+    showMessage('❌ שגיאה בטעינת האילוצים', 'error');
+  }
+}
+
+// Manager saves directly. Day-off is saved as APPROVED with approvedAt/approvedBy so scheduling uses it immediately.
+async function saveManualConstraints(){
+  const emp = document.getElementById('mc-employee')?.value || '';
+  if(!emp) return showMessage('אנא בחר עובד', 'error');
+
+  const c1Date = document.getElementById('mc-c1-date').value;
+  const c1Type = document.getElementById('mc-c1-type').value;
+  const c2Date = document.getElementById('mc-c2-date').value;
+  const c2Type = document.getElementById('mc-c2-type').value;
+
+  if (c1Date && !isValidWeekday(c1Date)) return showMessage('❌ לא ניתן לבחור שישי או שבת', 'error');
+  if (c2Date && !isValidWeekday(c2Date)) return showMessage('❌ לא ניתן לבחור שישי או שבת', 'error');
+
+  const build = (date, type) => {
+    if (!date || !type) return null;
+    if (type === 'day-off') {
+      return {
+        date,
+        type,
+        status: 'approved',
+        approvedAt: firebase.database.ServerValue.TIMESTAMP,
+        approvedBy: MANAGER.username
+      };
+    }
+    return { date, type, status: 'approved' };
+  };
+
+  const out = {};
+  const c1 = build(c1Date, c1Type);
+  const c2 = build(c2Date, c2Type);
+  if (c1) out.c1 = c1;
+  if (c2) out.c2 = c2;
+
+  try{
+    await db.ref('constraints/' + emp).set(Object.keys(out).length ? out : null);
+
+    showMessage('✅ נשמר בהצלחה (מנהל)', 'success');
+
+    // Refresh manager constraints list + preview
+    try { await loadAllConstraints(); } catch(e) {}
+    await loadManualConstraintsForEmp(emp);
+
+    // Reset current schedule view (because constraints changed)
+    currentSchedule = null;
+    document.getElementById('schedule-result').innerHTML = '';
+    document.getElementById('export-section').style.display = 'none';
+    setApproveButtonVisible(false);
+
+  } catch(e){
+    console.error('saveManualConstraints error', e);
+    showMessage('❌ שגיאה בשמירה', 'error');
+  }
+}
+
+function displayManualPreview(emp, data){
+  const today = new Date(); today.setHours(0,0,0,0);
+  let html = `<h3 style="color:#667eea;">אילוצים עבור ${DISPLAY_NAMES[emp] || emp}:</h3>`;
+  let hasValid = false;
+
+  const addLine = (label, c) => {
+    if(!c) return;
+    if (new Date(c.date + 'T00:00:00') < today) return;
+    html += `<div class="constraint-card"><strong>${label}:</strong> ${formatDate(c.date)} - ${formatType(c.type)} ${getStatusBadge(c)}</div>`;
+    hasValid = true;
+  };
+
+  addLine('אילוץ 1', data.c1);
+  addLine('אילוץ 2', data.c2);
+
+  if(!hasValid) html += '<p style="color:#28a745;">אין אילוצים עתידיים</p>';
+
+  const el = document.getElementById('mc-preview');
+  if(el) el.innerHTML = html;
+}
+
 
 /**
  * Load employee token status
