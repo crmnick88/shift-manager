@@ -2070,8 +2070,8 @@ ${css}
 
     // עיצוב בסיסי (גבולות/יישור/Wrap)
     const range = XLSX.utils.decode_range(ws['!ref']);
-    ws['!cols'] = new Array(colCount).fill({ wch: 18 });
-    ws['!rows'] = new Array(aoa.length).fill({ hpt: 42 });
+    ws['!cols'] = new Array(colCount).fill({ wch: 10 });
+    ws['!rows'] = new Array(aoa.length).fill({ hpt: 30 });
 
     const border = {
       top:    { style: "thin", color: { rgb: "000000" } },
