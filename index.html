@@ -652,9 +652,12 @@
   firebase.initializeApp(firebaseConfig);
   const db = firebase.database();
   const auth = firebase.auth();
-  if (!auth.currentUser) {
-  auth.signInAnonymously().catch(console.error);
-}
+  auth.onAuthStateChanged(user => {
+  if (!user) {
+    auth.signInAnonymously().catch(console.error);
+  }
+});
+
 
 
 
