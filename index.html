@@ -1102,6 +1102,9 @@ function initShirotToggleUI() {
     if (!username || !password) return showMessage('אנא הזן שם משתמש וסיסמה', 'error');
 
     if (username === MANAGER.username && password === MANAGER.password) {
+        auth.signInWithEmailAndPassword('sagi@shift.local', password)
+    .then(() => console.log('Firebase Auth OK'))
+    .catch((error) => console.error('Firebase Auth ERROR:', error));
       // ✅ Save push token for manager too (so manager devices receive reminders)
       currentEmployee = 'MANAGER';
       localStorage.setItem('currentEmployee', currentEmployee);
