@@ -414,15 +414,7 @@ function initShirotToggleUI() {
 
  function logout() {
   currentEmployee = '';
-  localStorage.removeItem('currentEmployee'); // מוחק זיכרון התחברות קבוע
-
-  // אם זה מנהל עם חשבון אמיתי – נבצע signOut כדי לחזור לאנונימי (firebase.js ידאג להיכנס אנונימי שוב)
-  try {
-    if (typeof auth !== 'undefined' && auth.currentUser && !auth.currentUser.isAnonymous) {
-      auth.signOut().catch(() => {});
-    }
-  } catch (e) {}
-
+  localStorage.removeItem('currentEmployee'); // ⬅️ חדש: מוחק זיכרון התחברות קבוע
   backToLogin();
   showMessage('התנתקת בהצלחה', 'success');
 }
@@ -454,36 +446,26 @@ function initShirotToggleUI() {
   }
 
   function loginManager() {
-    // Option B: Manager login via Firebase Email/Password (real users)
+    // Option B (Email/Password) - Option 1 flow:
+    // ✅ Sign-in if exists, otherwise create a new account.
+    // ⚠️ We do NOT use linkWithCredential here (UID may change vs anonymous).
     const email = document.getElementById('mgr-username').value.trim();
-    const password = document.getElementById('mgr-password').value;
+    const password = document.getElementById('mgr-password').value.trim();
 
     if (!email || !password) return showMessage('אנא הזן אימייל וסיסמה', 'error');
 
-    (async () => {
-      try {
-        // If we're currently signed in anonymously, upgrade (link) to keep the same UID
-        const user = auth.currentUser;
-
-        if (user && user.isAnonymous) {
-          const cred = firebase.auth.EmailAuthProvider.credential(email, password);
-          await user.linkWithCredential(cred);
-        } else {
-          try {
-            await auth.signInWithEmailAndPassword(email, password);
-          } catch (err) {
-            // If account doesn't exist yet -> create it
-            if (err && err.code === 'auth/user-not-found') {
-              await auth.createUserWithEmailAndPassword(email, password);
-            } else {
-              throw err;
-            }
-          }
+    auth.signInWithEmailAndPassword(email, password)
+      .catch((error) => {
+        // If user doesn't exist - create it
+        if (error && error.code === 'auth/user-not-found') {
+          return auth.createUserWithEmailAndPassword(email, password);
         }
-
+        throw error;
+      })
+      .then(() => {
         console.log('Firebase Auth OK (manager)');
 
-        // ✅ Save push token for manager too (so manager devices receive reminders)
+        // Manager session
         currentEmployee = 'MANAGER';
         localStorage.setItem('currentEmployee', currentEmployee);
 
@@ -494,20 +476,24 @@ function initShirotToggleUI() {
         loadAllConstraints();
         showMessage('התחברת בהצלחה', 'success');
         initPushNotifications();
-
-      } catch (error) {
+      })
+      .catch((error) => {
         console.error('Firebase Auth ERROR:', error);
 
         // Friendly messages
-        const code = error && error.code ? error.code : '';
-        if (code === 'auth/invalid-email') return showMessage('אימייל לא תקין', 'error');
-        if (code === 'auth/wrong-password') return showMessage('סיסמה שגויה', 'error');
-        if (code === 'auth/email-already-in-use') return showMessage('האימייל כבר קיים. נסה להתחבר במקום להירשם', 'error');
-        if (code === 'auth/credential-already-in-use') return showMessage('החשבון הזה כבר מחובר למשתמש אחר. נסה להתחבר בחלון גלישה בסתר/התנתק ואז התחבר', 'error');
-
-        showMessage('שגיאת התחברות. בדוק אימייל/סיסמה ונסה שוב', 'error');
-      }
-    })();
+        if (error && error.code === 'auth/wrong-password') {
+          showMessage('סיסמה שגויה', 'error');
+        } else if (error && error.code === 'auth/invalid-email') {
+          showMessage('אימייל לא תקין', 'error');
+        } else if (error && error.code === 'auth/weak-password') {
+          showMessage('הסיסמה חייבת להיות לפחות 6 תווים', 'error');
+        } else if (error && error.code === 'auth/email-already-in-use') {
+          // Can happen if create was attempted but account exists (race)
+          showMessage('האימייל כבר קיים. נסה להתחבר עם הסיסמה הנכונה', 'error');
+        } else {
+          showMessage('שגיאת התחברות. בדוק אימייל/סיסמה ונסה שוב', 'error');
+        }
+      });
   }
 
   async function loadEmployeeConstraints() {
