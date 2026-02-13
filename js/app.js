@@ -446,41 +446,71 @@ function initShirotToggleUI() {
   }
 
   function loginManager() {
-    // Option B (Email/Password) - Option 1 flow:
-    // ✅ Sign-in if exists, otherwise create a new account.
-    // ⚠️ We do NOT use linkWithCredential here (UID may change vs anonymous).
+    // Option B (Email/Password) - Option 1 flow (no linkWithCredential):
+    // ✅ Sign-in if account exists, otherwise create a new account.
+    // Uses fetchSignInMethodsForEmail to distinguish "wrong password" vs "user not found".
     const email = document.getElementById('mgr-username').value.trim();
     const password = document.getElementById('mgr-password').value.trim();
 
     if (!email || !password) return showMessage('אנא הזן אימייל וסיסמה', 'error');
 
+    const onAuthed = () => {
+      console.log('Firebase Auth OK (manager)');
+
+      currentEmployee = 'MANAGER';
+      localStorage.setItem('currentEmployee', currentEmployee);
+
+      hideAll();
+      document.getElementById('manager-section').classList.add('active');
+      initShirotToggleUI();
+      initEliyaToggleUI();
+      loadAllConstraints();
+      showMessage('התחברת בהצלחה', 'success');
+      initPushNotifications();
+    };
+
     auth.signInWithEmailAndPassword(email, password)
-      .catch((error) => {
-        // If user doesn't exist - create it
-        if (error && error.code === 'auth/user-not-found') {
-          return auth.createUserWithEmailAndPassword(email, password);
+      .then(onAuthed)
+      .catch(async (error) => {
+        console.error('Firebase Auth ERROR (signIn):', error);
+
+        // If the email doesn't exist, Firebase *should* return auth/user-not-found,
+        // but sometimes returns auth/invalid-login-credentials. We'll check methods.
+        if (error && (error.code === 'auth/user-not-found' || error.code === 'auth/invalid-login-credentials')) {
+          try {
+            const methods = await auth.fetchSignInMethodsForEmail(email);
+            if (!methods || methods.length === 0) {
+              // Truly new email -> create user
+              await auth.createUserWithEmailAndPassword(email, password);
+              return onAuthed();
+            } else {
+              // Email exists but creds are wrong
+              showMessage('סיסמה שגויה', 'error');
+              return;
+            }
+          } catch (e) {
+            console.error('fetchSignInMethodsForEmail failed:', e);
+            // Fall back to create attempt (safe-ish): if already exists, Firebase will return email-already-in-use
+            try {
+              await auth.createUserWithEmailAndPassword(email, password);
+              return onAuthed();
+            } catch (ce) {
+              console.error('Create user failed:', ce);
+              if (ce && ce.code === 'auth/email-already-in-use') {
+                showMessage('האימייל כבר קיים. נסה להתחבר עם הסיסמה הנכונה', 'error');
+              } else if (ce && ce.code === 'auth/weak-password') {
+                showMessage('הסיסמה חייבת להיות לפחות 6 תווים', 'error');
+              } else if (ce && ce.code === 'auth/invalid-email') {
+                showMessage('אימייל לא תקין', 'error');
+              } else {
+                showMessage('שגיאת התחברות. בדוק אימייל/סיסמה ונסה שוב', 'error');
+              }
+              return;
+            }
+          }
         }
-        throw error;
-      })
-      .then(() => {
-        console.log('Firebase Auth OK (manager)');
 
-        // Manager session
-        currentEmployee = 'MANAGER';
-        localStorage.setItem('currentEmployee', currentEmployee);
-
-        hideAll();
-        document.getElementById('manager-section').classList.add('active');
-        initShirotToggleUI();
-        initEliyaToggleUI();
-        loadAllConstraints();
-        showMessage('התחברת בהצלחה', 'success');
-        initPushNotifications();
-      })
-      .catch((error) => {
-        console.error('Firebase Auth ERROR:', error);
-
-        // Friendly messages
+        // Other common errors
         if (error && error.code === 'auth/wrong-password') {
           showMessage('סיסמה שגויה', 'error');
         } else if (error && error.code === 'auth/invalid-email') {
@@ -488,7 +518,6 @@ function initShirotToggleUI() {
         } else if (error && error.code === 'auth/weak-password') {
           showMessage('הסיסמה חייבת להיות לפחות 6 תווים', 'error');
         } else if (error && error.code === 'auth/email-already-in-use') {
-          // Can happen if create was attempted but account exists (race)
           showMessage('האימייל כבר קיים. נסה להתחבר עם הסיסמה הנכונה', 'error');
         } else {
           showMessage('שגיאת התחברות. בדוק אימייל/סיסמה ונסה שוב', 'error');
