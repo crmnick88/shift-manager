@@ -10,11 +10,12 @@ if (!firebase.apps || firebase.apps.length === 0) {
 }
 const db = firebase.database();
 const auth = firebase.auth();
+
 // =========================
 // GLOBAL BRANCH STATE
 // =========================
 let currentBranchId = null;   // manager UID
-let currentBranchKey = null;  // branch key (e.g. "HAIFA")
+let currentBranchKey = null;  // branch key (e.g. "HAIFA" or new UID)
 
 // =========================
 // SYSTEM SUBSCRIPTION (READ ONLY)
@@ -28,10 +29,26 @@ async function loadSystemSubscription() {
   try {
     const branchesSnap = await db.ref('branches').once('value');
 
+    // If branches node doesn't exist at all -> create the manager's branch immediately
     if (!branchesSnap.exists()) {
-      console.warn('No branches found');
+      console.warn('No branches found -> creating branches node with new manager branch');
+      currentBranchKey = currentBranchId;
+
+      const newBranchRef = db.ref(`branches/${currentBranchKey}`);
+      const existsSnap = await newBranchRef.once('value');
+
+      if (!existsSnap.exists()) {
+        await newBranchRef.set({
+          managerUid: currentBranchId,
+          displayName: "סניף חדש",   // מנהל ישנה אחר כך
+          createdAt: Date.now(),
+          subscription: null,
+          departments: {},
+          employees: {}
+        });
+      }
+
       systemSubscription = null;
-      currentBranchKey = null;
       return;
     }
 
@@ -40,7 +57,7 @@ async function loadSystemSubscription() {
     branchesSnap.forEach(branchSnap => {
       const branchData = branchSnap.val();
 
-      if (branchData.managerUid === currentBranchId) {
+      if (branchData && branchData.managerUid === currentBranchId) {
         currentBranchKey = branchSnap.key;
         systemSubscription = branchData.subscription || null;
 
@@ -56,16 +73,33 @@ async function loadSystemSubscription() {
       }
     });
 
+    // ✅ NEW: if not found -> create a new branch keyed by UID (safe)
     if (!found) {
-      console.warn('No branch found for manager UID:', currentBranchId);
+      currentBranchKey = currentBranchId;
+      console.log('No branch found -> creating new branch with key:', currentBranchKey);
+
+      const newBranchRef = db.ref(`branches/${currentBranchKey}`);
+
+      // Create only if not exists (safe)
+      const existsSnap = await newBranchRef.once('value');
+      if (!existsSnap.exists()) {
+        await newBranchRef.set({
+          managerUid: currentBranchId,
+          displayName: "סניף חדש",   // מנהל ישנה אחר כך
+          createdAt: Date.now(),
+          subscription: null,
+          departments: {},
+          employees: {}
+        });
+      }
+
       systemSubscription = null;
-      currentBranchKey = null;
+      return;
     }
   } catch (e) {
     console.error('Failed to load system subscription', e);
   }
 }
-
 
 // =========================
 // CONSTRAINTS PATH (branch-scoped with legacy fallback)
