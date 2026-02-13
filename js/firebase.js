@@ -1,10 +1,15 @@
 // =========================
-// Firebase – shared state only
-// (firebase.initializeApp כבר קורה ב־index.html)
+// Firebase Init
 // =========================
-
-/* global firebase, db, auth */
-
+const firebaseConfig = window.firebaseConfig;
+if (!firebaseConfig) {
+  throw new Error("firebaseConfig is not defined. Set window.firebaseConfig before loading firebase.js");
+}
+if (!firebase.apps || firebase.apps.length === 0) {
+  firebase.initializeApp(firebaseConfig);
+}
+const db = firebase.database();
+const auth = firebase.auth();
 // =========================
 // GLOBAL BRANCH STATE
 // =========================
@@ -61,6 +66,57 @@ async function loadSystemSubscription() {
   }
 }
 
+
+// =========================
+// CONSTRAINTS PATH (branch-scoped with legacy fallback)
+// =========================
+let constraintsBasePath = 'constraints';
+
+// Returns the correct constraints base path (scoped if available, fallback to legacy root)
+function getConstraintsPath() {
+  return constraintsBasePath;
+}
+
+// Convenience: db ref under the constraints base
+function constraintsRef(suffix = '') {
+  const base = getConstraintsPath();
+  return suffix ? db.ref(`${base}/${suffix}`) : db.ref(base);
+}
+
+// Decide whether to use branches/{branchKey}/constraints or legacy root constraints
+async function resolveConstraintsBasePath() {
+  // Default: legacy root
+  constraintsBasePath = 'constraints';
+
+  if (!currentBranchKey) {
+    console.log('CONSTRAINTS PATH (legacy):', constraintsBasePath);
+    return;
+  }
+
+  try {
+    const scopedSnap = await db.ref(`branches/${currentBranchKey}/constraints`).limitToFirst(1).once('value');
+    if (scopedSnap.exists()) {
+      constraintsBasePath = `branches/${currentBranchKey}/constraints`;
+      console.log('CONSTRAINTS PATH (scoped):', constraintsBasePath);
+      return;
+    }
+
+    const legacySnap = await db.ref('constraints').limitToFirst(1).once('value');
+    if (legacySnap.exists()) {
+      constraintsBasePath = 'constraints';
+      console.log('CONSTRAINTS PATH (legacy):', constraintsBasePath);
+      return;
+    }
+
+    // No legacy data -> use scoped for new branches
+    constraintsBasePath = `branches/${currentBranchKey}/constraints`;
+    console.log('CONSTRAINTS PATH (new scoped):', constraintsBasePath);
+  } catch (e) {
+    console.warn('Constraints path resolution failed, using legacy root constraints', e);
+    constraintsBasePath = 'constraints';
+  }
+}
+
 // =========================
 // AUTH STATE (single listener)
 // =========================
@@ -79,3 +135,13 @@ auth.onAuthStateChanged(async (user) => {
     console.error('Auth / subscription init error:', e);
   }
 });
+
+// =========================
+// EXPORTS (for other scripts / index.html)
+// =========================
+window.db = db;
+window.auth = auth;
+window.loadSystemSubscription = loadSystemSubscription;
+window.resolveConstraintsBasePath = resolveConstraintsBasePath;
+window.getConstraintsPath = getConstraintsPath;
+window.constraintsRef = constraintsRef;
