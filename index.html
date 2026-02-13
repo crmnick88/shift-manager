@@ -660,17 +660,36 @@ let systemSubscription = null;
 
 async function loadSystemSubscription() {
   try {
-    if (!currentBranchId) {
-      console.warn('loadSystemSubscription called without currentBranchId');
+    const branchesSnap = await db.ref('branches').once('value');
+
+    if (!branchesSnap.exists()) {
+      console.warn('No branches found');
+      systemSubscription = null;
       return;
     }
 
-    const snap = await db
-      .ref(`branches/${currentBranchId}/subscription`)
-      .once('value');
+    let found = false;
 
-    systemSubscription = snap.exists() ? snap.val() : null;
-    console.log('SYSTEM SUBSCRIPTION:', systemSubscription);
+    branchesSnap.forEach(branchSnap => {
+      const branchData = branchSnap.val();
+
+      if (branchData.managerUid === currentBranchId) {
+        systemSubscription = branchData.subscription || null;
+        console.log(
+          'SYSTEM SUBSCRIPTION (branch:',
+          branchSnap.key,
+          '):',
+          systemSubscription
+        );
+        found = true;
+      }
+    });
+
+    if (!found) {
+      console.warn('No branch found for manager UID:', currentBranchId);
+      systemSubscription = null;
+    }
+
   } catch (e) {
     console.error('Failed to load system subscription', e);
   }
