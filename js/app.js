@@ -414,7 +414,15 @@ function initShirotToggleUI() {
 
  function logout() {
   currentEmployee = '';
-  localStorage.removeItem('currentEmployee'); // ⬅️ חדש: מוחק זיכרון התחברות קבוע
+  localStorage.removeItem('currentEmployee'); // מוחק זיכרון התחברות קבוע
+
+  // אם זה מנהל עם חשבון אמיתי – נבצע signOut כדי לחזור לאנונימי (firebase.js ידאג להיכנס אנונימי שוב)
+  try {
+    if (typeof auth !== 'undefined' && auth.currentUser && !auth.currentUser.isAnonymous) {
+      auth.signOut().catch(() => {});
+    }
+  } catch (e) {}
+
   backToLogin();
   showMessage('התנתקת בהצלחה', 'success');
 }
@@ -446,30 +454,60 @@ function initShirotToggleUI() {
   }
 
   function loginManager() {
-    const username = document.getElementById('mgr-username').value.trim().toUpperCase();
-    const password = document.getElementById('mgr-password').value.trim();
+    // Option B: Manager login via Firebase Email/Password (real users)
+    const email = document.getElementById('mgr-username').value.trim();
+    const password = document.getElementById('mgr-password').value;
 
-    if (!username || !password) return showMessage('אנא הזן שם משתמש וסיסמה', 'error');
+    if (!email || !password) return showMessage('אנא הזן אימייל וסיסמה', 'error');
 
-    if (username === MANAGER.username && password === MANAGER.password) {
-        auth.signInWithEmailAndPassword('sagi@shift.local', password)
-    .then(() => console.log('Firebase Auth OK'))
-    .catch((error) => console.error('Firebase Auth ERROR:', error));
-      // ✅ Save push token for manager too (so manager devices receive reminders)
-      currentEmployee = 'MANAGER';
-      localStorage.setItem('currentEmployee', currentEmployee);
+    (async () => {
+      try {
+        // If we're currently signed in anonymously, upgrade (link) to keep the same UID
+        const user = auth.currentUser;
 
+        if (user && user.isAnonymous) {
+          const cred = firebase.auth.EmailAuthProvider.credential(email, password);
+          await user.linkWithCredential(cred);
+        } else {
+          try {
+            await auth.signInWithEmailAndPassword(email, password);
+          } catch (err) {
+            // If account doesn't exist yet -> create it
+            if (err && err.code === 'auth/user-not-found') {
+              await auth.createUserWithEmailAndPassword(email, password);
+            } else {
+              throw err;
+            }
+          }
+        }
 
-      hideAll();
-      document.getElementById('manager-section').classList.add('active');
-      initShirotToggleUI();
-      initEliyaToggleUI();
-      loadAllConstraints();
-      showMessage('התחברת בהצלחה', 'success');
-      initPushNotifications();
-    } else {
-      showMessage('שם משתמש או סיסמה שגויים', 'error');
-    }
+        console.log('Firebase Auth OK (manager)');
+
+        // ✅ Save push token for manager too (so manager devices receive reminders)
+        currentEmployee = 'MANAGER';
+        localStorage.setItem('currentEmployee', currentEmployee);
+
+        hideAll();
+        document.getElementById('manager-section').classList.add('active');
+        initShirotToggleUI();
+        initEliyaToggleUI();
+        loadAllConstraints();
+        showMessage('התחברת בהצלחה', 'success');
+        initPushNotifications();
+
+      } catch (error) {
+        console.error('Firebase Auth ERROR:', error);
+
+        // Friendly messages
+        const code = error && error.code ? error.code : '';
+        if (code === 'auth/invalid-email') return showMessage('אימייל לא תקין', 'error');
+        if (code === 'auth/wrong-password') return showMessage('סיסמה שגויה', 'error');
+        if (code === 'auth/email-already-in-use') return showMessage('האימייל כבר קיים. נסה להתחבר במקום להירשם', 'error');
+        if (code === 'auth/credential-already-in-use') return showMessage('החשבון הזה כבר מחובר למשתמש אחר. נסה להתחבר בחלון גלישה בסתר/התנתק ואז התחבר', 'error');
+
+        showMessage('שגיאת התחברות. בדוק אימייל/סיסמה ונסה שוב', 'error');
+      }
+    })();
   }
 
   async function loadEmployeeConstraints() {
