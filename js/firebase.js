@@ -131,6 +131,7 @@ auth.onAuthStateChanged(async (user) => {
     console.log('BRANCH ID (uid):', currentBranchId);
 
     await loadSystemSubscription();
+    await resolveConstraintsBasePath();
   } catch (e) {
     console.error('Auth / subscription init error:', e);
   }
@@ -145,3 +146,7 @@ window.loadSystemSubscription = loadSystemSubscription;
 window.resolveConstraintsBasePath = resolveConstraintsBasePath;
 window.getConstraintsPath = getConstraintsPath;
 window.constraintsRef = constraintsRef;
+
+window.currentBranchId = () => currentBranchId;
+window.currentBranchKey = () => currentBranchKey;
+window.getSystemSubscription = () => systemSubscription;
