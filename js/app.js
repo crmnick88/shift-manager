@@ -475,7 +475,7 @@ function initShirotToggleUI() {
   async function loadEmployeeConstraints() {
     if (currentEmployee) applyConstraintOptions(currentEmployee);
 
-    const snapshot = await db.ref('constraints/' + currentEmployee).once('value');
+    const snapshot = await constraintsRef(currentEmployee).once('value');
     const data = snapshot.val() || {};
 
     document.getElementById('c1-date').value = data.c1?.date || '';
@@ -502,7 +502,7 @@ function initShirotToggleUI() {
     if (c1Date && c1Type) constraints.c1 = { date: c1Date, type: c1Type, status: c1Type === 'day-off' ? 'pending' : 'approved' };
     if (c2Date && c2Type) constraints.c2 = { date: c2Date, type: c2Type, status: c2Type === 'day-off' ? 'pending' : 'approved' };
 
-    await db.ref('constraints/' + currentEmployee).set(constraints);
+    await constraintsRef(currentEmployee).set(constraints);
 
     const hasDayOff = c1Type === 'day-off' || c2Type === 'day-off';
     showMessage(hasDayOff ? 'נשמר! בקשות חופש ממתינות לאישור' : 'נשמר בהצלחה!', 'success');
@@ -527,7 +527,7 @@ function initShirotToggleUI() {
   }
 
   async function loadAllConstraints() {
-    const snapshot = await db.ref('constraints').once('value');
+    const snapshot = await constraintsRef().once('value');
     const allData = snapshot.val() || {};
     const today = new Date(); today.setHours(0,0,0,0);
 
@@ -640,7 +640,7 @@ function initShirotToggleUI() {
     const ok = confirm(`לאפס אילוצים לכל העובדים? פעולה זו מוחקת את כל האילוצים.`);
     if (!ok) return;
 
-    await db.ref(`constraints`).set(null);
+    await constraintsRef().set(null);
     showMessage(`כל האילוצים אופסו`, 'success');
 
     currentSchedule = null;
@@ -657,7 +657,7 @@ function initShirotToggleUI() {
 
   async function generateSchedule() {
     try {
-      const snapshot = await db.ref('constraints').once('value');
+      const snapshot = await constraintsRef().once('value');
       const constraints = snapshot.val() || {};
 
       const conflicts = checkConflicts(constraints);
