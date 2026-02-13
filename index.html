@@ -672,13 +672,15 @@ async function loadSystemSubscription() {
 // =========================
 // AUTH STATE (single listener)
 // =========================
+  let currentBranchId = null;
 auth.onAuthStateChanged(async (user) => {
   try {
     if (!user) {
       await auth.signInAnonymously();
       return; // ה-listener ייקרא שוב עם user תקין
     }
-
+  currentBranchId = user.uid;
+  console.log('BRANCH ID (uid):', currentBranchId);
     await loadSystemSubscription();
   } catch (e) {
     console.error('Auth / subscription init error:', e);
