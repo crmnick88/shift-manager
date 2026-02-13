@@ -657,11 +657,18 @@ const auth = firebase.auth();
 // SYSTEM SUBSCRIPTION (READ ONLY)
 // =========================
 let systemSubscription = null;
-const DEFAULT_BRANCH = 'HAIFA';
 
 async function loadSystemSubscription() {
   try {
-    const snap = await db.ref(`branches/${DEFAULT_BRANCH}/subscription`).once('value');
+    if (!currentBranchId) {
+      console.warn('loadSystemSubscription called without currentBranchId');
+      return;
+    }
+
+    const snap = await db
+      .ref(`branches/${currentBranchId}/subscription`)
+      .once('value');
+
     systemSubscription = snap.exists() ? snap.val() : null;
     console.log('SYSTEM SUBSCRIPTION:', systemSubscription);
   } catch (e) {
@@ -672,21 +679,23 @@ async function loadSystemSubscription() {
 // =========================
 // AUTH STATE (single listener)
 // =========================
-  let currentBranchId = null;
+let currentBranchId = null;
+
 auth.onAuthStateChanged(async (user) => {
   try {
     if (!user) {
       await auth.signInAnonymously();
       return; // ה-listener ייקרא שוב עם user תקין
     }
-  currentBranchId = user.uid;
-  console.log('BRANCH ID (uid):', currentBranchId);
+
+    currentBranchId = user.uid;
+    console.log('BRANCH ID (uid):', currentBranchId);
+
     await loadSystemSubscription();
   } catch (e) {
     console.error('Auth / subscription init error:', e);
   }
 });
-
 
 
   
