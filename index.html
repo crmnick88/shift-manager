@@ -648,24 +648,64 @@
     messagingSenderId: "1091605398341",
     appId: "1:1091605398341:web:cb6c14e7d832c3e8df342c"
   };
-
+  
 firebase.initializeApp(firebaseConfig);
 const db = firebase.database();
 const auth = firebase.auth();
 
 // =========================
-// SYSTEM SUBSCRIPTION (READ ONLY) + BRANCH RESOLUTION
+// SYSTEM SUBSCRIPTION (READ ONLY)
 // =========================
 let systemSubscription = null;
 
-// ✅ the actual branch key in DB (e.g. "HAIFA")
+// ✅ The actual branch key in DB (e.g. "HAIFA")
 let currentBranchKey = null;
 
-// Returns the correct constraints path (scoped if branch key is known, fallback otherwise)
+// =========================
+// CONSTRAINTS PATH (branch-scoped with legacy fallback)
+// =========================
+let constraintsBasePath = 'constraints';
+
+// Returns the correct constraints base path (scoped if available, fallback to legacy root)
 function getConstraintsPath() {
-  return currentBranchKey
-    ? `branches/${currentBranchKey}/constraints`
-    : 'constraints';
+  return constraintsBasePath;
+}
+
+// Convenience: db ref under the constraints base
+function constraintsRef(suffix = '') {
+  const base = getConstraintsPath();
+  return suffix ? db.ref(`${base}/${suffix}`) : db.ref(base);
+}
+
+// Decide whether to use branches/{branchKey}/constraints or legacy root constraints
+async function resolveConstraintsBasePath() {
+  // Default: legacy root
+  constraintsBasePath = 'constraints';
+
+  if (!currentBranchKey) return;
+
+  try {
+    const scopedSnap = await db.ref(`branches/${currentBranchKey}/constraints`).limitToFirst(1).once('value');
+    if (scopedSnap.exists()) {
+      constraintsBasePath = `branches/${currentBranchKey}/constraints`;
+      console.log('CONSTRAINTS PATH (scoped):', constraintsBasePath);
+      return;
+    }
+
+    const legacySnap = await db.ref('constraints').limitToFirst(1).once('value');
+    if (legacySnap.exists()) {
+      constraintsBasePath = 'constraints';
+      console.log('CONSTRAINTS PATH (legacy):', constraintsBasePath);
+      return;
+    }
+
+    // No legacy data -> use scoped for new branches
+    constraintsBasePath = `branches/${currentBranchKey}/constraints`;
+    console.log('CONSTRAINTS PATH (new scoped):', constraintsBasePath);
+  } catch (e) {
+    console.warn('Constraints path resolution failed, using legacy root constraints', e);
+    constraintsBasePath = 'constraints';
+  }
 }
 
 async function loadSystemSubscription() {
@@ -684,7 +724,8 @@ async function loadSystemSubscription() {
     branchesSnap.forEach(branchSnap => {
       const branchData = branchSnap.val();
 
-      if (branchData && branchData.managerUid === currentBranchId) {
+      // ✅ match by managerUid (as in your DB screenshot)
+      if (branchData.managerUid === currentBranchId) {
         currentBranchKey = branchSnap.key;
         console.log('BRANCH KEY:', currentBranchKey);
 
@@ -700,7 +741,6 @@ async function loadSystemSubscription() {
       systemSubscription = null;
       currentBranchKey = null;
     }
-
   } catch (e) {
     console.error('Failed to load system subscription', e);
   }
@@ -722,6 +762,7 @@ auth.onAuthStateChanged(async (user) => {
     console.log('BRANCH ID (uid):', currentBranchId);
 
     await loadSystemSubscription();
+    await resolveConstraintsBasePath();
   } catch (e) {
     console.error('Auth / subscription init error:', e);
   }
