@@ -14,7 +14,7 @@ const auth = firebase.auth();
 // =========================
 // GLOBAL BRANCH STATE
 // =========================
-let currentBranchId = null;   // manager UID
+let currentBranchId = null;   // manager UID (auth.uid)
 let currentBranchKey = null;  // branch key (e.g. "HAIFA" or new UID)
 
 // =========================
@@ -23,69 +23,94 @@ let currentBranchKey = null;  // branch key (e.g. "HAIFA" or new UID)
 let systemSubscription = null;
 
 // =========================
+// Helpers
+// =========================
+function isPermissionDenied(err) {
+  return !!err && (err.code === "PERMISSION_DENIED" || err.code === "permission_denied" || String(err).includes("permission_denied"));
+}
+
+async function ensureOwnBranchExists(uid) {
+  const ownBranchRef = db.ref(`branches/${uid}`);
+
+  // Read is allowed for the owner (rules: auth.uid === $branchId)
+  const snap = await ownBranchRef.once("value");
+  if (snap.exists()) {
+    const data = snap.val() || {};
+    currentBranchKey = uid;
+    systemSubscription = data.subscription || null;
+    return true;
+  }
+
+  // Create (write is allowed for the owner)
+  await ownBranchRef.set({
+    managerUid: uid,
+    displayName: "סניף חדש",   // מנהל ישנה אחר כך
+    createdAt: Date.now(),
+    subscription: null,
+    departments: {},
+    employees: {}
+  });
+
+  currentBranchKey = uid;
+  systemSubscription = null;
+  return true;
+}
+
+// =========================
 // Load subscription by manager UID
 // =========================
+// Goal:
+// - Admins (e.g. HAIFA legacy): can read /branches and match by managerUid
+// - New/non-admin managers: cannot read /branches root -> work only with /branches/{auth.uid}
 async function loadSystemSubscription() {
+  const uid = currentBranchId;
+  if (!uid) return;
+
+  // 1) Try admin path: read all branches and resolve by managerUid
   try {
-    const branchesSnap = await db.ref('branches').once('value');
+    const branchesSnap = await db.ref("branches").once("value");
 
     // If branches node doesn't exist at all -> create the manager's branch immediately
     if (!branchesSnap.exists()) {
-      console.warn('No branches found -> creating branches node with new manager branch');
-      currentBranchKey = currentBranchId;
-
+      currentBranchKey = uid;
       const newBranchRef = db.ref(`branches/${currentBranchKey}`);
-      const existsSnap = await newBranchRef.once('value');
-
-      if (!existsSnap.exists()) {
-        await newBranchRef.set({
-          managerUid: currentBranchId,
-          displayName: "סניף חדש",   // מנהל ישנה אחר כך
-          createdAt: Date.now(),
-          subscription: null,
-          departments: {},
-          employees: {}
-        });
-      }
-
+      await newBranchRef.set({
+        managerUid: uid,
+        displayName: "סניף חדש",
+        createdAt: Date.now(),
+        subscription: null,
+        departments: {},
+        employees: {}
+      });
       systemSubscription = null;
       return;
     }
 
     let found = false;
 
-    branchesSnap.forEach(branchSnap => {
+    branchesSnap.forEach((branchSnap) => {
       const branchData = branchSnap.val();
-
-      if (branchData && branchData.managerUid === currentBranchId) {
+      if (branchData && branchData.managerUid === uid) {
+        found = true;
         currentBranchKey = branchSnap.key;
         systemSubscription = branchData.subscription || null;
 
-        console.log('BRANCH KEY:', currentBranchKey);
-        console.log(
-          'SYSTEM SUBSCRIPTION (branch:',
-          currentBranchKey,
-          '):',
-          systemSubscription
-        );
-
-        found = true;
+        console.log("BRANCH KEY:", currentBranchKey);
+        console.log("SYSTEM SUBSCRIPTION (branch:", currentBranchKey, "):", systemSubscription);
       }
     });
 
-    // ✅ NEW: if not found -> create a new branch keyed by UID (safe)
+    // If admin didn't find a branch -> create a new UID-keyed branch
     if (!found) {
-      currentBranchKey = currentBranchId;
-      console.log('No branch found -> creating new branch with key:', currentBranchKey);
+      currentBranchKey = uid;
+      console.log("No branch found -> creating new branch with key:", currentBranchKey);
 
       const newBranchRef = db.ref(`branches/${currentBranchKey}`);
-
-      // Create only if not exists (safe)
-      const existsSnap = await newBranchRef.once('value');
+      const existsSnap = await newBranchRef.once("value");
       if (!existsSnap.exists()) {
         await newBranchRef.set({
-          managerUid: currentBranchId,
-          displayName: "סניף חדש",   // מנהל ישנה אחר כך
+          managerUid: uid,
+          displayName: "סניף חדש",
           createdAt: Date.now(),
           subscription: null,
           departments: {},
@@ -96,15 +121,28 @@ async function loadSystemSubscription() {
       systemSubscription = null;
       return;
     }
+
+    return; // resolved via admin scan
   } catch (e) {
-    console.error('Failed to load system subscription', e);
+    // If we are not admin, reading /branches will fail with permission_denied.
+    if (!isPermissionDenied(e)) {
+      console.error("Failed to load system subscription (unexpected):", e);
+    }
+    // fall through to non-admin path
+  }
+
+  // 2) Non-admin path: ONLY touch /branches/{uid}
+  try {
+    await ensureOwnBranchExists(uid);
+  } catch (e) {
+    console.error("Failed to load/create own branch:", e);
   }
 }
 
 // =========================
 // CONSTRAINTS PATH (branch-scoped with legacy fallback)
 // =========================
-let constraintsBasePath = 'constraints';
+let constraintsBasePath = "constraints";
 
 // Returns the correct constraints base path (scoped if available, fallback to legacy root)
 function getConstraintsPath() {
@@ -112,7 +150,7 @@ function getConstraintsPath() {
 }
 
 // Convenience: db ref under the constraints base
-function constraintsRef(suffix = '') {
+function constraintsRef(suffix = "") {
   const base = getConstraintsPath();
   return suffix ? db.ref(`${base}/${suffix}`) : db.ref(base);
 }
@@ -120,34 +158,34 @@ function constraintsRef(suffix = '') {
 // Decide whether to use branches/{branchKey}/constraints or legacy root constraints
 async function resolveConstraintsBasePath() {
   // Default: legacy root
-  constraintsBasePath = 'constraints';
+  constraintsBasePath = "constraints";
 
   if (!currentBranchKey) {
-    console.log('CONSTRAINTS PATH (legacy):', constraintsBasePath);
+    console.log("CONSTRAINTS PATH (legacy):", constraintsBasePath);
     return;
   }
 
   try {
-    const scopedSnap = await db.ref(`branches/${currentBranchKey}/constraints`).limitToFirst(1).once('value');
+    const scopedSnap = await db.ref(`branches/${currentBranchKey}/constraints`).limitToFirst(1).once("value");
     if (scopedSnap.exists()) {
       constraintsBasePath = `branches/${currentBranchKey}/constraints`;
-      console.log('CONSTRAINTS PATH (scoped):', constraintsBasePath);
+      console.log("CONSTRAINTS PATH (scoped):", constraintsBasePath);
       return;
     }
 
-    const legacySnap = await db.ref('constraints').limitToFirst(1).once('value');
+    const legacySnap = await db.ref("constraints").limitToFirst(1).once("value");
     if (legacySnap.exists()) {
-      constraintsBasePath = 'constraints';
-      console.log('CONSTRAINTS PATH (legacy):', constraintsBasePath);
+      constraintsBasePath = "constraints";
+      console.log("CONSTRAINTS PATH (legacy):", constraintsBasePath);
       return;
     }
 
     // No legacy data -> use scoped for new branches
     constraintsBasePath = `branches/${currentBranchKey}/constraints`;
-    console.log('CONSTRAINTS PATH (new scoped):', constraintsBasePath);
+    console.log("CONSTRAINTS PATH (new scoped):", constraintsBasePath);
   } catch (e) {
-    console.warn('Constraints path resolution failed, using legacy root constraints', e);
-    constraintsBasePath = 'constraints';
+    console.warn("Constraints path resolution failed, using legacy root constraints", e);
+    constraintsBasePath = "constraints";
   }
 }
 
@@ -162,12 +200,12 @@ auth.onAuthStateChanged(async (user) => {
     }
 
     currentBranchId = user.uid;
-    console.log('BRANCH ID (uid):', currentBranchId);
+    console.log("BRANCH ID (uid):", currentBranchId);
 
     await loadSystemSubscription();
     await resolveConstraintsBasePath();
   } catch (e) {
-    console.error('Auth / subscription init error:', e);
+    console.error("Auth / subscription init error:", e);
   }
 });
 
