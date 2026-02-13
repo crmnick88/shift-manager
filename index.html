@@ -673,15 +673,17 @@ async function loadSystemSubscription() {
 // AUTH STATE (single listener)
 // =========================
 auth.onAuthStateChanged(async (user) => {
-  if (!user) {
-    auth.signInAnonymously().catch(console.error);
-    return;
+  try {
+    if (!user) {
+      await auth.signInAnonymously();
+      return; // ה-listener ייקרא שוב עם user תקין
+    }
+
+    await loadSystemSubscription();
+  } catch (e) {
+    console.error('Auth / subscription init error:', e);
   }
-
-  await loadSystemSubscription();
 });
-
-
 
 
 
