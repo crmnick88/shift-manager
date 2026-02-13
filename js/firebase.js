@@ -1,9 +1,9 @@
 // =========================
-// Firebase Init
+// Firebase – shared state only
+// (firebase.initializeApp כבר קורה ב־index.html)
 // =========================
-firebase.initializeApp(firebaseConfig);
-const db = firebase.database();
-const auth = firebase.auth();
+
+/* global firebase, db, auth */
 
 // =========================
 // GLOBAL BRANCH STATE
