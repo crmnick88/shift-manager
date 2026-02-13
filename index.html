@@ -660,6 +660,17 @@ let systemSubscription = null;
 
 // ✅ NEW: the actual branch key in DB (e.g. "HAIFA")
 let currentBranchKey = null;
+  // =========================
+// BRANCH RESOLUTION (for scoping reads safely)
+// =========================
+let currentBranchKey = null;
+
+// Returns the correct constraints path (scoped if branch key is known, fallback otherwise)
+function getConstraintsPath() {
+  return currentBranchKey
+    ? `branches/${currentBranchKey}/constraints`
+    : 'constraints';
+}
 
 async function loadSystemSubscription() {
   try {
@@ -677,16 +688,14 @@ async function loadSystemSubscription() {
     branchesSnap.forEach(branchSnap => {
       const branchData = branchSnap.val();
 
-      if (branchData.managerUid === currentBranchId) {
-        // ✅ save branch key + subscription
-        currentBranchKey = branchSnap.key;
-        systemSubscription = branchData.subscription || null;
+ if (branchData.managerUid === currentBranchId) {
+  currentBranchKey = branchSnap.key;
+  console.log('BRANCH KEY:', currentBranchKey);
 
-        console.log('BRANCH KEY:', currentBranchKey);
-        console.log('SYSTEM SUBSCRIPTION (branch:', currentBranchKey, '):', systemSubscription);
-
-        found = true;
-      }
+  systemSubscription = branchData.subscription || null;
+  console.log('SYSTEM SUBSCRIPTION (branch:', branchSnap.key, '):', systemSubscription);
+  found = true;
+}
     });
 
     if (!found) {
