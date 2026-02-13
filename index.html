@@ -658,6 +658,9 @@ const auth = firebase.auth();
 // =========================
 let systemSubscription = null;
 
+// ✅ NEW: the actual branch key in DB (e.g. "HAIFA")
+let currentBranchKey = null;
+
 async function loadSystemSubscription() {
   try {
     const branchesSnap = await db.ref('branches').once('value');
@@ -665,6 +668,7 @@ async function loadSystemSubscription() {
     if (!branchesSnap.exists()) {
       console.warn('No branches found');
       systemSubscription = null;
+      currentBranchKey = null;
       return;
     }
 
@@ -674,13 +678,13 @@ async function loadSystemSubscription() {
       const branchData = branchSnap.val();
 
       if (branchData.managerUid === currentBranchId) {
+        // ✅ save branch key + subscription
+        currentBranchKey = branchSnap.key;
         systemSubscription = branchData.subscription || null;
-        console.log(
-          'SYSTEM SUBSCRIPTION (branch:',
-          branchSnap.key,
-          '):',
-          systemSubscription
-        );
+
+        console.log('BRANCH KEY:', currentBranchKey);
+        console.log('SYSTEM SUBSCRIPTION (branch:', currentBranchKey, '):', systemSubscription);
+
         found = true;
       }
     });
@@ -688,6 +692,7 @@ async function loadSystemSubscription() {
     if (!found) {
       console.warn('No branch found for manager UID:', currentBranchId);
       systemSubscription = null;
+      currentBranchKey = null;
     }
 
   } catch (e) {
@@ -715,8 +720,6 @@ auth.onAuthStateChanged(async (user) => {
     console.error('Auth / subscription init error:', e);
   }
 });
-
-
   
   // =======================
   // 🔔 PUSH NOTIFICATIONS
