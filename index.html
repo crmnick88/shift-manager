@@ -654,15 +654,11 @@ const db = firebase.database();
 const auth = firebase.auth();
 
 // =========================
-// SYSTEM SUBSCRIPTION (READ ONLY)
+// SYSTEM SUBSCRIPTION (READ ONLY) + BRANCH RESOLUTION
 // =========================
 let systemSubscription = null;
 
-// ✅ NEW: the actual branch key in DB (e.g. "HAIFA")
-let currentBranchKey = null;
-  // =========================
-// BRANCH RESOLUTION (for scoping reads safely)
-// =========================
+// ✅ the actual branch key in DB (e.g. "HAIFA")
 let currentBranchKey = null;
 
 // Returns the correct constraints path (scoped if branch key is known, fallback otherwise)
@@ -688,14 +684,15 @@ async function loadSystemSubscription() {
     branchesSnap.forEach(branchSnap => {
       const branchData = branchSnap.val();
 
- if (branchData.managerUid === currentBranchId) {
-  currentBranchKey = branchSnap.key;
-  console.log('BRANCH KEY:', currentBranchKey);
+      if (branchData && branchData.managerUid === currentBranchId) {
+        currentBranchKey = branchSnap.key;
+        console.log('BRANCH KEY:', currentBranchKey);
 
-  systemSubscription = branchData.subscription || null;
-  console.log('SYSTEM SUBSCRIPTION (branch:', branchSnap.key, '):', systemSubscription);
-  found = true;
-}
+        systemSubscription = branchData.subscription || null;
+        console.log('SYSTEM SUBSCRIPTION (branch:', branchSnap.key, '):', systemSubscription);
+
+        found = true;
+      }
     });
 
     if (!found) {
