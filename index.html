@@ -649,13 +649,36 @@
     appId: "1:1091605398341:web:cb6c14e7d832c3e8df342c"
   };
 
-  firebase.initializeApp(firebaseConfig);
-  const db = firebase.database();
-  const auth = firebase.auth();
-  auth.onAuthStateChanged(user => {
+firebase.initializeApp(firebaseConfig);
+const db = firebase.database();
+const auth = firebase.auth();
+
+// =========================
+// SYSTEM SUBSCRIPTION (READ ONLY)
+// =========================
+let systemSubscription = null;
+const DEFAULT_BRANCH = 'HAIFA';
+
+async function loadSystemSubscription() {
+  try {
+    const snap = await db.ref(`branches/${DEFAULT_BRANCH}/subscription`).once('value');
+    systemSubscription = snap.exists() ? snap.val() : null;
+    console.log('SYSTEM SUBSCRIPTION:', systemSubscription);
+  } catch (e) {
+    console.error('Failed to load system subscription', e);
+  }
+}
+
+// =========================
+// AUTH STATE (single listener)
+// =========================
+auth.onAuthStateChanged(async (user) => {
   if (!user) {
     auth.signInAnonymously().catch(console.error);
+    return;
   }
+
+  await loadSystemSubscription();
 });
 
 
