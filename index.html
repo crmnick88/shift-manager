@@ -13,8 +13,23 @@
   <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-database-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-auth-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-messaging-compat.js"></script>
-<!-- ⬅️ הקובץ החדש -->
-<script src="js/firebase.js"></script>
+
+  <script>
+    // Firebase configuration (shared)
+    const firebaseConfig = {
+      apiKey: "AIzaSyD-uaQ2aO87kGxbcc-m8_9fzJ3uhPv2zvk",
+      authDomain: "shift-manager-c026e.firebaseapp.com",
+      databaseURL: "https://shift-manager-c026e-default-rtdb.europe-west1.firebasedatabase.app",
+      projectId: "shift-manager-c026e",
+      storageBucket: "shift-manager-c026e.firebasestorage.app",
+      messagingSenderId: "1091605398341",
+      appId: "1:1091605398341:web:cb6c14e7d832c3e8df342c"
+    };
+  </script>
+
+  <!-- Firebase init + shared helpers -->
+  <script src="js/firebase.js"></script>
+
 <!-- SheetJS -->
   <script src="./xlsx.bundle.js"></script>
 
@@ -638,21 +653,6 @@
 </div>
 
 <script>
-  // Firebase Config
-  const firebaseConfig = {
-    apiKey: "AIzaSyD-uaQ2aO87kGxbcc-m8_9fzJ3uhPv2zvk",
-    authDomain: "shift-manager-c026e.firebaseapp.com",
-    databaseURL: "https://shift-manager-c026e-default-rtdb.europe-west1.firebasedatabase.app",
-    projectId: "shift-manager-c026e",
-    storageBucket: "shift-manager-c026e.firebasestorage.app",
-    messagingSenderId: "1091605398341",
-    appId: "1:1091605398341:web:cb6c14e7d832c3e8df342c"
-  };
-  
-firebase.initializeApp(firebaseConfig);
-const db = firebase.database();
-const auth = firebase.auth();
-
 // =========================
 // SYSTEM SUBSCRIPTION (READ ONLY)
 // =========================
