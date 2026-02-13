@@ -21,6 +21,7 @@ let currentBranchKey = null;  // branch key (e.g. "HAIFA" or new UID)
 // SYSTEM SUBSCRIPTION (READ ONLY)
 // =========================
 let systemSubscription = null;
+let isAdmin = false;
 
 // =========================
 // Helpers
@@ -69,6 +70,7 @@ async function loadSystemSubscription() {
   // 1) Try admin path: read all branches and resolve by managerUid
   try {
     const branchesSnap = await db.ref("branches").once("value");
+    isAdmin = true;
 
     // If branches node doesn't exist at all -> create the manager's branch immediately
     if (!branchesSnap.exists()) {
@@ -128,6 +130,7 @@ async function loadSystemSubscription() {
     if (!isPermissionDenied(e)) {
       console.error("Failed to load system subscription (unexpected):", e);
     }
+    isAdmin = false;
     // fall through to non-admin path
   }
 
@@ -165,6 +168,14 @@ async function resolveConstraintsBasePath() {
     return;
   }
 
+  // Non-admin managers cannot read legacy root nodes like /constraints.
+  // They only have access to their own branch subtree.
+  if (!isAdmin) {
+    constraintsBasePath = `branches/${currentBranchKey}/constraints`;
+    console.log("CONSTRAINTS PATH (scoped non-admin):", constraintsBasePath);
+    return;
+  }
+
   try {
     const scopedSnap = await db.ref(`branches/${currentBranchKey}/constraints`).limitToFirst(1).once("value");
     if (scopedSnap.exists()) {
@@ -184,8 +195,13 @@ async function resolveConstraintsBasePath() {
     constraintsBasePath = `branches/${currentBranchKey}/constraints`;
     console.log("CONSTRAINTS PATH (new scoped):", constraintsBasePath);
   } catch (e) {
-    console.warn("Constraints path resolution failed, using legacy root constraints", e);
-    constraintsBasePath = "constraints";
+    if (isPermissionDenied(e)) {
+      constraintsBasePath = `branches/${currentBranchKey}/constraints`;
+      console.warn("Constraints path resolution permission_denied -> using scoped:", constraintsBasePath);
+    } else {
+      console.warn("Constraints path resolution failed, using legacy root constraints", e);
+      constraintsBasePath = "constraints";
+    }
   }
 }
 
