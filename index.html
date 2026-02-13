@@ -13,23 +13,19 @@
   <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-database-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-auth-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-messaging-compat.js"></script>
-
-  <script>
-    // Firebase configuration (shared)
-    const firebaseConfig = {
-      apiKey: "AIzaSyD-uaQ2aO87kGxbcc-m8_9fzJ3uhPv2zvk",
-      authDomain: "shift-manager-c026e.firebaseapp.com",
-      databaseURL: "https://shift-manager-c026e-default-rtdb.europe-west1.firebasedatabase.app",
-      projectId: "shift-manager-c026e",
-      storageBucket: "shift-manager-c026e.firebasestorage.app",
-      messagingSenderId: "1091605398341",
-      appId: "1:1091605398341:web:cb6c14e7d832c3e8df342c"
-    };
-  </script>
-
-  <!-- Firebase init + shared helpers -->
-  <script src="js/firebase.js"></script>
-
+<!-- ⬅️ הקובץ החדש -->
+<script>
+  window.firebaseConfig = {
+    apiKey: "AIzaSyD-uaQ2aO87kGxbcc-m8_9fzJ3uhPv2zvk",
+    authDomain: "shift-manager-c026e.firebaseapp.com",
+    databaseURL: "https://shift-manager-c026e-default-rtdb.europe-west1.firebasedatabase.app",
+    projectId: "shift-manager-c026e",
+    storageBucket: "shift-manager-c026e.firebasestorage.app",
+    messagingSenderId: "1091605398341",
+    appId: "1:1091605398341:web:cb6c14e7d832c3e8df342c"
+  };
+</script>
+<script src="js/firebase.js"></script>
 <!-- SheetJS -->
   <script src="./xlsx.bundle.js"></script>
 
@@ -653,122 +649,9 @@
 </div>
 
 <script>
-// =========================
-// SYSTEM SUBSCRIPTION (READ ONLY)
-// =========================
-let systemSubscription = null;
+  // Firebase init moved to js/firebase.js
 
-// ✅ The actual branch key in DB (e.g. "HAIFA")
-let currentBranchKey = null;
-
-// =========================
-// CONSTRAINTS PATH (branch-scoped with legacy fallback)
-// =========================
-let constraintsBasePath = 'constraints';
-
-// Returns the correct constraints base path (scoped if available, fallback to legacy root)
-function getConstraintsPath() {
-  return constraintsBasePath;
-}
-
-// Convenience: db ref under the constraints base
-function constraintsRef(suffix = '') {
-  const base = getConstraintsPath();
-  return suffix ? db.ref(`${base}/${suffix}`) : db.ref(base);
-}
-
-// Decide whether to use branches/{branchKey}/constraints or legacy root constraints
-async function resolveConstraintsBasePath() {
-  // Default: legacy root
-  constraintsBasePath = 'constraints';
-
-  if (!currentBranchKey) return;
-
-  try {
-    const scopedSnap = await db.ref(`branches/${currentBranchKey}/constraints`).limitToFirst(1).once('value');
-    if (scopedSnap.exists()) {
-      constraintsBasePath = `branches/${currentBranchKey}/constraints`;
-      console.log('CONSTRAINTS PATH (scoped):', constraintsBasePath);
-      return;
-    }
-
-    const legacySnap = await db.ref('constraints').limitToFirst(1).once('value');
-    if (legacySnap.exists()) {
-      constraintsBasePath = 'constraints';
-      console.log('CONSTRAINTS PATH (legacy):', constraintsBasePath);
-      return;
-    }
-
-    // No legacy data -> use scoped for new branches
-    constraintsBasePath = `branches/${currentBranchKey}/constraints`;
-    console.log('CONSTRAINTS PATH (new scoped):', constraintsBasePath);
-  } catch (e) {
-    console.warn('Constraints path resolution failed, using legacy root constraints', e);
-    constraintsBasePath = 'constraints';
-  }
-}
-
-async function loadSystemSubscription() {
-  try {
-    const branchesSnap = await db.ref('branches').once('value');
-
-    if (!branchesSnap.exists()) {
-      console.warn('No branches found');
-      systemSubscription = null;
-      currentBranchKey = null;
-      return;
-    }
-
-    let found = false;
-
-    branchesSnap.forEach(branchSnap => {
-      const branchData = branchSnap.val();
-
-      // ✅ match by managerUid (as in your DB screenshot)
-      if (branchData.managerUid === currentBranchId) {
-        currentBranchKey = branchSnap.key;
-        console.log('BRANCH KEY:', currentBranchKey);
-
-        systemSubscription = branchData.subscription || null;
-        console.log('SYSTEM SUBSCRIPTION (branch:', branchSnap.key, '):', systemSubscription);
-
-        found = true;
-      }
-    });
-
-    if (!found) {
-      console.warn('No branch found for manager UID:', currentBranchId);
-      systemSubscription = null;
-      currentBranchKey = null;
-    }
-  } catch (e) {
-    console.error('Failed to load system subscription', e);
-  }
-}
-
-// =========================
-// AUTH STATE (single listener)
-// =========================
-let currentBranchId = null;
-
-auth.onAuthStateChanged(async (user) => {
-  try {
-    if (!user) {
-      await auth.signInAnonymously();
-      return; // ה-listener ייקרא שוב עם user תקין
-    }
-
-    currentBranchId = user.uid;
-    console.log('BRANCH ID (uid):', currentBranchId);
-
-    await loadSystemSubscription();
-    await resolveConstraintsBasePath();
-  } catch (e) {
-    console.error('Auth / subscription init error:', e);
-  }
-});
-  
-  // =======================
+// =======================
   // 🔔 PUSH NOTIFICATIONS
   // =======================
   let messaging = null;
