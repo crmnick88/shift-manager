@@ -1,10 +1,13 @@
 /* service-worker.js */
-const CACHE_VERSION = "v4"; // <-- כל פעם שאתה משנה קוד, תעלה ל-v5, v6...
+const CACHE_VERSION = "v5"; // <-- כל פעם שאתה משנה קוד, תעלה ל-v5, v6...
 const CACHE_NAME = `shift-pwa-${CACHE_VERSION}`;
 
 const ASSETS = [
   "./",
   "./index.html",
+  "./style.css",
+  "./js/app.js",
+  "./js/firebase.js",
   "./manifest.json",
   "./icon-192.png",
   "./icon-512.png",
