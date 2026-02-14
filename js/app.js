@@ -403,6 +403,15 @@ const USERS = {
     list = Object.keys(val);
   }
 
+  // ניקוי מפתחות לא חוקיים שמגיעים לפעמים מטפסים/אובייקטים
+  list = list.filter(e => typeof e === 'string' && e.trim() !== '' && e !== 'name');
+
+  // אם יש רשימת עובדים מוגדרת לסניף החדש – נוודא שהמחלקה משתמשת רק בהם
+  if (typeof BRANCH_EMPLOYEES === 'object' && BRANCH_EMPLOYEES && Object.keys(BRANCH_EMPLOYEES).length > 0) {
+    const allowed = new Set(Object.keys(BRANCH_EMPLOYEES));
+    list = list.filter(e => allowed.has(e));
+  }
+
   // נציגות שירות – כיבוי SHIROT
   if (dept === 'נציגות שירות' && typeof isShirotActive === "function" && !isShirotActive()) {
     list = list.filter(e => e !== 'SHIROT');
@@ -1422,9 +1431,19 @@ nextSunday.setDate(today.getDate() + (dow === 0 ? 7 : 7 - dow));
     }
 
     // שמירת היסטוריית מוצ"ש ב-Firebase
+    // ניקוי ערכים undefined לפני כתיבה ל-Firebase (Firebase לא מקבל undefined)
+    Object.keys(saturdayHistory).forEach(k => {
+      if (saturdayHistory[k] === undefined) delete saturdayHistory[k];
+    });
+
     await __ref('saturdayHistory').set(saturdayHistory);
 
     // ✅ Save weekday start history (2-employee departments)
+    // ניקוי ערכים undefined לפני כתיבה ל-Firebase
+    Object.keys(weekdayStartHistory).forEach(k => {
+      if (weekdayStartHistory[k] === undefined) delete weekdayStartHistory[k];
+    });
+
     await __ref('weekdayStartHistory').set(weekdayStartHistory);
 
     return allSchedules;
