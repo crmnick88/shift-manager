@@ -240,8 +240,18 @@
     });
   }
 
-  boot().catch((e) => {
-    console.error(e);
-    showMsg('שגיאת אתחול: ' + (e && e.message ? e.message : e), 'err');
+  function runWhenReady(fn){
+    if (document.readyState === 'loading') {
+      document.addEventListener('DOMContentLoaded', () => fn(), { once: true });
+    } else {
+      fn();
+    }
+  }
+
+  runWhenReady(() => {
+    boot().catch((e) => {
+      console.error(e);
+      showMsg('שגיאת אתחול: ' + (e && e.message ? e.message : e), 'err');
+    });
   });
 })();
