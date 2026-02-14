@@ -162,16 +162,18 @@ function constraintsRef(suffix = "") {
 async function resolveConstraintsBasePath() {
   try {
     const u = auth.currentUser;
-    if (!u) return "constraints";
+    if (!u) { constraintsBasePath = "constraints"; return constraintsBasePath; }
 
     // Admin keeps legacy root paths (HAIFA) to avoid breaking existing data.
     const admin = (typeof window.isAdmin === 'function') ? window.isAdmin() : false;
-    if (admin) return "constraints";
+    if (admin) { constraintsBasePath = "constraints"; return constraintsBasePath; }
 
     const branchKey = (typeof window.getBranchKey === 'function') ? window.getBranchKey() : u.uid;
-    return `branches/${branchKey}/constraints`;
+    constraintsBasePath = `branches/${branchKey}/constraints`;
+    return constraintsBasePath;
   } catch (e) {
-    return "constraints";
+    constraintsBasePath = "constraints";
+    return constraintsBasePath;
   }
 }
 
@@ -204,6 +206,9 @@ window.loadSystemSubscription = loadSystemSubscription;
 window.resolveConstraintsBasePath = resolveConstraintsBasePath;
 window.getConstraintsPath = getConstraintsPath;
 window.constraintsRef = constraintsRef;
+
+window.isAdmin = () => isAdmin;
+window.getBranchKey = () => currentBranchKey;
 
 window.currentBranchId = () => currentBranchId;
 window.currentBranchKey = () => currentBranchKey;
