@@ -189,7 +189,7 @@ async function approveCurrentSchedule(){
   };
 
   // ✅ שומר לפי שבוע
-  await db.ref('approvedSchedules/' + k).set(payload);
+  await __ref('approvedSchedules/' + k).set(payload);
 
   // ✅ מצביע ל"אחרון שאושר"
   await __ref('approvedSchedulesLatest').set({
@@ -212,7 +212,7 @@ async function approveCurrentSchedule(){
 
   const k = latest.weekKey;
 
-  const snap = await db.ref('approvedSchedules/' + k + '/data').once('value');
+  const snap = await __ref('approvedSchedules/' + k + '/data').once('value');
   const approved = snap.val();
 
   if(!approved){
@@ -243,7 +243,7 @@ async function approveCurrentSchedule(){
 
   const k = latest.weekKey;
 
-  const snap = await db.ref('approvedSchedules/' + k + '/data').once('value');
+  const snap = await __ref('approvedSchedules/' + k + '/data').once('value');
   const d = snap.val();
 
   if(!d) return showMessage('הסידור האחרון לא נמצא ב-DB', 'error');
@@ -677,10 +677,10 @@ function initShirotToggleUI() {
 
   async function updateApproval(emp, key, status) {
     if (status === 'rejected') {
-      await db.ref(`constraints/${emp}/${key}`).set(null);
+      await constraintsRef(`${emp}/${key}`).set(null);
       showMessage('בקשת החופש נדחתה ונמחקה', 'success');
     } else {
-      await db.ref(`constraints/${emp}/${key}`).update({
+      await constraintsRef(`${emp}/${key}`).update({
         status: "approved",
         approvedAt: firebase.database.ServerValue.TIMESTAMP,
         approvedBy: MANAGER.username
@@ -693,7 +693,7 @@ function initShirotToggleUI() {
   async function deleteSingleConstraint(emp, key){
     const ok = confirm(`למחוק את ${key} עבור ${DISPLAY_NAMES[emp] || emp}?`);
     if(!ok) return;
-    await db.ref(`constraints/${emp}/${key}`).set(null);
+    await constraintsRef(`${emp}/${key}`).set(null);
     showMessage(`נמחק ${key} עבור ${DISPLAY_NAMES[emp] || emp}`, 'success');
     await loadAllConstraints();
 
@@ -706,7 +706,7 @@ function initShirotToggleUI() {
     const ok = confirm(`לאפס את כל האילוצים של ${DISPLAY_NAMES[emp] || emp}? (ימחק c1+c2)`);
     if(!ok) return;
 
-    await db.ref(`constraints/${emp}`).set(null);
+    await constraintsRef(`${emp}`).set(null);
     showMessage(`אופסו האילוצים של ${DISPLAY_NAMES[emp] || emp}`, 'success');
 
     await loadAllConstraints();
@@ -1831,7 +1831,7 @@ function setManualConstraintOptions(emp){
 
 async function loadManualConstraintsForEmp(emp){
   try{
-    const snapshot = await db.ref('constraints/' + emp).once('value');
+    const snapshot = await constraintsRef(emp).once('value');
     const data = snapshot.val() || {};
 
     document.getElementById('mc-c1-date').value = data.c1?.date || '';
@@ -1881,7 +1881,7 @@ async function saveManualConstraints(){
   if (c2) out.c2 = c2;
 
   try{
-    await db.ref('constraints/' + emp).set(Object.keys(out).length ? out : null);
+    await constraintsRef(emp).set(Object.keys(out).length ? out : null);
 
     showMessage('✅ נשמר בהצלחה (מנהל)', 'success');
 
