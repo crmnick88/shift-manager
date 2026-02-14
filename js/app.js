@@ -278,7 +278,9 @@ async function approveCurrentSchedule(){
 
 
 
-  const USERS = {
+  let BRANCH_EMPLOYEES = {};
+
+const USERS = {
     'ILAY': 'ILAY',
     'ROVEN': 'ROVEN',
     'HAI': 'HAI',
@@ -351,20 +353,13 @@ async function approveCurrentSchedule(){
       }
     });
 
-  // טען עובדים
+  // טען עובדים (לסניפים דינמיים בלבד) — לא לגעת ב-USERS (התחברות)
   firebase.database()
     .ref(`${basePath}/employees`)
     .once("value")
     .then(snapshot => {
-      const data = snapshot.val();
-      if (data) {
-        Object.keys(USERS).forEach(k => delete USERS[k]);
-        Object.assign(USERS, data);
-        console.log("Employees loaded from branch");
-      } else {
-        Object.keys(USERS).forEach(k => delete USERS[k]);
-        console.log("No employees yet (new branch)");
-      }
+      BRANCH_EMPLOYEES = snapshot.val() || {};
+      console.log("Employees loaded from branch");
     });
 
 })();
