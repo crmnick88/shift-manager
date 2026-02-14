@@ -513,7 +513,6 @@ async function loginEmployee() {
 
       await waitForBranchReady(6000);
       await loadEmployeeConstraints();
-      try { localStorage.removeItem('allowBranchManagerInIndex'); } catch(e) {}
       showMessage('התחברת בהצלחה', 'success');
           initPushNotifications();
 } else {
@@ -543,18 +542,18 @@ async function loginEmployee() {
 
 
       
-      // 🔀 If this is NOT the legacy HAIFA manager, default behavior is to go to manager-portal.
-// However, right after Branch Setup we allow continuing inside index.html manager UI.
-try {
-  const cPath = (typeof window.getConstraintsPath === "function") ? window.getConstraintsPath() : "";
-  const allowInIndex = (localStorage.getItem('allowBranchManagerInIndex') === '1');
-  if (cPath && /^branches\//.test(cPath) && !allowInIndex) {
-    window.location.href = "./manager-portal.html";
-    return;
-  }
-} catch (e) {
-  console.warn("Redirect check failed:", e);
-}
+      // 🔀 If this is NOT the legacy HAIFA manager, don't open the HAIFA manager UI.
+      // New branch managers must go through the dedicated portal/setup pages.
+      try {
+        const cPath = (typeof window.getConstraintsPath === "function") ? window.getConstraintsPath() : "";
+        if (cPath && /^branches\//.test(cPath)) {
+          window.location.href = "./manager-portal.html";
+          return;
+        }
+      } catch (e) {
+        console.warn("Redirect check failed:", e);
+      }
+
 currentEmployee = 'MANAGER';
       localStorage.setItem('currentEmployee', currentEmployee);
 
@@ -563,7 +562,6 @@ currentEmployee = 'MANAGER';
       initShirotToggleUI();
       initEliyaToggleUI();
       loadAllConstraints();
-      try { localStorage.removeItem('allowBranchManagerInIndex'); } catch(e) {}
       showMessage('התחברת בהצלחה', 'success');
       initPushNotifications();
     };
@@ -2179,6 +2177,20 @@ if ("serviceWorker" in navigator) {
 // 🔁 Restore login after refresh
 // =======================
 document.addEventListener('DOMContentLoaded', () => {
+  // ✅ If we just finished branch setup, continue to the branch manager portal
+  try {
+    if (localStorage.getItem('afterBranchSetup') === '1') {
+      localStorage.removeItem('afterBranchSetup');
+      // If Firebase session exists, go straight to the portal; otherwise open manager login
+      if (window.auth && auth.currentUser) {
+        window.location.href = './manager-portal.html';
+        return;
+      }
+      showLoginForm('manager');
+      return;
+    }
+  } catch(e) {}
+
   const saved = localStorage.getItem('currentEmployee');
 
   if (!saved) {
@@ -2204,48 +2216,3 @@ document.addEventListener('DOMContentLoaded', () => {
 
   initPushNotifications();
 });
-
-
-// =======================
-// 🔁 Return from Branch Setup (new branches)
-// =======================
-function enterManagerDashboardAfterSetup() {
-  try {
-    currentEmployee = 'MANAGER';
-    localStorage.setItem('currentEmployee', currentEmployee);
-  } catch (e) {}
-
-  hideAll();
-  const ms = document.getElementById('manager-section');
-  if (ms) ms.classList.add('active');
-
-  try { initShirotToggleUI(); } catch (e) {}
-  try { initEliyaToggleUI(); } catch (e) {}
-  try { loadAllConstraints(); } catch (e) {}
-  try { showMessage('✅ ההקמה הושלמה – אפשר להתחיל לייצר סידור', 'success'); } catch (e) {}
-  try { initPushNotifications(); } catch (e) {}
-}
-
-document.addEventListener('DOMContentLoaded', () => {
-  try {
-    const afterSetup = localStorage.getItem('afterBranchSetup') === '1' || localStorage.getItem('openManagerAfterSetup') === '1';
-    if (!afterSetup) return;
-
-    localStorage.removeItem('afterBranchSetup');
-    localStorage.removeItem('openManagerAfterSetup');
-
-    // If already authenticated, go straight to manager dashboard (inside index.html)
-    const u = (window.auth && window.auth.currentUser) ? window.auth.currentUser : null;
-    if (u && u.uid) {
-      // Allow branch managers to use the main manager UI for this session
-      localStorage.setItem('allowBranchManagerInIndex', '1');
-      enterManagerDashboardAfterSetup();
-    } else {
-      // Not authed yet -> open manager login form (existing function)
-      if (typeof showLoginForm === 'function') showLoginForm('manager');
-    }
-  } catch (e) {
-    console.warn('afterBranchSetup handler failed', e);
-  }
-});
-
