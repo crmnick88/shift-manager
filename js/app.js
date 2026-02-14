@@ -278,7 +278,7 @@ async function approveCurrentSchedule(){
 
 
 
-  const LEGACY_USERS = {
+  let USERS = {
     'ILAY': 'ILAY',
     'ROVEN': 'ROVEN',
     'HAI': 'HAI',
@@ -293,7 +293,7 @@ async function approveCurrentSchedule(){
     'MOHAMAD': 'MOHAMAD'
   };
 
-  const LEGACY_DEPARTMENTS = {
+  let DEPARTMENTS = {
     'מחלקת מיחשוב': ['ILAY', 'ROVEN'],
     'מחלקת קטנים': ['HAI', 'NATALI'],
     'מחלקת מחסנאים': ['AVI', 'MOHAMAD'],
@@ -311,7 +311,7 @@ async function approveCurrentSchedule(){
     localStorage.setItem(SHIROT_TOGGLE_KEY, v ? 'true' : 'false');
   }
   function getDeptEmployees(dept) {
-    const list = (getDepartmentsMap()[dept] || []).slice();
+    const list = (DEPARTMENTS[dept] || []).slice();
 
     // נציגות שירות: כיבוי "שירות"
     if (dept === 'נציגות שירות' && !isShirotActive()) {
@@ -390,7 +390,7 @@ function initShirotToggleUI() {
 
 
   // מיפוי שמות תצוגה בעברית (רק לתצוגה בטבלה!)
-  const LEGACY_DISPLAY_NAMES = {
+  let DISPLAY_NAMES = {
     'ILAY': 'עילאי',
     'ROVEN': 'ראובן',
     'HAI': 'חי',
@@ -405,385 +405,268 @@ function initShirotToggleUI() {
     'SHIROT': 'שירות'
   };
 
-  const MANAGER = { username: 'SAGI', password: '241188' };
+// =======================
+// 🏗️ BRANCH SETUP (Stage 2)
+// =======================
 
-  // =========================
-  // Stage 2: Branch-scoped Employees & Departments (HAIFA stays legacy for now)
-  // =========================
-  const __isLegacyBranch = () => __isHaifaLegacy(); // HAIFA legacy until we migrate it later
+// =======================
+// 🏗️ BRANCH SETUP (Stage 2)
+// =======================
+// Non-HAIFA branches should NOT inherit Haifa’s hardcoded roster.
+// Instead they load departments/employees from DB under: branches/<branchKey>/departments and branches/<branchKey>/employees
+// Schema:
+// employees/<EMPKEY> = { password: "...", displayName: "..." }
+// departments/<DEPTNAME>/employees/<EMPKEY> = true
 
-  // In-memory org data for non-legacy branches
-  let BRANCH_EMPLOYEES = {};   // { USERNAME: { password, displayName, active } }
-  let BRANCH_DEPARTMENTS = {}; // { "Dept Name": ["USER1","USER2", ...] }
+function __isNewBranch() {
+  return !__isHaifaLegacy();
+}
 
-  function getEmployeesAuthMap() {
-    if (__isLegacyBranch()) return LEGACY_USERS;
-    const map = {};
-    for (const [k, v] of Object.entries(BRANCH_EMPLOYEES || {})) {
-      map[k] = (v && typeof v.password === 'string') ? v.password : '';
+async function loadBranchRosterFromDB() {
+  try {
+    if (!__isNewBranch()) return true;
+
+    // Ensure branchKey ready (firebase.js resolves it async)
+    await waitForBranchReady(6000);
+
+    const [empsSnap, deptsSnap] = await Promise.all([
+      __ref('employees').once('value'),
+      __ref('departments').once('value')
+    ]);
+
+    const emps = empsSnap.val() || {};
+    const depts = deptsSnap.val() || {};
+
+    // Build USERS + DISPLAY_NAMES
+    const newUSERS = {};
+    const newDISPLAY = {};
+    for (const [k, v] of Object.entries(emps)) {
+      const key = String(k).trim().toUpperCase();
+      if (!key) continue;
+      const pwd = (v && typeof v === 'object') ? (v.password || '') : '';
+      newUSERS[key] = String(pwd || '');
+      const dn = (v && typeof v === 'object') ? (v.displayName || key) : key;
+      newDISPLAY[key] = String(dn || key);
     }
-    return map;
-  }
 
-  function getDisplayNameMap() {
-    if (__isLegacyBranch()) return LEGACY_DISPLAY_NAMES;
-    const map = {};
-    for (const [k, v] of Object.entries(BRANCH_EMPLOYEES || {})) {
-      map[k] = (v && typeof v.displayName === 'string' && v.displayName.trim()) ? v.displayName.trim() : k;
-    }
-    return map;
-  }
-
-  function getDepartmentsMap() {
-    return __isLegacyBranch() ? LEGACY_DEPARTMENTS : (BRANCH_DEPARTMENTS || {});
-  }
-
-  function __normalizeEmployeesFromDb(raw) {
-    const out = {};
-    if (!raw || typeof raw !== 'object') return out;
-    for (const [key, val] of Object.entries(raw)) {
-      const k = String(key || '').toUpperCase().trim();
-      if (!k) continue;
-      if (val && typeof val === 'object') {
-        out[k] = {
-          password: (typeof val.password === 'string') ? val.password : '',
-          displayName: (typeof val.displayName === 'string') ? val.displayName : k,
-          active: (val.active === false) ? false : true
-        };
-      }
-    }
-    return out;
-  }
-
-  function __normalizeDepartmentsFromDb(raw) {
-    const out = {};
-    if (!raw || typeof raw !== 'object') return out;
-    for (const [deptName, val] of Object.entries(raw)) {
+    // Build DEPARTMENTS
+    const newDEPTS = {};
+    for (const [deptName, deptObj] of Object.entries(depts)) {
       const name = String(deptName || '').trim();
       if (!name) continue;
-      // Accept either array or object with numeric keys
-      let arr = [];
-      if (Array.isArray(val)) {
-        arr = val;
-      } else if (val && typeof val === 'object') {
-        // numeric keys -> array
-        const keys = Object.keys(val).sort((a,b)=>Number(a)-Number(b));
-        arr = keys.map(k => val[k]);
-      }
-      const cleaned = [];
-      (arr || []).forEach(e => {
-        const k = String(e || '').toUpperCase().trim();
-        if (k) cleaned.push(k);
-      });
-      out[name] = cleaned;
-    }
-    return out;
-  }
-
-  async function loadBranchOrgData() {
-    if (__isLegacyBranch()) return true;
-
-    try {
-      await waitForBranchReady(6000);
-      // Ensure nodes exist (owner can write under branches/<uid>/...)
-      const [depSnap, empSnap] = await Promise.all([
-        __ref('departments').once('value'),
-        __ref('employees').once('value')
-      ]);
-
-      if (!depSnap.exists()) await __ref('departments').set({});
-      if (!empSnap.exists()) await __ref('employees').set({});
-
-      BRANCH_DEPARTMENTS = __normalizeDepartmentsFromDb(depSnap.val());
-      BRANCH_EMPLOYEES = __normalizeEmployeesFromDb(empSnap.val());
-      return true;
-    } catch (e) {
-      console.error('loadBranchOrgData failed:', e);
-      BRANCH_DEPARTMENTS = {};
-      BRANCH_EMPLOYEES = {};
-      return false;
-    }
-  }
-
-  function __orgIsEmpty() {
-    const depts = getDepartmentsMap();
-    const hasDept = depts && Object.keys(depts).length > 0;
-    const emps = getEmployeesAuthMap();
-    const hasEmp = emps && Object.keys(emps).length > 0;
-    return !(hasDept && hasEmp);
-  }
-
-  // ===== Branch Setup UI (Manager only, non-legacy branches) =====
-  function __ensureSetupButton() {
-    try {
-      const toolbar = document.querySelector('#manager-section .toolbar');
-      if (!toolbar) return;
-
-      if (document.getElementById('open-branch-setup-btn')) return;
-
-      const btn = document.createElement('button');
-      btn.id = 'open-branch-setup-btn';
-      btn.className = 'btn';
-      btn.style.background = '#6f42c1';
-      btn.textContent = '🏗️ הקמת סניף (עובדים/מחלקות)';
-      btn.onclick = () => openBranchSetup();
-      toolbar.insertBefore(btn, toolbar.firstChild);
-    } catch (e) {}
-  }
-
-  function __disableScheduleIfNeeded() {
-    const isEmpty = (!__isLegacyBranch() && __orgIsEmpty());
-    const genBtns = document.querySelectorAll("button[onclick='generateSchedule()'], .btn[onclick='generateSchedule()']");
-    genBtns.forEach(b => { if (b) b.disabled = isEmpty; });
-    const exportSection = document.getElementById('export-section');
-    if (exportSection) exportSection.style.display = (isEmpty ? 'none' : exportSection.style.display);
-    if (isEmpty) {
-      showMessage('🏗️ הסניף ריק. יש להקים מחלקות ועובדים לפני יצירת סידור.', 'error');
-    }
-  }
-
-  function openBranchSetup() {
-    if (__isLegacyBranch()) {
-      showMessage('חיפה במצב Legacy כרגע. שלב זה מיועד לסניפים חדשים.', 'error');
-      return;
+      const empMap = (deptObj && typeof deptObj === 'object') ? (deptObj.employees || {}) : {};
+      const list = Object.keys(empMap || {}).map(x => String(x).trim().toUpperCase()).filter(Boolean);
+      newDEPTS[name] = list;
     }
 
-    let overlay = document.getElementById('branch-setup-overlay');
-    if (!overlay) {
-      overlay = document.createElement('div');
-      overlay.id = 'branch-setup-overlay';
-      overlay.style.position = 'fixed';
-      overlay.style.inset = '0';
-      overlay.style.background = 'rgba(0,0,0,0.45)';
-      overlay.style.zIndex = '9999';
-      overlay.style.display = 'flex';
-      overlay.style.alignItems = 'center';
-      overlay.style.justifyContent = 'center';
-      overlay.innerHTML = `
-        <div style="width:min(920px,94vw); max-height:90vh; overflow:auto; background:#fff; border-radius:14px; padding:18px; border:2px solid #e0e0e0;">
-          <div style="display:flex; justify-content:space-between; align-items:center; gap:10px;">
-            <h2 style="margin:0;">🏗️ הקמת סניף – מחלקות ועובדים</h2>
-            <button class="btn" style="width:auto; padding:8px 14px; background:#6c757d;" id="close-branch-setup-btn">סגור</button>
-          </div>
-          <p style="margin:10px 0 16px 0; opacity:.85;">סניף חדש מתחיל ריק. כאן מוסיפים מחלקות ועובדים ומשייכים עובדים למחלקות.</p>
+    // Apply (fallback: keep existing if empty)
+    if (Object.keys(newUSERS).length) USERS = newUSERS;
+    if (Object.keys(newDISPLAY).length) DISPLAY_NAMES = newDISPLAY;
+    if (Object.keys(newDEPTS).length) DEPARTMENTS = newDEPTS;
 
-          <div style="display:grid; grid-template-columns: 1fr 1fr; gap:14px;">
-            <div style="border:2px solid #e0e0e0; border-radius:12px; padding:12px;">
-              <h3 style="margin:0 0 10px 0;">➕ הוספת מחלקה</h3>
-              <div class="form-group">
-                <label>שם מחלקה:</label>
-                <input type="text" id="bs-dept-name" placeholder="לדוגמה: מחסן / קו לבן / קו קופות">
-              </div>
-              <button class="btn" style="background:#667eea;" id="bs-add-dept">הוסף מחלקה</button>
-              <div id="bs-dept-list" style="margin-top:12px;"></div>
-              <div id="bs-status"></div>
+    return true;
+  } catch (e) {
+    console.error('loadBranchRosterFromDB error:', e);
+    return false;
+  }
+}
+
+function __ensureBranchSetupButton() {
+  const toolbar = document.querySelector('#manager-section .toolbar');
+  if (!toolbar) return;
+
+  // Already exists?
+  if (document.getElementById('setup-branch-btn')) return;
+
+  const btn = document.createElement('button');
+  btn.className = 'btn';
+  btn.id = 'setup-branch-btn';
+  btn.style.background = '#f1c40f';
+  btn.style.color = '#000';
+  btn.textContent = '🏗️ הקמת סניף (מחלקות/עובדים)';
+  btn.onclick = () => openBranchSetupModal();
+  toolbar.insertBefore(btn, toolbar.firstChild);
+}
+
+async function maybeShowBranchSetupButton() {
+  try {
+    if (!__isNewBranch()) return;
+
+    const deptsSnap = await __ref('departments').once('value');
+    const empsSnap  = await __ref('employees').once('value');
+
+    const hasDepts = deptsSnap.exists() && Object.keys(deptsSnap.val() || {}).length > 0;
+    const hasEmps  = empsSnap.exists()  && Object.keys(empsSnap.val()  || {}).length > 0;
+
+    if (!hasDepts || !hasEmps) {
+      __ensureBranchSetupButton();
+    } else {
+      // if fully configured, hide (but keep element for future)
+      const b = document.getElementById('setup-branch-btn');
+      if (b) b.style.display = 'none';
+    }
+  } catch (e) {
+    console.error('maybeShowBranchSetupButton error:', e);
+  }
+}
+
+// ------- Modal UI -------
+function openBranchSetupModal() {
+  // One modal only
+  let modal = document.getElementById('branch-setup-modal');
+  if (!modal) {
+    modal = document.createElement('div');
+    modal.id = 'branch-setup-modal';
+    modal.style.position = 'fixed';
+    modal.style.top = '0';
+    modal.style.left = '0';
+    modal.style.right = '0';
+    modal.style.bottom = '0';
+    modal.style.background = 'rgba(0,0,0,.55)';
+    modal.style.display = 'flex';
+    modal.style.alignItems = 'center';
+    modal.style.justifyContent = 'center';
+    modal.style.zIndex = '9999';
+
+    modal.innerHTML = `
+      <div style="width:min(720px,94vw); max-height:88vh; overflow:auto; background:#fff; border-radius:14px; padding:18px; border:3px solid #f1c40f;">
+        <div style="display:flex; justify-content:space-between; align-items:center; gap:10px;">
+          <h2 style="margin:0;">🏗️ הקמת סניף</h2>
+          <button class="btn" id="branch-setup-close" style="width:auto; padding:10px 14px; background:#6c757d;">סגור</button>
+        </div>
+
+        <p style="margin:10px 0 18px 0; color:#333;">
+          כאן מוסיפים <b>מחלקות</b> ו<b>עובדים</b> לסניף שלך. אחרי זה יופיעו לך אילוצים וסידור לפי מה שהקמת.
+        </p>
+
+        <div style="display:grid; grid-template-columns:1fr; gap:14px;">
+          <div style="border:2px solid #eee; border-radius:12px; padding:12px;">
+            <h3 style="margin:0 0 8px 0;">➕ הוספת מחלקה</h3>
+            <div class="form-group">
+              <label>שם מחלקה:</label>
+              <input type="text" id="setup-dept-name" placeholder="לדוגמה: מחלקת מחסנאים">
             </div>
-
-            <div style="border:2px solid #e0e0e0; border-radius:12px; padding:12px;">
-              <h3 style="margin:0 0 10px 0;">➕ הוספת עובד</h3>
-              <div class="form-group">
-                <label>שם משתמש (אנגלית/מספרים):</label>
-                <input type="text" id="bs-emp-username" placeholder="לדוגמה: ITAY01">
-              </div>
-              <div class="form-group">
-                <label>שם לתצוגה (עברית):</label>
-                <input type="text" id="bs-emp-display" placeholder="לדוגמה: איתי">
-              </div>
-              <div class="form-group">
-                <label>סיסמה:</label>
-                <input type="text" id="bs-emp-password" placeholder="לדוגמה: 1234">
-              </div>
-              <div class="form-group">
-                <label>שייך למחלקה:</label>
-                <select id="bs-emp-dept"></select>
-              </div>
-              <button class="btn" style="background:#28a745;" id="bs-add-emp">הוסף עובד</button>
-              <div id="bs-emp-list" style="margin-top:12px;"></div>
-            </div>
+            <button class="btn" id="setup-add-dept-btn" style="background:#667eea;">צור מחלקה</button>
+            <div id="setup-dept-msg" style="margin-top:8px;"></div>
           </div>
 
-          <div style="margin-top:14px; display:flex; gap:10px; justify-content:flex-end;">
-            <button class="btn" style="background:#17a2b8; width:auto; padding:10px 16px;" id="bs-refresh">רענן נתוני סניף</button>
+          <div style="border:2px solid #eee; border-radius:12px; padding:12px;">
+            <h3 style="margin:0 0 8px 0;">➕ הוספת עובד</h3>
+            <div class="form-group">
+              <label>מפתח עובד (באנגלית, למשל AVI):</label>
+              <input type="text" id="setup-emp-key" placeholder="AVI">
+            </div>
+            <div class="form-group">
+              <label>שם לתצוגה (עברית):</label>
+              <input type="text" id="setup-emp-name" placeholder="אבי">
+            </div>
+            <div class="form-group">
+              <label>סיסמה לעובד:</label>
+              <input type="text" id="setup-emp-pass" placeholder="1234">
+            </div>
+            <div class="form-group">
+              <label>שייך למחלקה:</label>
+              <select id="setup-emp-dept"></select>
+            </div>
+            <button class="btn" id="setup-add-emp-btn" style="background:#28a745;">צור עובד ושייך למחלקה</button>
+            <div id="setup-emp-msg" style="margin-top:8px;"></div>
+          </div>
+
+          <div style="border:2px dashed #ddd; border-radius:12px; padding:12px;">
+            <h3 style="margin:0 0 8px 0;">📋 תצוגה מהירה</h3>
+            <button class="btn" id="setup-refresh-preview" style="background:#343a40;">רענן תצוגה</button>
+            <pre id="setup-preview" style="white-space:pre-wrap; background:#f8f9fa; padding:10px; border-radius:10px; margin-top:10px; font-size:12px;"></pre>
           </div>
         </div>
-      `;
-      document.body.appendChild(overlay);
+      </div>
+    `;
 
-      overlay.querySelector('#close-branch-setup-btn').onclick = () => (overlay.style.display = 'none');
-      overlay.addEventListener('click', (e) => { if (e.target === overlay) overlay.style.display = 'none'; });
+    document.body.appendChild(modal);
 
-      overlay.querySelector('#bs-add-dept').onclick = async () => {
-        // Ensure branchKey is resolved before writing (prevents accidental root writes on hard refresh)
-        await waitForBranchReady(6000);
-        const name = (document.getElementById('bs-dept-name').value || '').trim();
-        if (!name) return showMessage('נא להזין שם מחלקה', 'error');
-        try {
-          await __ref(`departments/${name}`).set([]);
-          document.getElementById('bs-dept-name').value = '';
-          await loadBranchOrgData();
-          __renderBranchSetupLists();
-          showMessage('מחלקה נוספה בהצלחה', 'success');
-          __disableScheduleIfNeeded();
-        } catch (e) {
-          console.error(e);
-          showMessage('שגיאה בהוספת מחלקה', 'error');
-        }
-      };
+    // Close handler
+    modal.querySelector('#branch-setup-close').onclick = () => { modal.style.display = 'none'; };
+    modal.onclick = (e) => { if (e.target === modal) modal.style.display = 'none'; };
 
-      overlay.querySelector('#bs-add-emp').onclick = async () => {
-        // Ensure branchKey is resolved before writing
-        await waitForBranchReady(6000);
-        const usernameRaw = (document.getElementById('bs-emp-username').value || '').trim();
-        const username = usernameRaw.toUpperCase().replace(/\s+/g,'');
-        const displayName = (document.getElementById('bs-emp-display').value || '').trim();
-        const password = (document.getElementById('bs-emp-password').value || '').trim();
-        const dept = (document.getElementById('bs-emp-dept').value || '').trim();
-
-        if (!username) return showMessage('נא להזין שם משתמש', 'error');
-        if (!password) return showMessage('נא להזין סיסמה', 'error');
-        if (!dept) return showMessage('נא לבחור מחלקה', 'error');
-
-        try {
-          await __ref(`employees/${username}`).set({
-            password,
-            displayName: displayName || username,
-            active: true,
-            createdAt: Date.now()
-          });
-
-          // Add to department list (append unique)
-          const depRef = __ref(`departments/${dept}`);
-          const snap = await depRef.once('value');
-          let list = [];
-          const v = snap.val();
-          if (Array.isArray(v)) list = v;
-          else if (v && typeof v === 'object') list = Object.keys(v).sort((a,b)=>Number(a)-Number(b)).map(k=>v[k]);
-          list = (list || []).map(x => String(x||'').toUpperCase().trim()).filter(Boolean);
-          if (!list.includes(username)) list.push(username);
-          await depRef.set(list);
-
-          document.getElementById('bs-emp-username').value = '';
-          document.getElementById('bs-emp-display').value = '';
-          document.getElementById('bs-emp-password').value = '';
-          await loadBranchOrgData();
-          __renderBranchSetupLists();
-          showMessage('עובד נוסף בהצלחה', 'success');
-          __disableScheduleIfNeeded();
-        } catch (e) {
-          console.error(e);
-          showMessage('שגיאה בהוספת עובד', 'error');
-        }
-      };
-
-      overlay.querySelector('#bs-refresh').onclick = async () => {
-        await loadBranchOrgData();
-        __renderBranchSetupLists();
-        __disableScheduleIfNeeded();
-        showMessage('רוענן בהצלחה', 'success');
-      };
-    }
-
-    overlay.style.display = 'flex';
-    __renderBranchSetupLists();
-  }
-
-  function __renderBranchSetupLists() {
-    if (__isLegacyBranch()) return;
-
-    const depts = getDepartmentsMap();
-    const deptSelect = document.getElementById('bs-emp-dept');
-    if (deptSelect) {
-      deptSelect.innerHTML = '';
-      const opt0 = document.createElement('option');
-      opt0.value = '';
-      opt0.textContent = '-- בחר מחלקה --';
-      deptSelect.appendChild(opt0);
-      Object.keys(depts).forEach((d) => {
-        const opt = document.createElement('option');
-        opt.value = d;
-        opt.textContent = d;
-        deptSelect.appendChild(opt);
-      });
-    }
-
-    const deptList = document.getElementById('bs-dept-list');
-    if (deptList) {
-      let html = '';
-      for (const [d, list] of Object.entries(depts)) {
-        const count = (list || []).length;
-        html += `<div style="display:flex; justify-content:space-between; gap:10px; padding:8px 10px; border:1px solid #eee; border-radius:10px; margin-bottom:8px;">
-          <div><b>${d}</b> <span style="opacity:.75;">(${count} עובדים)</span></div>
-          <button class="btn" style="width:auto; padding:6px 10px; background:#dc3545;" onclick="deleteBranchDepartment(${JSON.stringify(d)})">מחק</button>
-        </div>`;
+    // Actions
+    modal.querySelector('#setup-add-dept-btn').onclick = async () => {
+      const name = (document.getElementById('setup-dept-name').value || '').trim();
+      if (!name) return showSetupMsg('setup-dept-msg', '❌ חייב שם מחלקה', true);
+      try {
+        await __ref(`departments/${name}/employees`).transaction((cur) => cur || {});
+        showSetupMsg('setup-dept-msg', '✅ מחלקה נוצרה', false);
+        await refreshSetupDeptSelect();
+        await refreshSetupPreview();
+      } catch (e) {
+        console.error('add dept error', e);
+        showSetupMsg('setup-dept-msg', '❌ שגיאה ביצירת מחלקה', true);
       }
-      deptList.innerHTML = html || '<div style="opacity:.75;">אין מחלקות עדיין.</div>';
-    }
+    };
 
-    const empList = document.getElementById('bs-emp-list');
-    if (empList) {
-      const dn = getDisplayNameMap();
-      const emps = Object.keys(getEmployeesAuthMap()).sort();
-      let html = '';
-      for (const u of emps) {
-        html += `<div style="display:flex; justify-content:space-between; gap:10px; padding:8px 10px; border:1px solid #eee; border-radius:10px; margin-bottom:8px;">
-          <div><b>${u}</b> <span style="opacity:.75;">(${dn[u] || u})</span></div>
-          <button class="btn" style="width:auto; padding:6px 10px; background:#dc3545;" onclick="deleteBranchEmployee(${JSON.stringify(u)})">מחק</button>
-        </div>`;
+    modal.querySelector('#setup-add-emp-btn').onclick = async () => {
+      const key = (document.getElementById('setup-emp-key').value || '').trim().toUpperCase();
+      const dn  = (document.getElementById('setup-emp-name').value || '').trim();
+      const pwd = (document.getElementById('setup-emp-pass').value || '').trim();
+      const dept = (document.getElementById('setup-emp-dept').value || '').trim();
+
+      if (!key || !pwd || !dept) return showSetupMsg('setup-emp-msg', '❌ חייב מפתח עובד, סיסמה ומחלקה', true);
+
+      try {
+        await __ref(`employees/${key}`).set({ password: pwd, displayName: dn || key, createdAt: Date.now() });
+        await __ref(`departments/${dept}/employees/${key}`).set(true);
+        showSetupMsg('setup-emp-msg', '✅ עובד נוצר ושויך למחלקה', false);
+        await refreshSetupPreview();
+      } catch (e) {
+        console.error('add employee error', e);
+        showSetupMsg('setup-emp-msg', '❌ שגיאה ביצירת עובד', true);
       }
-      empList.innerHTML = html || '<div style="opacity:.75;">אין עובדים עדיין.</div>';
-    }
+    };
+
+    modal.querySelector('#setup-refresh-preview').onclick = async () => {
+      await refreshSetupDeptSelect();
+      await refreshSetupPreview();
+    };
   }
 
-  async function deleteBranchEmployee(username) {
-    if (__isLegacyBranch()) return;
-    const u = String(username||'').toUpperCase().trim();
-    if (!u) return;
-    if (!confirm(`למחוק את העובד ${u}?`)) return;
-    try {
-      await __ref(`employees/${u}`).remove();
+  modal.style.display = 'flex';
+  refreshSetupDeptSelect();
+  refreshSetupPreview();
+}
 
-      // Remove from all departments
-      const depts = getDepartmentsMap();
-      for (const d of Object.keys(depts)) {
-        const list = (depts[d] || []).filter(x => String(x||'').toUpperCase().trim() !== u);
-        await __ref(`departments/${d}`).set(list);
-      }
+function showSetupMsg(id, txt, isErr){
+  const el = document.getElementById(id);
+  if(!el) return;
+  el.innerHTML = `<div class="message ${isErr ? 'error' : 'success'}" style="margin:0;">${txt}</div>`;
+}
 
-      await loadBranchOrgData();
-      __renderBranchSetupLists();
-      __disableScheduleIfNeeded();
-      showMessage('העובד נמחק', 'success');
-    } catch (e) {
-      console.error(e);
-      showMessage('שגיאה במחיקת עובד', 'error');
-    }
-  }
+async function refreshSetupDeptSelect(){
+  const sel = document.getElementById('setup-emp-dept');
+  if(!sel) return;
+  const snap = await __ref('departments').once('value');
+  const depts = snap.val() || {};
+  const names = Object.keys(depts).sort((a,b)=>a.localeCompare(b,'he'));
+  sel.innerHTML = names.length ? names.map(n=>`<option value="${n}">${n}</option>`).join('') : `<option value="">(אין מחלקות עדיין)</option>`;
+}
 
-  async function deleteBranchDepartment(deptName) {
-    if (__isLegacyBranch()) return;
-    const d = String(deptName||'').trim();
-    if (!d) return;
-    if (!confirm(`למחוק את המחלקה "${d}"?`)) return;
-    try {
-      await __ref(`departments/${d}`).remove();
-      await loadBranchOrgData();
-      __renderBranchSetupLists();
-      __disableScheduleIfNeeded();
-      showMessage('המחלקה נמחקה', 'success');
-    } catch (e) {
-      console.error(e);
-      showMessage('שגיאה במחיקת מחלקה', 'error');
-    }
-  }
-  window.openBranchSetup = openBranchSetup;
-  window.deleteBranchEmployee = deleteBranchEmployee;
-  window.deleteBranchDepartment = deleteBranchDepartment;
+async function refreshSetupPreview(){
+  const el = document.getElementById('setup-preview');
+  if(!el) return;
+  const [empsSnap, deptsSnap] = await Promise.all([
+    __ref('employees').once('value'),
+    __ref('departments').once('value')
+  ]);
+  const out = { employees: empsSnap.val() || {}, departments: deptsSnap.val() || {} };
+  el.textContent = JSON.stringify(out, null, 2);
+}
 
+
+
+
+  const MANAGER = { username: 'SAGI', password: '241188' };
 
 
   // ======== התאמת אפשרויות אילוץ לפי מחלקה ========
   function getDeptOfEmp(emp) {
-    for (const [dept, list] of Object.entries(getDepartmentsMap())) {
+    for (const [dept, list] of Object.entries(DEPARTMENTS)) {
       if (list.includes(emp)) return dept;
     }
     return null;
@@ -873,32 +756,27 @@ async function loginEmployee() {
 
     if (!username || !password) return showMessage('אנא הזן שם משתמש וסיסמה', 'error');
 
-    // Ensure branch is ready (non-legacy branches depend on branches/<branchKey>/employees)
-    await waitForBranchReady(6000);
-    await loadBranchOrgData();
-
-    const authMap = getEmployeesAuthMap();
-    if (authMap[username] && authMap[username] === password) {
+    if (USERS[username] && USERS[username] === password) {
       currentEmployee = username;
       localStorage.setItem('currentEmployee', currentEmployee);
 
+
       hideAll();
       document.getElementById('employee-section').classList.add('active');
-
-      const dn = getDisplayNameMap();
-      document.getElementById('employee-welcome').textContent = `שלום ${dn[username] || username}! 👋`;
+      document.getElementById('employee-welcome').textContent = `שלום ${DISPLAY_NAMES[username] || username}! 👋`;
 
       applyConstraintOptions(currentEmployee);
 
+      await waitForBranchReady(6000);
       await loadEmployeeConstraints();
       showMessage('התחברת בהצלחה', 'success');
-      initPushNotifications();
-    } else {
+          initPushNotifications();
+} else {
       showMessage('שם משתמש או סיסמה שגויים', 'error');
     }
   }
 
-function loginManager() {
+  function loginManager() {
     // Option B (Email/Password) - Option 1 flow (no linkWithCredential):
     // ✅ Sign-in if account exists, otherwise create a new account.
     // Uses fetchSignInMethodsForEmail to distinguish "wrong password" vs "user not found".
@@ -926,14 +804,8 @@ function loginManager() {
       document.getElementById('manager-section').classList.add('active');
       initShirotToggleUI();
       initEliyaToggleUI();
-      // Stage 2: load employees/departments for this branch (non-legacy)
-      await loadBranchOrgData();
-      __ensureSetupButton();
-      if (!__isLegacyBranch() && __orgIsEmpty()) {
-        openBranchSetup();
-      }
-      __disableScheduleIfNeeded();
-
+      await loadBranchRosterFromDB();
+      await maybeShowBranchSetupButton();
       loadAllConstraints();
       showMessage('התחברת בהצלחה', 'success');
       initPushNotifications();
@@ -1065,7 +937,7 @@ function loginManager() {
 
     let html = '<h2>אילוצי העובדים</h2>';
 
-    for (const [dept] of Object.entries(getDepartmentsMap())) {
+    for (const [dept] of Object.entries(DEPARTMENTS)) {
       const employees = getDeptEmployees(dept);
       html += `<div style="background:#f0f0f0; padding:15px; border-radius:10px; margin-bottom:20px;">
         <h3 style="color:#667eea;">🏢 ${dept}</h3>`;
@@ -1077,7 +949,7 @@ function loginManager() {
 
         html += `
           <div class="emp-header-row">
-            <h4>${getDisplayNameMap()[emp] || emp}</h4>
+            <h4>${DISPLAY_NAMES[emp] || emp}</h4>
           </div>
         `;
 
@@ -1143,10 +1015,10 @@ function loginManager() {
   }
 
   async function deleteSingleConstraint(emp, key){
-    const ok = confirm(`למחוק את ${key} עבור ${getDisplayNameMap()[emp] || emp}?`);
+    const ok = confirm(`למחוק את ${key} עבור ${DISPLAY_NAMES[emp] || emp}?`);
     if(!ok) return;
     await constraintsRef(`${emp}/${key}`).set(null);
-    showMessage(`נמחק ${key} עבור ${getDisplayNameMap()[emp] || emp}`, 'success');
+    showMessage(`נמחק ${key} עבור ${DISPLAY_NAMES[emp] || emp}`, 'success');
     await loadAllConstraints();
 
     currentSchedule = null;
@@ -1155,11 +1027,11 @@ function loginManager() {
   }
 
   async function resetEmployeeConstraints(emp){
-    const ok = confirm(`לאפס את כל האילוצים של ${getDisplayNameMap()[emp] || emp}? (ימחק c1+c2)`);
+    const ok = confirm(`לאפס את כל האילוצים של ${DISPLAY_NAMES[emp] || emp}? (ימחק c1+c2)`);
     if(!ok) return;
 
     await constraintsRef(`${emp}`).set(null);
-    showMessage(`אופסו האילוצים של ${getDisplayNameMap()[emp] || emp}`, 'success');
+    showMessage(`אופסו האילוצים של ${DISPLAY_NAMES[emp] || emp}`, 'success');
 
     await loadAllConstraints();
 
@@ -1186,6 +1058,7 @@ function loginManager() {
   }
 
   async function refreshAll(){
+  try { await loadBranchRosterFromDB(); await maybeShowBranchSetupButton(); } catch(e) {}
   const __ok = await __ensureConstraintsReady();
   if (!__ok) { console.warn('Constraints path not ready yet'); return; }
 
@@ -1244,7 +1117,7 @@ function loginManager() {
       return !c.status || c.status === 'approved';
     };
 
-    for (const [dept] of Object.entries(getDepartmentsMap())) {
+    for (const [dept] of Object.entries(DEPARTMENTS)) {
       const emps = getDeptEmployees(dept);
       const allDates = [];
 
@@ -1404,7 +1277,7 @@ nextSunday.setDate(today.getDate() + (dow === 0 ? 7 : 7 - dow));
       return (c.type === 'no-evening' || c.type === 'day-off');
     };
 
-    for (const [dept] of Object.entries(getDepartmentsMap())) {
+    for (const [dept] of Object.entries(DEPARTMENTS)) {
       const emps = getDeptEmployees(dept);
       const schedule = [];
       const days = ['ראשון','שני','שלישי','רביעי','חמישי','שישי','שבת'];
@@ -1718,7 +1591,7 @@ nextSunday.setDate(today.getDate() + (dow === 0 ? 7 : 7 - dow));
   }
 
   function displaySchedule(allSchedules) {
-    const deptOrder = Object.keys(getDepartmentsMap());
+    const deptOrder = Object.keys(DEPARTMENTS);
     const sampleDept = deptOrder.find(d => allSchedules[d] && allSchedules[d].length) || deptOrder[0];
     const sampleSchedule = allSchedules[sampleDept] || [];
     if (sampleSchedule.length === 0) { document.getElementById('schedule-result').innerHTML = ''; return; }
@@ -1744,7 +1617,7 @@ nextSunday.setDate(today.getDate() + (dow === 0 ? 7 : 7 - dow));
 
       employees.forEach(emp => {
         html += `<tr>
-          <td style="background:#667eea; color:white; font-weight:bold;">${getDisplayNameMap()[emp] || emp}</td>`;
+          <td style="background:#667eea; color:white; font-weight:bold;">${DISPLAY_NAMES[emp] || emp}</td>`;
 
         dayCols.forEach(c => {
           const day = deptSchedule.find(d => d.date === c.date);
@@ -2021,7 +1894,7 @@ ${css}
     };
 
     // ✅ בניית סט שמות עובדים לזיהוי עמודה ראשונה
-    const allEmpDisplayNames = new Set(Object.values(getDisplayNameMap()));
+    const allEmpDisplayNames = new Set(Object.values(DISPLAY_NAMES));
 
     for (let r = range.s.r; r <= range.e.r; r++) {
       for (let c = range.s.c; c <= range.e.c; c++) {
@@ -2129,20 +2002,9 @@ ${css}
   }
   function showMessage(text, type) {
     const div = document.getElementById('message');
-    if (div) {
-      div.className = `message ${type}`;
-      div.textContent = text;
-      setTimeout(() => { if (div) div.innerHTML = ''; }, 8000);
-    }
-    // Also show status inside branch-setup overlay if it's open
-    const bs = document.getElementById('bs-status');
-    if (bs) {
-      bs.textContent = text;
-      bs.style.marginTop = '10px';
-      bs.style.fontWeight = '700';
-      bs.style.color = (type === 'error') ? '#e74c3c' : '#28a745';
-      setTimeout(() => { if (bs) bs.textContent = ''; }, 8000);
-    }
+    div.className = `message ${type}`;
+    div.textContent = text;
+    setTimeout(() => div.innerHTML = '', 8000);
   }
   function formatDate(dateStr) {
     const d = new Date(dateStr + 'T00:00:00');
@@ -2250,7 +2112,7 @@ function populateManualEmployeeList(){
 
   const seen = new Set();
   const emps = [];
-  for (const dept of Object.keys(getDepartmentsMap())) {
+  for (const dept of Object.keys(DEPARTMENTS)) {
     const list = getDeptEmployees(dept);
     list.forEach(e => {
       if(!seen.has(e)) { seen.add(e); emps.push(e); }
@@ -2259,14 +2121,14 @@ function populateManualEmployeeList(){
 
   // Sort by display name (Hebrew), fallback to key
   emps.sort((a,b)=>{
-    const da = getDisplayNameMap()[a] || a;
-    const dbn = getDisplayNameMap()[b] || b;
+    const da = DISPLAY_NAMES[a] || a;
+    const dbn = DISPLAY_NAMES[b] || b;
     return da.localeCompare(dbn, 'he');
   });
 
   const current = sel.value;
   sel.innerHTML = `<option value="">-- בחר עובד --</option>` + emps
-    .map(e => `<option value="${e}">${getDisplayNameMap()[e] || e}</option>`).join('');
+    .map(e => `<option value="${e}">${DISPLAY_NAMES[e] || e}</option>`).join('');
   if (current && emps.includes(current)) sel.value = current;
 }
 
@@ -2375,7 +2237,7 @@ async function saveManualConstraints(){
 
 function displayManualPreview(emp, data){
   const today = new Date(); today.setHours(0,0,0,0);
-  let html = `<h3 style="color:#667eea;">אילוצים עבור ${getDisplayNameMap()[emp] || emp}:</h3>`;
+  let html = `<h3 style="color:#667eea;">אילוצים עבור ${DISPLAY_NAMES[emp] || emp}:</h3>`;
   let hasValid = false;
 
   const addLine = (label, c) => {
@@ -2405,7 +2267,7 @@ async function loadEmployeeTokenStatus() {
     
     let html = '';
     
-    const allEmployees = Object.keys(getEmployeesAuthMap());
+    const allEmployees = Object.keys(USERS);
     
     allEmployees.forEach(emp => {
       const hasToken = tokensData[emp] && typeof tokensData[emp] === 'object';
@@ -2428,7 +2290,7 @@ async function loadEmployeeTokenStatus() {
       html += `
         <div class="${cardClass}">
           <div>
-            <div class="name">${statusIcon} ${getDisplayNameMap()[emp] || emp}</div>
+            <div class="name">${statusIcon} ${DISPLAY_NAMES[emp] || emp}</div>
             <div class="info">${statusText}${lastUpdate ? ' • ' + lastUpdate : ''}</div>
           </div>
           ${!hasToken ? '<span class="badge danger">לא נרשם</span>' : ''}
@@ -2510,7 +2372,7 @@ async function loadNotificationHistory() {
         
         html += `
           <div class="recipient-item">
-            <div class="name">${getDisplayNameMap()[empName] || empName}</div>
+            <div class="name">${DISPLAY_NAMES[empName] || empName}</div>
             <div>${statusHtml}</div>
           </div>
         `;
@@ -2579,19 +2441,10 @@ document.addEventListener('DOMContentLoaded', () => {
   } else {
     hideAll();
     document.getElementById('employee-section').classList.add('active');
-    document.getElementById('employee-welcome').textContent = `שלום ${getDisplayNameMap()[saved] || saved}! 👋`;
+    document.getElementById('employee-welcome').textContent = `שלום ${DISPLAY_NAMES[saved] || saved}! 👋`;
     applyConstraintOptions(currentEmployee);
     loadEmployeeConstraints();
   }
 
   initPushNotifications();
 });
-
-
-// ===== Stage 2 FIX: branch setup state helpers =====
-function hasDepartments() {
-  return window.__departments && Object.keys(window.__departments).length > 0;
-}
-function hasEmployees() {
-  return window.__employees && Object.keys(window.__employees).length > 0;
-}
