@@ -359,8 +359,21 @@ async function approveCurrentSchedule(){
   function setShirotActive(v) {
     localStorage.setItem(SHIROT_TOGGLE_KEY, v ? 'true' : 'false');
   }
-  function getDeptEmployees(dept) {
-    const list = (DEPARTMENTS[dept] || []).slice();
+ function getDeptEmployees(dept) {
+  const val = DEPARTMENTS[dept];
+
+  // חיפה – מערך
+  if (Array.isArray(val)) {
+    return val.slice();
+  }
+
+  // סניף חדש – אובייקט
+  if (val && typeof val === "object") {
+    return Object.keys(val);
+  }
+
+  return [];
+}
 
     // נציגות שירות: כיבוי "שירות"
     if (dept === 'נציגות שירות' && !isShirotActive()) {
