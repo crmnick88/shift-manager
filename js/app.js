@@ -576,6 +576,7 @@ function initShirotToggleUI() {
               </div>
               <button class="btn" style="background:#667eea;" id="bs-add-dept">הוסף מחלקה</button>
               <div id="bs-dept-list" style="margin-top:12px;"></div>
+              <div id="bs-status"></div>
             </div>
 
             <div style="border:2px solid #e0e0e0; border-radius:12px; padding:12px;">
@@ -612,6 +613,8 @@ function initShirotToggleUI() {
       overlay.addEventListener('click', (e) => { if (e.target === overlay) overlay.style.display = 'none'; });
 
       overlay.querySelector('#bs-add-dept').onclick = async () => {
+        // Ensure branchKey is resolved before writing (prevents accidental root writes on hard refresh)
+        await waitForBranchReady(6000);
         const name = (document.getElementById('bs-dept-name').value || '').trim();
         if (!name) return showMessage('נא להזין שם מחלקה', 'error');
         try {
@@ -628,6 +631,8 @@ function initShirotToggleUI() {
       };
 
       overlay.querySelector('#bs-add-emp').onclick = async () => {
+        // Ensure branchKey is resolved before writing
+        await waitForBranchReady(6000);
         const usernameRaw = (document.getElementById('bs-emp-username').value || '').trim();
         const username = usernameRaw.toUpperCase().replace(/\s+/g,'');
         const displayName = (document.getElementById('bs-emp-display').value || '').trim();
@@ -2124,9 +2129,20 @@ ${css}
   }
   function showMessage(text, type) {
     const div = document.getElementById('message');
-    div.className = `message ${type}`;
-    div.textContent = text;
-    setTimeout(() => div.innerHTML = '', 8000);
+    if (div) {
+      div.className = `message ${type}`;
+      div.textContent = text;
+      setTimeout(() => { if (div) div.innerHTML = ''; }, 8000);
+    }
+    // Also show status inside branch-setup overlay if it's open
+    const bs = document.getElementById('bs-status');
+    if (bs) {
+      bs.textContent = text;
+      bs.style.marginTop = '10px';
+      bs.style.fontWeight = '700';
+      bs.style.color = (type === 'error') ? '#e74c3c' : '#28a745';
+      setTimeout(() => { if (bs) bs.textContent = ''; }, 8000);
+    }
   }
   function formatDate(dateStr) {
     const d = new Date(dateStr + 'T00:00:00');
