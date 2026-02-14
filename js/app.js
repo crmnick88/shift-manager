@@ -39,9 +39,8 @@ function __ref(path) {
   // ✅ Save token without overriding (supports multiple devices per user)
   async function savePushTokenForKey(userKey, token) {
     if (!userKey || !token) return;
-    try {
 
-    const userRef = __ref(`pushTokens/${userKey}`);
+    const userRef = db.ref(`pushTokens/${userKey}`);
     const snap = await userRef.once("value");
     const data = snap.val();
 
@@ -157,10 +156,6 @@ messaging.onMessage((payload) => {
       showMessage("✅ נשלחה בקשת תזכורת (נשמרה ב-Firebase)", "success");
     } catch (e) {
       console.error("sendConstraintsReminderRequest error:", e);
-      if (e && (String(e).includes('permission_denied') || String(e.code||'').includes('permission'))) {
-        showMessage("⚠️ אין הרשאה לשליחת תזכורת בסניפים חדשים בשלב זה", "error");
-        return;
-      }
       showMessage("❌ שגיאה בשליחת בקשת תזכורת", "error");
     }
   }
