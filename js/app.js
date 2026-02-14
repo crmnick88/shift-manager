@@ -368,7 +368,7 @@ async function approveCurrentSchedule(){
   function toSafeKey(s) {
     return String(s || '')
       .trim()
-      .replace(/[.#$\\[\\]\\/]/g, '_')
+      .replace(/[.#$\[\]\/]/g, '_')
       .replace(/\s+/g, ' ')
       .replace(/%/g, '_');
   }
