@@ -301,6 +301,55 @@ async function approveCurrentSchedule(){
     'נציגות שירות': ['LIOR', 'AMANI', 'SHIROT']
   };
 
+// =============================
+// DYNAMIC BRANCH OVERRIDE
+// =============================
+
+(function initDynamicBranchData() {
+  const branchKey = localStorage.getItem("currentBranchKey");
+
+  // אם אין branchKey → זה חיפה → לא נוגעים בכלום
+  if (!branchKey) return;
+
+  console.log("Loading dynamic branch data for:", branchKey);
+
+  const basePath = `branches/${branchKey}/org`;
+
+  // טען מחלקות
+  firebase.database()
+    .ref(`${basePath}/departments`)
+    .once("value")
+    .then(snapshot => {
+      const data = snapshot.val();
+      if (data) {
+        Object.keys(DEPARTMENTS).forEach(k => delete DEPARTMENTS[k]);
+        Object.assign(DEPARTMENTS, data);
+        console.log("Departments loaded from branch");
+      } else {
+        // אין נתונים → סניף חדש → ריק
+        Object.keys(DEPARTMENTS).forEach(k => delete DEPARTMENTS[k]);
+        console.log("No departments yet (new branch)");
+      }
+    });
+
+  // טען עובדים
+  firebase.database()
+    .ref(`${basePath}/employees`)
+    .once("value")
+    .then(snapshot => {
+      const data = snapshot.val();
+      if (data) {
+        Object.keys(USERS).forEach(k => delete USERS[k]);
+        Object.assign(USERS, data);
+        console.log("Employees loaded from branch");
+      } else {
+        Object.keys(USERS).forEach(k => delete USERS[k]);
+        console.log("No employees yet (new branch)");
+      }
+    });
+
+})();
+
   // ======== נציגות שירות: הפעלה/כיבוי עובד "שירות" (SHIROT) ========
   const SHIROT_TOGGLE_KEY = 'shirotActive';
   function isShirotActive() {
