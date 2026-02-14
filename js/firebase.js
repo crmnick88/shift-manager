@@ -172,6 +172,16 @@ async function resolveConstraintsBasePath() {
     constraintsBasePath = `branches/${branchKey}/constraints`;
     return constraintsBasePath;
   } catch (e) {
+    // IMPORTANT: Do NOT fall back to root-level constraints for non-admins.
+    // If rules are not yet updated, fallback would write into HAIFA legacy data.
+    try {
+      const u = auth.currentUser;
+      const bk = currentBranchKey || (u ? u.uid : null);
+      if (bk) {
+        constraintsBasePath = `branches/${bk}/constraints`;
+        return constraintsBasePath;
+      }
+    } catch (_) {}
     constraintsBasePath = "constraints";
     return constraintsBasePath;
   }
