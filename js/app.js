@@ -579,11 +579,13 @@ async function loginEmployee() {
 
       hideAll();
       document.getElementById('manager-section').classList.add('active');
-       ensureBranchSetupButton();
-       await loadBranchOrgFromDB();
+       if (!__isHaifaLegacy()) {
+         ensureBranchSetupButton();
+         await loadBranchOrgFromDB();
+       }
 
-      initShirotToggleUI();
-      initEliyaToggleUI();
+      if (typeof initShirotToggleUI === 'function') if (typeof initShirotToggleUI === 'function') initShirotToggleUI();
+      if (typeof initEliyaToggleUI === 'function') if (typeof initEliyaToggleUI === 'function') initEliyaToggleUI();
       loadAllConstraints();
       showMessage('התחברת בהצלחה', 'success');
       initPushNotifications();
@@ -2212,8 +2214,8 @@ document.addEventListener('DOMContentLoaded', () => {
   if (saved === 'MANAGER') {
     hideAll();
     document.getElementById('manager-section').classList.add('active');
-    initShirotToggleUI();
-      initEliyaToggleUI();
+    if (typeof initShirotToggleUI === 'function') initShirotToggleUI();
+      if (typeof initEliyaToggleUI === 'function') initEliyaToggleUI();
     loadAllConstraints();
   } else {
     hideAll();
