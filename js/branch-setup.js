@@ -40,20 +40,10 @@
 
   // Firebase helpers (firebase.js already defines: firebase, auth, db, getBranchKey(), isAdmin())
   function getBranchKeySafe() {
-    // Prefer firebase.js resolver
     try {
-      if (typeof window.getBranchKey === 'function') {
-        const k = window.getBranchKey();
-        if (k) return k;
-      }
-      // Fallback: cached BRANCH_KEY
-      if (typeof window.BRANCH_KEY === 'string' && window.BRANCH_KEY) return window.BRANCH_KEY;
-      // Fallback: auth user uid (always branch-scoped for new managers)
-      const u = (window.auth && window.auth.currentUser) ? window.auth.currentUser : null;
-      if (u && u.uid) return u.uid;
+      if (typeof window.getBranchKey === 'function') return window.getBranchKey();
+      if (typeof window.BRANCH_KEY === 'string') return window.BRANCH_KEY;
     } catch (e) {}
-    return null;
-  }
     return null;
   }
 
@@ -63,13 +53,12 @@
   }
 
   function ref(path) {
-    const k = getBranchKeySafe();
-    // HAIFA legacy stays on root to avoid breaking existing data
-    if (k && String(k).toUpperCase() === 'HAIFA') return db.ref(path);
-    // For new managers, ALWAYS scope under branches/<uid>/
-    const uid = k || (auth.currentUser && auth.currentUser.uid ? auth.currentUser.uid : null);
-    if (!uid) return db.ref(path); // last-resort (shouldn't happen after auth)
-    return db.ref(`branches/${uid}/${path}`);
+    // NEVER fall back to root-level /org/* for new branches.
+    // If branchKey isn't ready yet, fall back to auth.currentUser.uid.
+    const k = getBranchKeySafe() || (auth && auth.currentUser ? auth.currentUser.uid : null);
+    if (!k) throw new Error('Missing branch key/uid (not authenticated yet)');
+    if (String(k).toUpperCase() === 'HAIFA') return db.ref(path); // keep HAIFA legacy out of this flow
+    return db.ref(`branches/${k}/${path}`);
   }
 
   function safeKey(s) {
@@ -235,8 +224,6 @@
       let key = getBranchKeySafe();
       // firebase.js may populate currentBranchKey asynchronously; always fall back to auth.uid
       if (!key && user && user.uid) key = user.uid;
-      // Persist for this page so refs never fall back to root
-      try { window.BRANCH_KEY = key; } catch (e) {}
       if (!key) {
         showMsg('לא נמצא branchKey (UID). ודא שנכנסת כמנהל.', 'err');
         return;
@@ -249,14 +236,6 @@
       // wire buttons
       el('addDeptBtn').addEventListener('click', addDepartment);
       el('addEmpBtn').addEventListener('click', addEmployee);
-
-      // Back to system: open manager login automatically
-      const back = document.getElementById('backToSystem');
-      if (back) {
-        back.addEventListener('click', () => {
-          try { localStorage.setItem('openManagerAfterSetup', '1'); } catch(e) {}
-        });
-      }
 
       await loadOrg();
       unsub();
