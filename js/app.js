@@ -2100,7 +2100,7 @@ async function loadEmployeeTokenStatus() {
     
     let html = '';
     
-    const allEmployees = Object.keys(USERS);
+    const allEmployees = Object.keys(BRANCH_EMPLOYEES);
     
     allEmployees.forEach(emp => {
       const hasToken = tokensData[emp] && typeof tokensData[emp] === 'object';
