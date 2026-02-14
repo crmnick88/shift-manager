@@ -364,7 +364,20 @@ async function approveCurrentSchedule(){
   let DEPARTMENTS = JSON.parse(JSON.stringify(LEGACY_DEPARTMENTS));
   let DISPLAY_NAMES = { ...LEGACY_DISPLAY_NAMES };
 
-  // Firebase-safe key (no . # $ [ ] /)
+  
+  // ✅ Helpers
+  function getDeptEmployees(deptName) {
+    const v = (DEPARTMENTS || {})[deptName];
+    if (!v) return [];
+    if (Array.isArray(v)) return v.filter(Boolean);
+    // support shape: { employees: [...] }
+    if (typeof v === 'object' && Array.isArray(v.employees)) return v.employees.filter(Boolean);
+    // support shape: { ILAY:true, ... }
+    if (typeof v === 'object') return Object.keys(v).filter(k => v[k]);
+    return [];
+  }
+
+// Firebase-safe key (no . # $ [ ] /)
   function toSafeKey(s) {
     return String(s || '')
       .trim()
