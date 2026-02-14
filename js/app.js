@@ -542,17 +542,7 @@ async function loginEmployee() {
 
 
       
-      // 🔀 If this is NOT the legacy HAIFA manager, don't open the HAIFA manager UI.
-      // New branch managers must go through the dedicated portal/setup pages.
-      try {
-        const cPath = (typeof window.getConstraintsPath === "function") ? window.getConstraintsPath() : "";
-        if (cPath && /^branches\//.test(cPath)) {
-          window.location.href = "./manager-portal.html";
-          return;
-        }
-      } catch (e) {
-        console.warn("Redirect check failed:", e);
-      }
+
 
 currentEmployee = 'MANAGER';
       localStorage.setItem('currentEmployee', currentEmployee);
