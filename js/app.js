@@ -542,15 +542,7 @@ async function loginEmployee() {
 
 
       
-      // 🔀 If this is NOT the legacy HAIFA manager, don't open the HAIFA manager UI.
-      // New branch managers must go through the dedicated portal/setup pages.
-      try {
-        const cPath = (typeof window.getConstraintsPath === "function") ? window.getConstraintsPath() : "";
-        if (cPath && /^branches\//.test(cPath)) {
-          window.location.href = "./manager-portal.html";
-          return;
-        }
-      } catch (e) {
+      // 🔀 New branch managers: stay in manager dashboard inside index.html (no separate portal)
         console.warn("Redirect check failed:", e);
       }
 
@@ -2186,14 +2178,39 @@ document.addEventListener('DOMContentLoaded', () => {
     try { localStorage.removeItem('openManagerAfterSetup'); } catch (e) {}
     try { localStorage.removeItem('afterBranchSetup'); } catch (e) {}
 
-    // If already authenticated as a branch manager, go straight to the manager portal
+    // If already authenticated, go straight to the manager dashboard inside index.html
     try {
       const u = (window.auth && window.auth.currentUser) ? window.auth.currentUser : null;
-      const cPath = (typeof window.getConstraintsPath === "function") ? window.getConstraintsPath() : "";
-      if (u && u.uid && cPath && /^branches\//.test(cPath)) {
-        window.location.href = "./manager-portal.html";
+      if (u && u.uid) {
+        // Ensure branch path is ready
+        try {
+          if (typeof window.loadSystemSubscription === "function") await window.loadSystemSubscription();
+          if (typeof window.resolveConstraintsBasePath === "function") await window.resolveConstraintsBasePath();
+          if (typeof window.waitForBranchReady === "function") await window.waitForBranchReady(6000);
+        } catch (e) {
+          console.warn("Branch init wait failed:", e);
+        }
+
+        currentEmployee = 'MANAGER';
+        localStorage.setItem('currentEmployee', currentEmployee);
+
+        hideAll();
+        document.getElementById('manager-section').classList.add('active');
+        initShirotToggleUI();
+        initEliyaToggleUI();
+        loadAllConstraints();
+        showMessage('✅ ההקמה הושלמה — אפשר להתחיל לייצר סידור', 'success');
         return;
       }
+    } catch (e) {}
+
+    // Not authenticated -> open manager login form
+    if (typeof window.showLoginForm === 'function') {
+      window.showLoginForm('manager');
+      showMessage('✅ ההקמה הושלמה — התחבר כמנהל כדי להתחיל לייצר סידור', 'success');
+      return;
+    }
+  }
     } catch (e) {}
 
     // Otherwise, open manager login form
