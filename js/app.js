@@ -2247,16 +2247,38 @@ if ("serviceWorker" in navigator) {
 document.addEventListener('DOMContentLoaded', () => {
   // ✅ If we just finished branch setup, continue to the branch manager portal
   try {
-    if (localStorage.getItem('afterBranchSetup') === '1') {
-      localStorage.removeItem('afterBranchSetup');
-      // If Firebase session exists, go straight to the portal; otherwise open manager login
-      if (window.auth && auth.currentUser) {
-        window.location.href = './branch-manager.html';
-        return;
-      }
-      showLoginForm('manager');
-      return;
-    }
+   if (localStorage.getItem('afterBranchSetup') === '1') {
+  localStorage.removeItem('afterBranchSetup');
+
+  // אם כבר יש “סשן מקומי” של מנהל – נכנסים ישר למסך מנהל
+  const saved = localStorage.getItem('currentEmployee');
+  if (saved === 'MANAGER') {
+    hideAll();
+    document.getElementById('manager-section').classList.add('active');
+    initShirotToggleUI();
+    initEliyaToggleUI();
+    loadAllConstraints();
+    initPushNotifications();
+    return;
+  }
+
+  // ואם יש Firebase session פעיל – גם נכנסים כמנהל
+  if (window.auth && auth.currentUser) {
+    localStorage.setItem('currentEmployee', 'MANAGER');
+    currentEmployee = 'MANAGER';
+    hideAll();
+    document.getElementById('manager-section').classList.add('active');
+    initShirotToggleUI();
+    initEliyaToggleUI();
+    loadAllConstraints();
+    initPushNotifications();
+    return;
+  }
+
+  // אחרת – פותחים כניסת מנהל
+  showLoginForm('manager');
+  return;
+}
   } catch(e) {}
 
   const saved = localStorage.getItem('currentEmployee');
