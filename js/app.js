@@ -2586,3 +2586,12 @@ document.addEventListener('DOMContentLoaded', () => {
 
   initPushNotifications();
 });
+
+
+// ===== Stage 2 FIX: branch setup state helpers =====
+function hasDepartments() {
+  return window.__departments && Object.keys(window.__departments).length > 0;
+}
+function hasEmployees() {
+  return window.__employees && Object.keys(window.__employees).length > 0;
+}
