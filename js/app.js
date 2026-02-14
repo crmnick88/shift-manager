@@ -1,4 +1,42 @@
 
+
+// ===== Compatibility helpers (Stage2) =====
+// Returns array of employee ids that belong to a department.
+// Works with the legacy HAIFA structures (DEPARTMENTS/USERS) and with future branch-scoped org structures.
+function getDeptEmployees(deptName) {
+  try {
+    // If there is a map dept -> employees already prepared, use it
+    if (window.__deptEmployees && window.__deptEmployees[deptName]) return window.__deptEmployees[deptName];
+
+    // Legacy: DEPARTMENTS is a map of department name -> array of usernames OR object containing employees
+    if (typeof DEPARTMENTS !== "undefined" && DEPARTMENTS && DEPARTMENTS[deptName]) {
+      const v = DEPARTMENTS[deptName];
+      if (Array.isArray(v)) return v.slice();
+      if (v && typeof v === "object") {
+        if (Array.isArray(v.employees)) return v.employees.slice();
+        if (Array.isArray(v.users)) return v.users.slice();
+      }
+    }
+
+    // If USERS has dept field
+    if (typeof USERS !== "undefined" && USERS) {
+      const out = [];
+      for (const [uid, u] of Object.entries(USERS)) {
+        if (u && (u.dept === deptName || u.department === deptName)) out.push(uid);
+      }
+      if (out.length) return out;
+    }
+  } catch (e) {}
+  return [];
+}
+
+// Dept "size for rules" used by scheduling heuristics.
+function getDeptSizeForRules(deptName) {
+  const emps = getDeptEmployees(deptName);
+  return Array.isArray(emps) ? emps.length : 0;
+}
+
+
 // ===== Branch-scoped paths (multi-tenant) =====
 // For the legacy HAIFA branch, we keep using the old root-level paths so nothing breaks.
 function __getBranchKeySafe() {
