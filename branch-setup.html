@@ -136,6 +136,15 @@
 
   function baseRef(path){ return firebase.database().ref(`branches/${branchKey}/${path}`); }
 
+  function sanitizeKey(s){
+    // Firebase keys cannot contain: . # $ [ ] /
+    return String(s).trim()
+      .replace(/[\.\#\$\[\]\/]/g, '-')
+      .replace(/\s+/g, ' ')
+      .trim();
+  }
+
+
   let DEPTS = {};          // {deptName: {empKey:true}}
   let DISPLAY = {};        // {empKey: "שם תצוגה"}
   let EMPLOYEES = {};      // {empKey:true}
@@ -225,22 +234,35 @@
 
   async function createDepartment(){
     clearMsg();
-    const name = (document.getElementById('deptName').value || '').trim();
-    if (!name){ showMsg("חייב למלא שם מחלקה", false); return; }
+    const raw = (document.getElementById('deptName').value || '').trim();
+    if (!raw){ showMsg("חייב למלא שם מחלקה", false); return; }
     if (!branchKey) return;
 
+    const key = sanitizeKey(raw);
     try{
-      // ניצור מחלקה כ-אובייקט ריק (כדי שהמפתח יופיע)
-      await baseRef(`org/departments/${name}`).set(DEPTS[name] || {});
+      console.log("[createDepartment] branchKey=", branchKey, "raw=", raw, "key=", key);
+      const payload = {
+        _meta: {
+          createdAt: firebase.database.ServerValue.TIMESTAMP,
+          displayName: raw
+        }
+      };
+      await baseRef(`org/departments/${key}`).set(payload);
+
+      // אימות: נקרא חזרה את הערך לוודא שנכתב
+      const snap = await baseRef(`org/departments/${key}`).once('value');
+      if (!snap.exists()){
+        throw new Error("נראה שהכתיבה לא נשמרה (אין הרשאה או נתיב שגוי).");
+      }
+
       document.getElementById('deptName').value='';
       await reloadFromDB();
-      showMsg(`מחלקה "${name}" נוצרה ✅`, true);
+      showMsg(`מחלקה "${raw}" נוצרה ✅`, true);
     }catch(err){
       console.error(err);
       showMsg("שגיאה ביצירת מחלקה: " + (err?.message || err), false);
     }
   }
-
   async function deleteDept(name){
     if (!confirm(`למחוק את המחלקה "${name}"?`)) return;
     clearMsg();
