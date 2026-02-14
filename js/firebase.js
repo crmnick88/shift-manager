@@ -160,48 +160,18 @@ function constraintsRef(suffix = "") {
 
 // Decide whether to use branches/{branchKey}/constraints or legacy root constraints
 async function resolveConstraintsBasePath() {
-  // Default: legacy root
-  constraintsBasePath = "constraints";
-
-  if (!currentBranchKey) {
-    console.log("CONSTRAINTS PATH (legacy):", constraintsBasePath);
-    return;
-  }
-
-  // Non-admin managers cannot read legacy root nodes like /constraints.
-  // They only have access to their own branch subtree.
-  if (!isAdmin) {
-    constraintsBasePath = `branches/${currentBranchKey}/constraints`;
-    console.log("CONSTRAINTS PATH (scoped non-admin):", constraintsBasePath);
-    return;
-  }
-
   try {
-    const scopedSnap = await db.ref(`branches/${currentBranchKey}/constraints`).limitToFirst(1).once("value");
-    if (scopedSnap.exists()) {
-      constraintsBasePath = `branches/${currentBranchKey}/constraints`;
-      console.log("CONSTRAINTS PATH (scoped):", constraintsBasePath);
-      return;
-    }
+    const u = auth.currentUser;
+    if (!u) return "constraints";
 
-    const legacySnap = await db.ref("constraints").limitToFirst(1).once("value");
-    if (legacySnap.exists()) {
-      constraintsBasePath = "constraints";
-      console.log("CONSTRAINTS PATH (legacy):", constraintsBasePath);
-      return;
-    }
+    // Admin keeps legacy root paths (HAIFA) to avoid breaking existing data.
+    const admin = (typeof window.isAdmin === 'function') ? window.isAdmin() : false;
+    if (admin) return "constraints";
 
-    // No legacy data -> use scoped for new branches
-    constraintsBasePath = `branches/${currentBranchKey}/constraints`;
-    console.log("CONSTRAINTS PATH (new scoped):", constraintsBasePath);
+    const branchKey = (typeof window.getBranchKey === 'function') ? window.getBranchKey() : u.uid;
+    return `branches/${branchKey}/constraints`;
   } catch (e) {
-    if (isPermissionDenied(e)) {
-      constraintsBasePath = `branches/${currentBranchKey}/constraints`;
-      console.warn("Constraints path resolution permission_denied -> using scoped:", constraintsBasePath);
-    } else {
-      console.warn("Constraints path resolution failed, using legacy root constraints", e);
-      constraintsBasePath = "constraints";
-    }
+    return "constraints";
   }
 }
 

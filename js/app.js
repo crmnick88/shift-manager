@@ -1,3 +1,30 @@
+
+// ===== Branch-scoped paths (multi-tenant) =====
+// For the legacy HAIFA branch, we keep using the old root-level paths so nothing breaks.
+function __getBranchKeySafe() {
+  try {
+    if (typeof window.getBranchKey === 'function') return window.getBranchKey();
+    if (typeof window.BRANCH_KEY === 'string') return window.BRANCH_KEY;
+  } catch (e) {}
+  return null;
+}
+function __isHaifaLegacy() {
+  const k = __getBranchKeySafe();
+  return (k && String(k).toUpperCase() === 'HAIFA');
+}
+function __branchPath(path) {
+  const k = __getBranchKeySafe();
+  if (!k) return path; // fallback
+  if (__isHaifaLegacy()) return path; // keep legacy for HAIFA
+  // Scope under branches/<branchKey>/
+  return `branches/${k}/${path}`;
+}
+function __ref(path) {
+  return db.ref(__branchPath(path));
+}
+// For a few legacy collections we may want to *read* either new scoped or old root (HAIFA) later.
+// Right now: HAIFA stays root, other branches are scoped.
+
 // ===========================================
 // מערכת ניהול משמרות - לוגיקה ראשית
 // ===========================================
@@ -165,7 +192,7 @@ async function approveCurrentSchedule(){
   await db.ref('approvedSchedules/' + k).set(payload);
 
   // ✅ מצביע ל"אחרון שאושר"
-  await db.ref('approvedSchedulesLatest').set({
+  await __ref('approvedSchedulesLatest').set({
     weekKey: k,
     approvedAt: payload.approvedAt,
     approvedBy: payload.approvedBy
@@ -176,7 +203,7 @@ async function approveCurrentSchedule(){
 
   async function exportApprovedScheduleToExcel(){
   // טוען את "האחרון שאושר" (או את השבוע הרלוונטי)
-  const latestSnap = await db.ref('approvedSchedulesLatest').once('value');
+  const latestSnap = await __ref('approvedSchedulesLatest').once('value');
   const latest = latestSnap.val();
 
   if(!latest || !latest.weekKey){
@@ -207,7 +234,7 @@ async function approveCurrentSchedule(){
 
 
  async function loadApprovedScheduleToScreen(){
-  const latestSnap = await db.ref('approvedSchedulesLatest').once('value');
+  const latestSnap = await __ref('approvedSchedulesLatest').once('value');
   const latest = latestSnap.val();
 
   if(!latest || !latest.weekKey){
@@ -839,11 +866,11 @@ nextSunday.setDate(today.getDate() + (dow === 0 ? 7 : 7 - dow));
     const allSchedules = {};
 
     // קריאת היסטוריית מוצ"ש מ-Firebase
-    const historySnapshot = await db.ref('saturdayHistory').once('value');
+    const historySnapshot = await __ref('saturdayHistory').once('value');
     const saturdayHistory = historySnapshot.val() || {};
 
     // ✅ NEW: היסטוריה למחלקות של 2 עובדים (מי פותח את השבוע)
-    const weekdaySnap = await db.ref('weekdayStartHistory').once('value');
+    const weekdaySnap = await __ref('weekdayStartHistory').once('value');
     const weekdayStartHistory = weekdaySnap.val() || {};
 
 
@@ -1221,10 +1248,10 @@ nextSunday.setDate(today.getDate() + (dow === 0 ? 7 : 7 - dow));
     }
 
     // שמירת היסטוריית מוצ"ש ב-Firebase
-    await db.ref('saturdayHistory').set(saturdayHistory);
+    await __ref('saturdayHistory').set(saturdayHistory);
 
     // ✅ Save weekday start history (2-employee departments)
-    await db.ref('weekdayStartHistory').set(weekdayStartHistory);
+    await __ref('weekdayStartHistory').set(weekdayStartHistory);
 
     return allSchedules;
   }
@@ -1951,7 +1978,7 @@ async function loadNotificationHistory() {
   try {
     showMessage('טוען היסטוריה...', 'info');
     
-    const snapshot = await db.ref('notificationHistory').orderByChild('sentAt').limitToLast(10).once('value');
+    const snapshot = await __ref('notificationHistory').orderByChild('sentAt').limitToLast(10).once('value');
     const historyData = snapshot.val();
     
     if (!historyData) {
