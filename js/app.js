@@ -22,6 +22,27 @@ function __branchPath(path) {
 function __ref(path) {
   return db.ref(__branchPath(path));
 }
+
+// ===== Ensure branch-scoped constraints path is ready (prevents falling back to legacy root on hard refresh) =====
+async function __ensureConstraintsReady() {
+  try {
+    if (typeof window.resolveConstraintsBasePath === 'function') {
+      await window.resolveConstraintsBasePath();
+    }
+  } catch (e) {}
+
+  const start = Date.now();
+  while (true) {
+    try {
+      const admin = (typeof window.isAdmin === 'function') ? window.isAdmin() : false;
+      const p = (typeof window.getConstraintsPath === 'function') ? window.getConstraintsPath() : 'constraints';
+      if (admin || (p && p !== 'constraints')) return true;
+    } catch (e) {}
+
+    if (Date.now() - start > 5000) return false;
+    await new Promise(r => setTimeout(r, 50));
+  }
+}
 // For a few legacy collections we may want to *read* either new scoped or old root (HAIFA) later.
 // Right now: HAIFA stays root, other branches are scoped.
 
@@ -589,6 +610,9 @@ async function loginEmployee() {
   }
 
   async function loadEmployeeConstraints() {
+  const __ok = await __ensureConstraintsReady();
+  if (!__ok) { console.warn('Constraints path not ready yet'); return; }
+
     if (currentEmployee) applyConstraintOptions(currentEmployee);
 
     const snapshot = await constraintsRef(currentEmployee).once('value');
@@ -604,6 +628,9 @@ async function loginEmployee() {
   }
 
   async function saveConstraints() {
+  const __ok = await __ensureConstraintsReady();
+  if (!__ok) { console.warn('Constraints path not ready yet'); return; }
+
     if (!currentEmployee) return;
 
     const c1Date = document.getElementById('c1-date').value;
@@ -643,6 +670,9 @@ async function loginEmployee() {
   }
 
   async function loadAllConstraints() {
+  const __ok = await __ensureConstraintsReady();
+  if (!__ok) { console.warn('Constraints path not ready yet'); return; }
+
     const snapshot = await constraintsRef().once('value');
     const allData = snapshot.val() || {};
     const today = new Date(); today.setHours(0,0,0,0);
@@ -753,6 +783,9 @@ async function loginEmployee() {
   }
 
   async function resetAllConstraints() {
+  const __ok = await __ensureConstraintsReady();
+  if (!__ok) { console.warn('Constraints path not ready yet'); return; }
+
     const ok = confirm(`לאפס אילוצים לכל העובדים? פעולה זו מוחקת את כל האילוצים.`);
     if (!ok) return;
 
@@ -767,11 +800,17 @@ async function loginEmployee() {
   }
 
   async function refreshAll(){
+  const __ok = await __ensureConstraintsReady();
+  if (!__ok) { console.warn('Constraints path not ready yet'); return; }
+
     await loadAllConstraints();
     await generateSchedule();
   }
 
   async function generateSchedule() {
+  const __ok = await __ensureConstraintsReady();
+  if (!__ok) { console.warn('Constraints path not ready yet'); return; }
+
     try {
       const snapshot = await constraintsRef().once('value');
       const constraints = snapshot.val() || {};
