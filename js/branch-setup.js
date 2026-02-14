@@ -43,6 +43,8 @@
     try {
       if (typeof window.getBranchKey === 'function') return window.getBranchKey();
       if (typeof window.BRANCH_KEY === 'string') return window.BRANCH_KEY;
+      // Fallback: firebase.js may not have populated branchKey yet; use authenticated UID
+      if (typeof auth !== 'undefined' && auth.currentUser && auth.currentUser.uid) return auth.currentUser.uid;
     } catch (e) {}
     return null;
   }
@@ -53,9 +55,23 @@
   }
 
   function ref(path) {
-    const k = getBranchKeySafe();
-    if (!k) return db.ref(path);
-    if (isHaifaLegacy()) return db.ref(path); // keep HAIFA legacy out of this flow
+    // IMPORTANT:
+    // This setup page MUST write under branches/<branchKey>/org (never to root /org),
+    // otherwise non-admin users will get permission_denied.
+    let k = getBranchKeySafe();
+
+    // Always fall back to auth UID if branchKey isn't ready yet
+    if (!k && typeof auth !== 'undefined' && auth.currentUser && auth.currentUser.uid) {
+      k = auth.currentUser.uid;
+      window.BRANCH_KEY = k;
+    }
+
+    // HAIFA legacy stays out of this flow (root-level paths)
+    if (isHaifaLegacy()) return db.ref(path);
+
+    // If still no key, force an error early (avoid accidental root writes)
+    if (!k) throw new Error('branchKey is missing (cannot scope refs).');
+
     return db.ref(`branches/${k}/${path}`);
   }
 
@@ -222,6 +238,7 @@
       let key = getBranchKeySafe();
       // firebase.js may populate currentBranchKey asynchronously; always fall back to auth.uid
       if (!key && user && user.uid) key = user.uid;
+      if (key) window.BRANCH_KEY = key;
       if (!key) {
         showMsg('לא נמצא branchKey (UID). ודא שנכנסת כמנהל.', 'err');
         return;
@@ -240,18 +257,8 @@
     });
   }
 
-  function runWhenReady(fn){
-    if (document.readyState === 'loading') {
-      document.addEventListener('DOMContentLoaded', () => fn(), { once: true });
-    } else {
-      fn();
-    }
-  }
-
-  runWhenReady(() => {
-    boot().catch((e) => {
-      console.error(e);
-      showMsg('שגיאת אתחול: ' + (e && e.message ? e.message : e), 'err');
-    });
+  boot().catch((e) => {
+    console.error(e);
+    showMsg('שגיאת אתחול: ' + (e && e.message ? e.message : e), 'err');
   });
 })();
