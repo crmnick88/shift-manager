@@ -2,174 +2,95 @@
 <html lang="he" dir="rtl">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <link rel="manifest" href="./manifest.json">
-  <link rel="icon" href="./icon-192.png">
-  <meta name="theme-color" content="#667eea" />
   <title>פאנל מנהל סניף</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 
+  <!-- Firebase config חייב להיות לפני firebase.js -->
+  <script>
+    window.firebaseConfig = {
+      apiKey: "API_KEY",
+      authDomain: "PROJECT_ID.firebaseapp.com",
+      databaseURL: "https://PROJECT_ID-default-rtdb.firebaseio.com",
+      projectId: "PROJECT_ID",
+      storageBucket: "PROJECT_ID.appspot.com",
+      messagingSenderId: "SENDER_ID",
+      appId: "APP_ID"
+    };
+  </script>
 
-  <!-- Firebase Compat (load once) -->
+  <!-- Firebase (טעינה אחת בלבד!) -->
   <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-auth-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-database-compat.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-messaging-compat.js"></script>
+  <script src="./firebase.js"></script>
 
-  <!-- SheetJS -->
-  <script src="./xlsx.bundle.js"></script>
-
-  <link rel="stylesheet" href="./style.css">
-
-  <!-- Project firebase init (defines window.auth, window.db, etc.) -->
-  <script src="./js/firebase.js"></script>
-
-  <!-- Ensure BRANCH_KEY is available early (prevents branches/null/* paths) -->
-  <script>
-    (function() {
-      try {
-        var k = localStorage.getItem('currentBranchKey');
-        if (k) window.BRANCH_KEY = k;
-      } catch(e) {}
-    })();
-  </script>
-
-
-  <!-- Firebase Compat -->
+  <style>
+    body {
+      margin: 0;
+      font-family: Arial, sans-serif;
+      background: #f5f7fb;
+    }
+    .container {
+      max-width: 1100px;
+      margin: 40px auto;
+      background: #fff;
+      padding: 24px;
+      border-radius: 12px;
+      box-shadow: 0 4px 20px rgba(0,0,0,0.08);
+    }
+    .top-bar {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 20px;
+    }
+    .back {
+      text-decoration: none;
+      color: #2563eb;
+      font-weight: bold;
+    }
+    .title {
+      font-size: 22px;
+      font-weight: bold;
+    }
+    .info {
+      margin-top: 20px;
+      padding: 12px;
+      background: #e6f7ec;
+      border-radius: 8px;
+      color: #065f46;
+    }
+  </style>
 </head>
+
 <body>
-<div class="container">
-<div id="manager-section" class="section">
-    <div style="display:flex; justify-content:space-between; margin-bottom:10px;">
-      <h1>🗓️ פאנל מנהל</h1>
-      <button class="btn" onclick="logout()" style="width:auto; padding:10px 20px; background:#dc3545;">התנתק</button>
+  <div class="container">
+    <div class="top-bar">
+      <a class="back" href="branch-manager.html">רענון עמוד</a>
+      <div class="title">פאנל מנהל סניף</div>
     </div>
 
-    <div class="toolbar">
-      <button class="btn" id="approve-schedule-btn" onclick="approveCurrentSchedule()" style="background:#28a745; display:none;">✅ אשר סידור</button>
-      <button class="btn" onclick="exportApprovedScheduleToExcel()" style="background:#17a2b8;">📥 ייצא סידור מאושר לאקסל</button>
+    <div id="branchInfo"></div>
 
-      <button class="btn" onclick="refreshAll()" style="background:#343a40;">🔁 רענן הכל</button>
-      <button class="btn" onclick="loadAllConstraints()" style="background:#17a2b8;">🔄 רענן אילוצים</button>
-      <button class="btn" onclick="generateSchedule()" style="background:#667eea;">🔄 רענן סידור</button>
-      <button class="btn" onclick="sendConstraintsReminderRequest()" style="background:#ff6f61;">🔔 שלח תזכורת להזנת אילוצים</button>
-      <button class="btn" onclick="showNotificationHistory()" style="background:#17a2b8;">📊 היסטוריית התראות</button>
-
-      <button class="btn" onclick="openManualConstraints()" style="background:#6f42c1;">✍️ הזנת אילוצים ידנית</button>
-
-      <button class="btn" onclick="resetAllConstraints()" style="background:#6c757d;">🧹 איפוס אילוצים לכל העובדים</button>
-      <div style="display:flex; align-items:center; gap:10px; padding:10px 12px; border:2px solid #e0e0e0; border-radius:10px; background:#ffffff; width:100%; max-width:520px;">
-        <label style="display:flex; align-items:center; gap:10px; cursor:pointer; font-weight:700;">
-          <input type="checkbox" id="shirot-active-toggle" style="width:18px; height:18px;" />
-          <span>נציגות שירות: עובד "שירות" פעיל</span>
-        </label>
-        <span style="font-size:12px; opacity:.8;">כיבוי = המחלקה תתנהג כמו 2 עובדים</span>
-      </div>
-      <div style="display:flex; align-items:center; gap:10px; padding:10px 12px; border:2px solid #e0e0e0; border-radius:10px; background:#ffffff; width:100%; max-width:520px;">
-        <label style="display:flex; align-items:center; gap:10px; cursor:pointer; font-weight:700;">
-          <input type="checkbox" id="eliya-active-toggle" style="width:18px; height:18px;" />
-          <span>קו לבן: עובד "אליה" פעיל</span>
-        </label>
-        <span style="font-size:12px; opacity:.8;">כיבוי = קו לבן יתנהג כמו 2 עובדים (בלי אמצע)</span>
-      </div>
-
-    </div>
-
-    <div id="all-constraints"></div>
-
-    <button class="btn" onclick="generateSchedule()">צור סידור אוטומטי</button>
-
-    <div id="export-section" style="display:none; margin-top:10px;">
-      <button class="btn" onclick="exportToExcel()" style="background:#28a745;">📊 ייצא ל-Excel</button>
-      <button class="btn" onclick="exportToHTML()" style="background:#17a2b8;">📄 ייצא ל-HTML מעוצב</button>
-    </div>
-
-    <div id="schedule-result"></div>
-  </div>
-
-  <!-- Manual Constraints Section -->
-  <div id="manual-constraints-section" class="section">
-    <div style="display:flex; justify-content:space-between; margin-bottom:10px;">
-      <h1>✍️ הזנת אילוצים ידנית</h1>
-      <button class="btn" onclick="backToManagerFromManualConstraints()" style="width:auto; padding:10px 20px; background:#6c757d;">חזור</button>
-    </div>
-
-    <div style="background:#f8f9fa; padding:20px; border-radius:12px;">
-      <p style="color:#e74c3c; margin:0 0 10px 0;">⚠️ גם כאן לא ניתן לבחור שישי או שבת</p>
-
-      <div class="form-group">
-        <label>בחר עובד:</label>
-        <select id="mc-employee" onchange="loadManualConstraintsForSelected()">
-          <option value="">-- בחר עובד --</option>
-        </select>
-      </div>
-
-      <div class="constraint-item">
-        <h4>אילוץ 1</h4>
-        <div class="form-group">
-          <label>תאריך:</label>
-          <input type="date" id="mc-c1-date">
-        </div>
-        <div class="form-group">
-          <label>סוג:</label>
-          <select id="mc-c1-type"></select>
-        </div>
-      </div>
-
-      <div class="constraint-item">
-        <h4>אילוץ 2</h4>
-        <div class="form-group">
-          <label>תאריך:</label>
-          <input type="date" id="mc-c2-date">
-        </div>
-        <div class="form-group">
-          <label>סוג:</label>
-          <select id="mc-c2-type"></select>
-        </div>
-      </div>
-
-      <button class="btn" onclick="saveManualConstraints()" style="background:#6f42c1;">💾 שמור אילוצים לעובד</button>
-    </div>
-
-    <div id="mc-preview" style="margin-top:20px;"></div>
-  </div>
-
-  <!-- Notification History Section -->
-  <div id="notification-history-section" class="section">
-    <div style="display:flex; justify-content:space-between; margin-bottom:10px;">
-      <h1>📊 היסטוריית התראות</h1>
-      <button class="btn" onclick="backToManager()" style="width:auto; padding:10px 20px; background:#6c757d;">חזור</button>
-    </div>
-
-    <div style="background:#f8f9fa; padding:20px; border-radius:12px; margin-bottom:20px;">
-      <h3>סטטוס עובדים</h3>
-      <div id="employee-status-list"></div>
-    </div>
-
-    <div style="background:#ffffff; padding:20px; border-radius:12px; border:2px solid #e0e0e0;">
-      <h3>היסטוריית שליחות</h3>
-      <button class="btn" onclick="loadNotificationHistory()" style="background:#667eea; margin-bottom:20px;">🔄 רענן היסטוריה</button>
-      <div id="notification-history-list"></div>
+    <div class="info">
+      מחובר/ת לממשק מנהל סניף.<br>
+      הנתונים נטענים לפי הסניף שהוקם עכשיו.
     </div>
   </div>
-
-  <div id="message"></div>
-</div>
-<script>
-    // Force manager view on this page (no login UI here)
-    try { localStorage.setItem('currentEmployee','MANAGER'); } catch(e){}
-  </script>
-
-  <!-- Firebase Compat --><!-- XLSX bundle -->
-
-  <!-- firebase.js must run before app.js -->
-  
-  <script src="./js/app.js"></script>
 
   <script>
-    // Force manager view on this page (no login UI here)
-    try { localStorage.setItem('currentEmployee','MANAGER'); } catch(e){}
-  </script>
+    // שליפת branchKey שנשמר בזמן הקמת הסניף
+    const branchKey = localStorage.getItem("branchKey");
 
-  <script src="./js/branch-manager.js"></script>
+    if (!branchKey) {
+      alert("לא נמצא סניף פעיל – חוזר למסך הראשי");
+      window.location.href = "index.html";
+    }
+
+    document.getElementById("branchInfo").innerHTML =
+      "<b>Branch ID:</b> " + branchKey;
+
+    console.log("BRANCH ID (uid):", branchKey);
+  </script>
 </body>
 </html>
