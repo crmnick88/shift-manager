@@ -1,0 +1,57 @@
+<!DOCTYPE html>
+<html lang="he" dir="rtl">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>פורטל מנהל - סניפים</title>
+
+  <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-auth-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-database-compat.js"></script>
+
+  <style>
+    body{margin:0;font-family:'Segoe UI',Tahoma,Arial,sans-serif;background:#f6f7fb;color:#111}
+    .wrap{max-width:900px;margin:28px auto;padding:0 16px}
+    .card{background:#fff;border:1px solid #e8e9ef;border-radius:16px;box-shadow:0 8px 24px rgba(0,0,0,.06);padding:18px}
+    h1{margin:0 0 10px;font-size:22px}
+    .sub{margin:0 0 18px;color:#555}
+    .row{display:flex;gap:12px;flex-wrap:wrap}
+    .btn{border:0;border-radius:12px;padding:12px 14px;font-weight:800;cursor:pointer}
+    .primary{background:#4f67ff;color:#fff}
+    .ghost{background:#f2f3f8;color:#111}
+    .danger{background:#e44;color:#fff}
+    .status{margin-top:12px;padding:10px 12px;border-radius:12px}
+    .ok{background:#eaffef;border:1px solid #bfe9c8;color:#115c22}
+    .err{background:#ffecec;border:1px solid #f1b9b9;color:#7b1010}
+    code{background:#f2f3f8;border-radius:8px;padding:2px 6px}
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <div class="card">
+      <h1>פורטל מנהל</h1>
+      <p class="sub">
+        חיפה ממשיכה לעבוד במערכת הראשית (<code>index.html</code>) בלי שינוי.
+        מנהלים של סניפים חדשים משתמשים בפורטל הזה כדי להקים סניף.
+      </p>
+
+      <div id="status" class="status err" style="display:none"></div>
+
+      <div id="actions" style="display:none">
+        <div class="row">
+          <button id="btnSetup" class="btn primary" type="button">🏗️ הקמת סניף (מחלקות ועובדים)</button>
+          <button id="btnMainHaifa" class="btn ghost" type="button">כניסה למערכת הראשית (חיפה)</button>
+          <button id="btnOut" class="btn danger" type="button">התנתק</button>
+        </div>
+        <div class="status ok" style="margin-top:14px">
+          אם אתה מנהל סניף חדש – לחץ על <b>הקמת סניף</b>.
+          אחרי שתקים מחלקות ועובדים, נבנה לך "מסך מנהל סניף" נפרד שלא מציג את חיפה.
+        </div>
+      </div>
+
+      <script src="./js/firebase.js"></script>
+      <script src="./js/manager-portal.js"></script>
+    </div>
+  </div>
+</body>
+</html>
