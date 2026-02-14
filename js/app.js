@@ -382,7 +382,7 @@ async function approveCurrentSchedule(){
 
     // קו לבן: כיבוי "אליה"
     if (dept === 'מחלקת קו לבן' && !isEliyaActive()) {
-      return list.filter(e => e !== 'ELIYA');
+      return list.filter(e => e !== 'ELIYA')
     }
 
     return list;
