@@ -594,6 +594,21 @@ async function loginEmployee() {
 
     const onAuthed = async () => {
       console.log('Firebase Auth OK (manager)');
+      
+// ✅ Lock branch context for this manager BEFORE resolving paths
+const uid = auth.currentUser?.uid;
+const HAIFA_MANAGER_UID = "LRHfwBSAqYV9cxrcko9KfCafJOD3";
+
+if (uid === HAIFA_MANAGER_UID) {
+  // חיפה (legacy)
+  localStorage.removeItem("currentBranchKey");
+  console.log("HAIFA manager detected – using legacy data");
+} else {
+  // סניף חדש
+  localStorage.setItem("currentBranchKey", uid);
+  console.log("New branch manager detected – branchKey set to", uid);
+}
+      
       // ✅ Ensure branch + constraints path resolved before loading data
       try {
         if (typeof window.loadSystemSubscription === "function") await window.loadSystemSubscription();
