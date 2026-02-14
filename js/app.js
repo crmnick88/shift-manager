@@ -2177,6 +2177,33 @@ if ("serviceWorker" in navigator) {
 // 🔁 Restore login after refresh
 // =======================
 document.addEventListener('DOMContentLoaded', () => {
+  // If we returned from branch setup, prefer continuing as manager (not back to login chooser)
+  const afterSetup =
+    localStorage.getItem('openManagerAfterSetup') === '1' ||
+    localStorage.getItem('afterBranchSetup') === '1';
+
+  if (afterSetup) {
+    try { localStorage.removeItem('openManagerAfterSetup'); } catch (e) {}
+    try { localStorage.removeItem('afterBranchSetup'); } catch (e) {}
+
+    // If already authenticated as a branch manager, go straight to the manager portal
+    try {
+      const u = (window.auth && window.auth.currentUser) ? window.auth.currentUser : null;
+      const cPath = (typeof window.getConstraintsPath === "function") ? window.getConstraintsPath() : "";
+      if (u && u.uid && cPath && /^branches\//.test(cPath)) {
+        window.location.href = "./manager-portal.html";
+        return;
+      }
+    } catch (e) {}
+
+    // Otherwise, open manager login form
+    if (typeof window.showLoginForm === 'function') {
+      window.showLoginForm('manager');
+      showMessage('✅ ההקמה הושלמה — התחבר כמנהל כדי להתחיל לייצר סידור', 'success');
+      return;
+    }
+  }
+
   const saved = localStorage.getItem('currentEmployee');
 
   if (!saved) {
@@ -2190,7 +2217,7 @@ document.addEventListener('DOMContentLoaded', () => {
     hideAll();
     document.getElementById('manager-section').classList.add('active');
     initShirotToggleUI();
-      initEliyaToggleUI();
+    initEliyaToggleUI();
     loadAllConstraints();
   } else {
     hideAll();
