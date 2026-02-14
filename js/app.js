@@ -335,6 +335,22 @@ async function approveCurrentSchedule(){
       }
     });
 
+  
+  // טען שמות תצוגה (DISPLAY NAMES) לסניף
+  firebase.database()
+    .ref(`${basePath}/displayNames`)
+    .once("value")
+    .then(snapshot => {
+      const data = snapshot.val();
+      if (data) {
+        Object.keys(DISPLAY_NAMES).forEach(k => delete DISPLAY_NAMES[k]);
+        Object.assign(DISPLAY_NAMES, data);
+        console.log("Display names loaded from branch");
+      } else {
+        console.log("No display names yet (new branch)");
+      }
+    });
+
   // טען עובדים
   firebase.database()
     .ref(`${basePath}/employees`)
