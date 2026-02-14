@@ -303,6 +303,23 @@ const USERS = {
     'נציגות שירות': ['LIOR', 'AMANI', 'SHIROT']
   };
 
+
+  // מיפוי שמות תצוגה בעברית (רק לתצוגה בטבלה!)
+  let DISPLAY_NAMES = {
+    'ILAY': 'עילאי',
+    'ROVEN': 'ראובן',
+    'HAI': 'חי',
+    'NATALI': 'נטלי',
+    'AVI': 'אבי',
+    'MOHAMAD': 'מוחמד',
+    'INNA': 'אינה',
+    'TAMIR': 'תמיר',
+    'ELIYA': 'אליה',
+    'LIOR': 'ליאור',
+    'AMANI': 'אמאני',
+    'SHIROT': 'שירות'
+  };
+
 // =============================
 // DYNAMIC BRANCH OVERRIDE
 // =============================
@@ -464,20 +481,7 @@ function initShirotToggleUI() {
 
 
   // מיפוי שמות תצוגה בעברית (רק לתצוגה בטבלה!)
-  const DISPLAY_NAMES = {
-    'ILAY': 'עילאי',
-    'ROVEN': 'ראובן',
-    'HAI': 'חי',
-    'NATALI': 'נטלי',
-    'AVI': 'אבי',
-    'MOHAMAD': 'מוחמד',
-    'INNA': 'אינה',
-    'TAMIR': 'תמיר',
-    'ELIYA': 'אליה',
-    'LIOR': 'ליאור',
-    'AMANI': 'אמאני',
-    'SHIROT': 'שירות'
-  };
+  
 
   const MANAGER = { username: 'SAGI', password: '241188' };
 
@@ -485,12 +489,15 @@ function initShirotToggleUI() {
   // ======== התאמת אפשרויות אילוץ לפי מחלקה ========
   function getDeptOfEmp(emp) {
     for (const [dept, list] of Object.entries(DEPARTMENTS)) {
-      if (list.includes(emp)) return dept;
+      // HAIFA legacy: array
+      if (Array.isArray(list) && list.includes(emp)) return dept;
+      // New branches: object map {EMP:true}
+      if (list && typeof list === 'object' && !Array.isArray(list) && Object.prototype.hasOwnProperty.call(list, emp)) return dept;
     }
     return null;
   }
 
-  function buildConstraintOptionsForEmp(emp) {
+function buildConstraintOptionsForEmp(emp) {
     const dept = getDeptOfEmp(emp);
     const size = dept ? (getDeptSizeForRules(dept) || 0) : 0;
 
