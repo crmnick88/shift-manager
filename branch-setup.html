@@ -82,7 +82,9 @@
 <body>
   <div class="wrap">
     <div class="top">
-      <a class="back" href="./branch-manager.html">← חזרה למערכת</a>
+      <a class="back" href="./index.html" onclick="try{localStorage.setItem('openManagerAfterSetup','1')}catch(e){}">
+  ← חזרה למערכת
+</a>
       <div>
         <h1>הקמת סניף – מחלקות ועובדים</h1>
         <div class="hint">הנתונים נשמרים תחת <code>branches/&lt;branchKey&gt;/org</code></div>
