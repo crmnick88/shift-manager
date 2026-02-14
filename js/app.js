@@ -594,6 +594,21 @@ async function loginEmployee() {
 
     const onAuthed = async () => {
       console.log('Firebase Auth OK (manager)');
+      
+// ✅ Lock branch context for this manager BEFORE resolving paths
+const uid = auth.currentUser?.uid;
+const HAIFA_MANAGER_UID = "LRHfwBSAqYV9cxrcko9KfCafJOD3";
+
+if (uid === HAIFA_MANAGER_UID) {
+  // חיפה (legacy)
+  localStorage.removeItem("currentBranchKey");
+  console.log("HAIFA manager detected – using legacy data");
+} else {
+  // סניף חדש
+  localStorage.setItem("currentBranchKey", uid);
+  console.log("New branch manager detected – branchKey set to", uid);
+}
+      
       // ✅ Ensure branch + constraints path resolved before loading data
       try {
         if (typeof window.loadSystemSubscription === "function") await window.loadSystemSubscription();
@@ -603,46 +618,20 @@ async function loginEmployee() {
         console.warn("Branch init wait failed:", e);
       }
 
-      // ✅ Smart routing: HAIFA vs New Branch
-      const branchKey = window.getBranchKey ? window.getBranchKey() : null;
-      
-      if (branchKey === 'HAIFA') {
-        // ✅ HAIFA Legacy: use the existing index.html manager-section (no changes!)
-        currentEmployee = 'MANAGER';
-        localStorage.setItem('currentEmployee', currentEmployee);
 
-        hideAll();
-        document.getElementById('manager-section').classList.add('active');
-        initShirotToggleUI();
-        initEliyaToggleUI();
-        loadAllConstraints();
-        showMessage('התחברת בהצלחה', 'success');
-        initPushNotifications();
-        
-      } else {
-        // ✅ New Branch: check if org exists, then route accordingly
-        try {
-          const orgSnap = await db.ref(`branches/${branchKey}/org/employees`).once('value');
-          
-          if (!orgSnap.exists() || Object.keys(orgSnap.val() || {}).length === 0) {
-            // No employees yet → redirect to branch-setup
-            showMessage('מעביר אותך להקמת סניף...', 'success');
-            setTimeout(() => {
-              window.location.href = './branch-setup.html';
-            }, 800);
-          } else {
-            // Has employees → redirect to branch-manager
-            showMessage('מעביר אותך לפאנל מנהל...', 'success');
-            setTimeout(() => {
-              window.location.href = './branch-manager.html';
-            }, 800);
-          }
-        } catch (e) {
-          console.error('Error checking org:', e);
-          // On error, redirect to setup (safe fallback)
-          window.location.href = './branch-setup.html';
-        }
-      }
+      
+
+
+currentEmployee = 'MANAGER';
+      localStorage.setItem('currentEmployee', currentEmployee);
+
+      hideAll();
+      document.getElementById('manager-section').classList.add('active');
+      initShirotToggleUI();
+      initEliyaToggleUI();
+      loadAllConstraints();
+      showMessage('התחברת בהצלחה', 'success');
+      initPushNotifications();
     };
 
     auth.signInWithEmailAndPassword(email, password)
