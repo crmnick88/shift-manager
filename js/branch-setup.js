@@ -262,7 +262,7 @@
         backLink.addEventListener('click', (e) => {
           try { localStorage.setItem('afterBranchSetup', '1'); } catch(_) {}
           e.preventDefault();
-          window.location.href = './manager-portal.html';
+       window.location.href = './index.html';
         });
       }
 
