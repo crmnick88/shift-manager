@@ -2183,7 +2183,7 @@ document.addEventListener('DOMContentLoaded', () => {
       localStorage.removeItem('afterBranchSetup');
       // If Firebase session exists, go straight to the portal; otherwise open manager login
       if (window.auth && auth.currentUser) {
-        window.location.href = './manager-portal.html';
+        window.location.href = './branch-manager.html';
         return;
       }
       showLoginForm('manager');

@@ -247,6 +247,15 @@
       el('addDeptBtn').addEventListener('click', addDepartment);
       el('addEmpBtn').addEventListener('click', addEmployee);
 
+      // Back to system -> go straight to branch manager dashboard
+      const back = document.getElementById('backToSystem');
+      if (back) {
+        back.addEventListener('click', (e) => {
+          try { localStorage.setItem('afterBranchSetup', '1'); } catch(err) {}
+        });
+      }
+
+
       // Back to system: return to manager portal after setup
       const backLink = document.querySelector('a.back');
       if (backLink) {
