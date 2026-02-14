@@ -1,0 +1,87 @@
+<!DOCTYPE html>
+<html lang="he" dir="rtl">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>הקמת סניף - מחלקות ועובדים</title>
+
+  <!-- Firebase Compat (same versions as main app) -->
+  <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-auth-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-database-compat.js"></script>
+
+  <style>
+    * { box-sizing: border-box; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
+    body { margin:0; background:#f4f6fb; }
+    .wrap { max-width: 1100px; margin: 24px auto; padding: 0 12px; }
+    .card { background:#fff; border-radius: 18px; padding: 18px; box-shadow: 0 10px 26px rgba(20,30,60,.10); }
+    h1 { margin: 0 0 8px; font-size: 26px; }
+    .sub { color:#4b5563; margin-bottom: 16px; }
+    .row { display:flex; gap: 14px; flex-wrap: wrap; }
+    .col { flex: 1 1 420px; border: 1px solid #e5e7eb; border-radius: 14px; padding: 14px; }
+    .col h2 { margin: 0 0 12px; font-size: 18px; }
+    label { display:block; font-weight: 700; margin: 10px 0 6px; }
+    input, select { width:100%; padding: 10px 12px; border-radius: 10px; border: 1px solid #d1d5db; outline: none; }
+    button { width:100%; padding: 11px 12px; border-radius: 12px; border: none; cursor:pointer; font-weight: 800; }
+    .btn-blue { background:#2f6fed; color:#fff; }
+    .btn-green { background:#16a34a; color:#fff; }
+    .btn-red { background:#ef4444; color:#fff; }
+    .small { font-size: 12px; color:#6b7280; margin-top: 8px; }
+    .msg { margin: 12px 0 0; padding: 10px 12px; border-radius: 12px; display:none; }
+    .msg.ok { background:#ecfdf5; color:#065f46; border:1px solid #a7f3d0; }
+    .msg.err { background:#fef2f2; color:#991b1b; border:1px solid #fecaca; }
+    .list { margin-top: 12px; padding: 10px; border-radius: 12px; background: #f9fafb; border: 1px solid #e5e7eb; max-height: 320px; overflow:auto; }
+    .item { padding: 10px; border-bottom: 1px solid #e5e7eb; display:flex; align-items:center; justify-content: space-between; gap: 10px; }
+    .item:last-child { border-bottom:none; }
+    .pill { font-size: 12px; padding: 3px 8px; border-radius: 999px; background:#eef2ff; color:#3730a3; white-space: nowrap; }
+    .topbar { display:flex; justify-content: space-between; align-items:center; gap: 12px; margin-bottom: 14px; }
+    .link { text-decoration:none; color:#2f6fed; font-weight:800; }
+  </style>
+
+  <script src="./js/firebase.js"></script>
+  <script defer src="./js/branch-setup.js"></script>
+</head>
+<body>
+  <div class="wrap">
+    <div class="card">
+      <div class="topbar">
+        <div>
+          <h1>הקמת סניף – מחלקות ועובדים</h1>
+          <div class="sub">מסך נפרד כדי שתראה שגיאות בקונסול בקלות. הנתונים נשמרים תחת <span class="pill">branches/&lt;branchKey&gt;/org</span>.</div>
+        </div>
+        <a class="link" href="./index.html">חזרה למערכת</a>
+      </div>
+
+      <div id="msg" class="msg"></div>
+
+      <div class="row">
+        <div class="col">
+          <h2>➕ הוספת מחלקה</h2>
+          <label for="deptName">שם מחלקה</label>
+          <input id="deptName" placeholder="לדוגמה: מחסן / קו לבן / קו קופות" />
+          <button id="addDeptBtn" class="btn-blue">הוסף מחלקה</button>
+
+          <div class="list" id="deptList"></div>
+          <div class="small">אפשר למחוק מחלקה רק אם אין בה עובדים (כדי לא לשבור שיוכים).</div>
+        </div>
+
+        <div class="col">
+          <h2>➕ הוספת עובד</h2>
+          <label for="empUser">שם משתמש (אנגלית/מספרים)</label>
+          <input id="empUser" placeholder="לדוגמה: OR / AVI1" />
+          <label for="empName">שם לתצוגה (עברית)</label>
+          <input id="empName" placeholder="לדוגמה: אור" />
+          <label for="empPass">סיסמה</label>
+          <input id="empPass" placeholder="לדוגמה: 1234" />
+          <label for="empDept">שייך למחלקה</label>
+          <select id="empDept"></select>
+          <button id="addEmpBtn" class="btn-green">הוסף עובד</button>
+
+          <div class="list" id="empList"></div>
+          <div class="small">בשלב הבא נוסיף גם עריכת עובד/החלפת מחלקה וכניסת עובדים לסניפים החדשים.</div>
+        </div>
+      </div>
+    </div>
+  </div>
+</body>
+</html>
