@@ -404,7 +404,21 @@ const USERS = {
   }
 
   // ניקוי מפתחות לא חוקיים שמגיעים לפעמים מטפסים/אובייקטים
-  list = list.filter(e => typeof e === 'string' && e.trim() !== '' && e !== 'name');
+  list = list.filter(e => {
+    if (typeof e !== 'string') return false;
+    const t = e.trim();
+    if (!t) return false;
+
+    // מסננים מפתחות מערכת/מטא
+    if (t === 'name') return false;
+    if (t.startsWith('_')) return false;
+
+    // לפעמים נשמר "_meta" או "meta_" ומוצג כעובד בטעות
+    const normalized = t.toLowerCase().replace(/[^a-z]/g, '');
+    if (normalized === 'meta') return false;
+
+    return true;
+  });
 
   // אם יש רשימת עובדים מוגדרת לסניף החדש – נוודא שהמחלקה משתמשת רק בהם
   if (typeof BRANCH_EMPLOYEES === 'object' && BRANCH_EMPLOYEES && Object.keys(BRANCH_EMPLOYEES).length > 0) {
