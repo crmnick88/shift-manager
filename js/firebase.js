@@ -63,9 +63,37 @@ async function ensureOwnBranchExists(uid) {
 // Goal:
 // - Admins (e.g. HAIFA legacy): can read /branches and match by managerUid
 // - New/non-admin managers: cannot read /branches root -> work only with /branches/{auth.uid}
+
+async function tryResolveLegacyHaifa(uid) {
+  try {
+    const haifaRef = db.ref("branches/HAIFA");
+    const snap = await haifaRef.once("value");
+    if (snap.exists()) {
+      const data = snap.val() || {};
+      // If this user is the HAIFA manager, resolve to legacy branch key
+      if (data.managerUid && data.managerUid === uid) {
+        currentBranchKey = "HAIFA";
+        systemSubscription = data.subscription || null;
+        // For legacy HAIFA we treat as "admin-like" for constraints path purposes
+        // (keeps root-level constraints to avoid breaking existing data).
+        isAdmin = true;
+        console.log("Resolved legacy HAIFA branch for managerUid:", uid);
+        return true;
+      }
+    }
+  } catch (e) {
+    // ignore; will fall back to other resolution paths
+  }
+  return false;
+}
+
 async function loadSystemSubscription() {
   const uid = currentBranchId;
   if (!uid) return;
+
+  // 0) Legacy HAIFA: try resolve by reading /branches/HAIFA (allowed for its managerUid)
+  if (await tryResolveLegacyHaifa(uid)) return;
+
 
   // 1) Try admin path: read all branches and resolve by managerUid
   try {
@@ -167,6 +195,10 @@ async function resolveConstraintsBasePath() {
     // Admin keeps legacy root paths (HAIFA) to avoid breaking existing data.
     const admin = (typeof window.isAdmin === 'function') ? window.isAdmin() : false;
     if (admin) { constraintsBasePath = "constraints"; return constraintsBasePath; }
+
+    // Legacy HAIFA manager (non-admin in rules) should still use root constraints
+    const bk0 = (typeof window.getBranchKey === 'function') ? window.getBranchKey() : u.uid;
+    if (String(bk0).toUpperCase() === 'HAIFA') { constraintsBasePath = "constraints"; return constraintsBasePath; }
 
     const branchKey = (typeof window.getBranchKey === 'function') ? window.getBranchKey() : u.uid;
     constraintsBasePath = `branches/${branchKey}/constraints`;
