@@ -330,7 +330,7 @@ function initShirotToggleUI() {
       setShirotActive(el.checked);
 
       // רענון תצוגה בהתאם למצב (לא נוגעים בלוגיקת משתמשים/סיסמאות)
-      try { await loadAllConstraints(); } catch(e) {}
+      try { await await loadAllConstraints(); } catch(e) {}
       try { if (currentSchedule) displaySchedule(currentSchedule); } catch(e) {}
 
       showMessage(
@@ -447,7 +447,33 @@ function initShirotToggleUI() {
 }
 
 
-  function loginEmployee() {
+  
+// =======================
+// ✅ WAIT FOR BRANCH/CONSTRAINTS INIT
+// =======================
+// When manager logs in, auth state + subscription resolution happen async in firebase.js.
+// We must wait until constraints path is resolved to branch-scoped (or admin legacy)
+// before doing any DB reads/writes, otherwise we may accidentally touch root paths.
+async function waitForBranchReady(timeoutMs = 5000) {
+  const start = Date.now();
+  while (Date.now() - start < timeoutMs) {
+    try {
+      const branchKey = (typeof window.getBranchKey === "function") ? window.getBranchKey() : null;
+      const isAdminFn = (typeof window.isAdmin === "function") ? window.isAdmin() : false;
+      const cPath = (typeof window.getConstraintsPath === "function") ? window.getConstraintsPath() : "constraints";
+
+      // Admins keep legacy root path; non-admins must have branchKey and scoped constraints path.
+      if (isAdminFn) return true;
+      if (branchKey && cPath && String(cPath).startsWith(`branches/${branchKey}/constraints`)) return true;
+    } catch (e) {}
+
+    // small delay
+    await new Promise((r) => setTimeout(r, 80));
+  }
+  return false;
+}
+
+async function loginEmployee() {
     const username = document.getElementById('emp-username').value.trim().toUpperCase();
     const password = document.getElementById('emp-password').value.trim();
 
@@ -464,7 +490,8 @@ function initShirotToggleUI() {
 
       applyConstraintOptions(currentEmployee);
 
-      loadEmployeeConstraints();
+      await waitForBranchReady(6000);
+      await loadEmployeeConstraints();
       showMessage('התחברת בהצלחה', 'success');
           initPushNotifications();
 } else {
@@ -481,8 +508,17 @@ function initShirotToggleUI() {
 
     if (!email || !password) return showMessage('אנא הזן אימייל וסיסמה', 'error');
 
-    const onAuthed = () => {
+    const onAuthed = async () => {
       console.log('Firebase Auth OK (manager)');
+      // ✅ Ensure branch + constraints path resolved before loading data
+      try {
+        if (typeof window.loadSystemSubscription === "function") await window.loadSystemSubscription();
+        if (typeof window.resolveConstraintsBasePath === "function") await window.resolveConstraintsBasePath();
+        await waitForBranchReady(6000);
+      } catch (e) {
+        console.warn("Branch init wait failed:", e);
+      }
+
 
       currentEmployee = 'MANAGER';
       localStorage.setItem('currentEmployee', currentEmployee);
