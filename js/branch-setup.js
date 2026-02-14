@@ -40,10 +40,20 @@
 
   // Firebase helpers (firebase.js already defines: firebase, auth, db, getBranchKey(), isAdmin())
   function getBranchKeySafe() {
+    // Prefer firebase.js resolver
     try {
-      if (typeof window.getBranchKey === 'function') return window.getBranchKey();
-      if (typeof window.BRANCH_KEY === 'string') return window.BRANCH_KEY;
+      if (typeof window.getBranchKey === 'function') {
+        const k = window.getBranchKey();
+        if (k) return k;
+      }
+      // Fallback: cached BRANCH_KEY
+      if (typeof window.BRANCH_KEY === 'string' && window.BRANCH_KEY) return window.BRANCH_KEY;
+      // Fallback: auth user uid (always branch-scoped for new managers)
+      const u = (window.auth && window.auth.currentUser) ? window.auth.currentUser : null;
+      if (u && u.uid) return u.uid;
     } catch (e) {}
+    return null;
+  }
     return null;
   }
 
@@ -56,15 +66,10 @@
     const k = getBranchKeySafe();
     // HAIFA legacy stays on root to avoid breaking existing data
     if (k && String(k).toUpperCase() === 'HAIFA') return db.ref(path);
-
     // For new managers, ALWAYS scope under branches/<uid>/
-    const uid =
-      k ||
-      (auth && auth.currentUser && auth.currentUser.uid ? auth.currentUser.uid : null) ||
-      (typeof localStorage !== 'undefined' ? localStorage.getItem('currentBranchKey') : null);
-
+    const uid = k || (auth.currentUser && auth.currentUser.uid ? auth.currentUser.uid : null);
     if (!uid) {
-      // Do not allow accidental root access like "/org/..."
+      // Do NOT fall back to root paths (would hit /org/* and cause permission_denied).
       throw new Error('Branch UID not ready yet');
     }
     return db.ref(`branches/${uid}/${path}`);
@@ -104,6 +109,18 @@
   }
 
   async function loadOrg() {
+  try {
+    // Ensure branch key exists before any DB access
+    const k = getBranchKeySafe();
+    if (!k) {
+      // Wait a tick for auth to populate
+      await new Promise(r => setTimeout(r, 50));
+    }
+  } catch (e) {
+    console.warn('Branch not ready, retrying loadOrg...', e);
+    setTimeout(() => loadOrg().catch(()=>{}), 200);
+    return;
+  }
     clearMsg();
     const deptList = el('deptList');
     const deptSelect = el('empDept');
@@ -233,6 +250,8 @@
       let key = getBranchKeySafe();
       // firebase.js may populate currentBranchKey asynchronously; always fall back to auth.uid
       if (!key && user && user.uid) key = user.uid;
+      // Persist for this page so refs never fall back to root
+      try { window.BRANCH_KEY = key; } catch (e) {}
       if (!key) {
         showMsg('לא נמצא branchKey (UID). ודא שנכנסת כמנהל.', 'err');
         return;
@@ -246,10 +265,11 @@
       el('addDeptBtn').addEventListener('click', addDepartment);
       el('addEmpBtn').addEventListener('click', addEmployee);
 
+      // Back to system: open manager login automatically
       const back = document.getElementById('backToSystem');
       if (back) {
         back.addEventListener('click', () => {
-          try { localStorage.setItem('afterBranchSetup', '1'); } catch(e) {}
+          try { localStorage.setItem('openManagerAfterSetup', '1'); } catch(e) {}
         });
       }
 
