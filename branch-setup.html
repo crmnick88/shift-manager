@@ -5,106 +5,93 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>הקמת סניף - מחלקות ועובדים</title>
 
-  <!-- Firebase Compat (same versions as main app usually uses) -->
+  <!-- Firebase Compat (same versions as main app) -->
   <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-auth-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-database-compat.js"></script>
 
   <style>
-    *{box-sizing:border-box}
-    body{margin:0;font-family:'Segoe UI',Tahoma,Arial,sans-serif;background:#f6f7fb;color:#111}
-    .wrap{max-width:1100px;margin:24px auto;padding:0 16px}
-    .card{background:#fff;border:1px solid #e8e9ef;border-radius:16px;box-shadow:0 8px 24px rgba(0,0,0,.06);padding:16px}
-    h1{margin:0 0 8px;font-size:22px}
-    .sub{margin:0 0 16px;color:#555}
-    .grid{display:grid;grid-template-columns:1fr 1fr;gap:16px}
-    @media (max-width: 900px){.grid{grid-template-columns:1fr}}
-    label{display:block;font-weight:600;margin:10px 0 6px}
-    input,select{width:100%;padding:10px 12px;border:1px solid #d8dbe6;border-radius:12px;font-size:14px}
-    button{border:0;border-radius:12px;padding:10px 14px;font-weight:700;cursor:pointer}
-    .btn{background:#4f67ff;color:#fff;width:100%;margin-top:12px}
-    .btn-danger{background:#e44; color:#fff}
-    .btn-ghost{background:#f2f3f8;color:#111}
-    .row{display:flex;gap:10px;align-items:center}
-    .row > *{flex:1}
-    .list{margin-top:12px;border-top:1px dashed #e5e6ee;padding-top:12px}
-    .item{display:flex;gap:10px;align-items:center;justify-content:space-between;padding:10px 12px;border:1px solid #eef0f6;border-radius:12px;margin-bottom:10px}
-    .item small{color:#666}
-    .status{margin-top:12px;padding:10px 12px;border-radius:12px;display:none}
-    .ok{background:#eaffef;border:1px solid #bfe9c8;color:#115c22}
-    .err{background:#ffecec;border:1px solid #f1b9b9;color:#7b1010}
-    a{color:#4f67ff;text-decoration:none}
-    .topbar{display:flex;justify-content:space-between;align-items:center;gap:10px;margin-bottom:12px}
+    * { box-sizing: border-box; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
+    body { margin:0; background:#f4f6fb; }
+    .wrap { max-width: 1100px; margin: 24px auto; padding: 0 12px; }
+    .card { background:#fff; border-radius: 18px; padding: 18px; box-shadow: 0 10px 26px rgba(20,30,60,.10); }
+    h1 { margin: 0 0 8px; font-size: 26px; }
+    .sub { color:#4b5563; margin-bottom: 16px; }
+    .row { display:flex; gap: 14px; flex-wrap: wrap; }
+    .col { flex: 1 1 420px; border: 1px solid #e5e7eb; border-radius: 14px; padding: 14px; }
+    .col h2 { margin: 0 0 12px; font-size: 18px; }
+    label { display:block; font-weight: 700; margin: 10px 0 6px; }
+    input, select { width:100%; padding: 10px 12px; border-radius: 10px; border: 1px solid #d1d5db; outline: none; }
+    button { width:100%; padding: 11px 12px; border-radius: 12px; border: none; cursor:pointer; font-weight: 800; }
+    .btn-blue { background:#2f6fed; color:#fff; }
+    .btn-green { background:#16a34a; color:#fff; }
+    .btn-red { background:#ef4444; color:#fff; }
+    .small { font-size: 12px; color:#6b7280; margin-top: 8px; }
+    .msg { margin: 12px 0 0; padding: 10px 12px; border-radius: 12px; display:none; }
+    .msg.ok { background:#ecfdf5; color:#065f46; border:1px solid #a7f3d0; }
+    .msg.err { background:#fef2f2; color:#991b1b; border:1px solid #fecaca; }
+    .list { margin-top: 12px; padding: 10px; border-radius: 12px; background: #f9fafb; border: 1px solid #e5e7eb; max-height: 320px; overflow:auto; }
+    .item { padding: 10px; border-bottom: 1px solid #e5e7eb; display:flex; align-items:center; justify-content: space-between; gap: 10px; }
+    .item:last-child { border-bottom:none; }
+    .pill { font-size: 12px; padding: 3px 8px; border-radius: 999px; background:#eef2ff; color:#3730a3; white-space: nowrap; }
+    .topbar { display:flex; justify-content: space-between; align-items:center; gap: 12px; margin-bottom: 14px; }
+    .link { text-decoration:none; color:#2f6fed; font-weight:800; }
   </style>
+
+  <script>
+  window.firebaseConfig = {
+    apiKey: "AIzaSyD-uaQ2aO87kGxbcc-m8_9fzJ3uhPv2zvk",
+    authDomain: "shift-manager-c026e.firebaseapp.com",
+    databaseURL: "https://shift-manager-c026e-default-rtdb.europe-west1.firebasedatabase.app",
+    projectId: "shift-manager-c026e",
+    storageBucket: "shift-manager-c026e.firebasestorage.app",
+    messagingSenderId: "1091605398341",
+    appId: "1:1091605398341:web:cb6c14e7d832c3e8df342c"
+  };
+</script>
+<script src="./js/firebase.js"></script>
+  <script defer src="./js/branch-setup.js"></script>
 </head>
 <body>
   <div class="wrap">
     <div class="card">
       <div class="topbar">
         <div>
-          <h1>🏗️ הקמת סניף – מחלקות ועובדים</h1>
-          <p class="sub">עמוד נפרד כדי שהקמה תהיה נקייה ולא תשבור את סניף חיפה.</p>
+          <h1>הקמת סניף – מחלקות ועובדים</h1>
+          <div class="sub">מסך נפרד כדי שתראה שגיאות בקונסול בקלות. הנתונים נשמרים תחת <span class="pill">branches/&lt;branchKey&gt;/org</span>.</div>
         </div>
-        <div class="row" style="max-width:360px">
-          <button id="btnBack" class="btn-ghost" type="button">חזרה למערכת</button>
-          <button id="btnSignOut" class="btn-danger" type="button">התנתק</button>
+        <a class="link" href="./index.html">חזרה למערכת</a>
+      </div>
+
+      <div id="msg" class="msg"></div>
+
+      <div class="row">
+        <div class="col">
+          <h2>➕ הוספת מחלקה</h2>
+          <label for="deptName">שם מחלקה</label>
+          <input id="deptName" placeholder="לדוגמה: מחסן / קו לבן / קו קופות" />
+          <button id="addDeptBtn" class="btn-blue">הוסף מחלקה</button>
+
+          <div class="list" id="deptList"></div>
+          <div class="small">אפשר למחוק מחלקה רק אם אין בה עובדים (כדי לא לשבור שיוכים).</div>
         </div>
-      </div>
 
-      <div id="authNotice" class="status err" style="display:none">
-        לא מחובר. כנס קודם כמנהל במערכת הראשית ואז פתח את העמוד הזה שוב.
-      </div>
+        <div class="col">
+          <h2>➕ הוספת עובד</h2>
+          <label for="empUser">שם משתמש (אנגלית/מספרים)</label>
+          <input id="empUser" placeholder="לדוגמה: OR / AVI1" />
+          <label for="empName">שם לתצוגה (עברית)</label>
+          <input id="empName" placeholder="לדוגמה: אור" />
+          <label for="empPass">סיסמה</label>
+          <input id="empPass" placeholder="לדוגמה: 1234" />
+          <label for="empDept">שייך למחלקה</label>
+          <select id="empDept"></select>
+          <button id="addEmpBtn" class="btn-green">הוסף עובד</button>
 
-      <div id="legacyNotice" class="status err" style="display:none">
-        זה סניף חיפה (Legacy). לא מקימים אותו כאן כרגע.
-      </div>
-
-      <div id="main" style="display:none">
-        <div class="grid">
-          <div class="card" style="box-shadow:none">
-            <h2 style="margin:0 0 8px;font-size:18px">➕ הוספת מחלקה</h2>
-            <label>שם מחלקה</label>
-            <input id="deptName" placeholder="לדוגמה: מחסן / קו לבן / קו קופות" />
-            <button id="btnAddDept" class="btn" type="button">הוסף מחלקה</button>
-            <div id="deptStatus" class="status"></div>
-
-            <div class="list">
-              <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
-                <strong>מחלקות קיימות</strong>
-                <small id="deptCount">0</small>
-              </div>
-              <div id="deptList"></div>
-            </div>
-          </div>
-
-          <div class="card" style="box-shadow:none">
-            <h2 style="margin:0 0 8px;font-size:18px">➕ הוספת עובד</h2>
-            <label>שם משתמש (אנגלית/ספרות)</label>
-            <input id="empUser" placeholder="לדוגמה: OR / AVI / NATALI" />
-            <label>שם לתצוגה (עברית)</label>
-            <input id="empName" placeholder="לדוגמה: אור" />
-            <label>סיסמה</label>
-            <input id="empPass" placeholder="לדוגמה: 1234" />
-            <label>שייך למחלקה</label>
-            <select id="empDept">
-              <option value="">— בחר מחלקה —</option>
-            </select>
-            <button id="btnAddEmp" class="btn" type="button">הוסף עובד</button>
-            <div id="empStatus" class="status"></div>
-
-            <div class="list">
-              <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
-                <strong>עובדים קיימים</strong>
-                <small id="empCount">0</small>
-              </div>
-              <div id="empList"></div>
-            </div>
-          </div>
+          <div class="list" id="empList"></div>
+          <div class="small">בשלב הבא נוסיף גם עריכת עובד/החלפת מחלקה וכניסת עובדים לסניפים החדשים.</div>
         </div>
       </div>
-
-      <script src="./js/firebase.js"></script>
-      <script src="./js/branch-setup.js"></script>
     </div>
   </div>
 </body>
