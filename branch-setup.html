@@ -3,132 +3,312 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>הקמת סניף – מחלקות ועובדים</title>
+  <title>הקמת מחלקות ועובדים</title>
 
   <!-- Firebase Compat -->
   <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-auth-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-database-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-auth-compat.js"></script>
 
-  <!-- IMPORTANT: firebase.js expects window.firebaseConfig to exist -->
+  <!-- Config -->
   <script>
-    window.firebaseConfig = {
+    window.firebaseConfig = window.firebaseConfig || {
       apiKey: "AIzaSyD-uaQ2aO87kGxbcc-m8_9fzJ3uhPv2zvk",
       authDomain: "shift-manager-c026e.firebaseapp.com",
       databaseURL: "https://shift-manager-c026e-default-rtdb.europe-west1.firebasedatabase.app",
       projectId: "shift-manager-c026e",
+      storageBucket: "shift-manager-c026e.firebasestorage.app",
+      messagingSenderId: "1091605398341",
       appId: "1:1091605398341:web:cb6c14e7d832c3e8df342c"
     };
   </script>
-
-  <!-- Your existing initializer (uses window.firebaseConfig) -->
   <script src="./js/firebase.js"></script>
 
   <style>
     *{box-sizing:border-box}
-    body{
-      margin:0;
-      font-family:'Segoe UI',Tahoma,Arial,sans-serif;
-      background:#f6f7fb;
-      color:#111;
-    }
-    .wrap{max-width:1200px;margin:22px auto;padding:0 16px}
-    .top{
-      display:flex;align-items:center;justify-content:space-between;gap:12px;
-      margin-bottom:14px;
-    }
-    .back{color:#245bff;text-decoration:none;font-weight:800}
-    h1{margin:0;font-size:22px}
-    .hint{color:#666;font-size:13px}
-    .grid{display:grid;grid-template-columns:1fr 1fr;gap:14px}
-    @media(max-width:900px){.grid{grid-template-columns:1fr}}
-    .card{
-      background:#fff;border:1px solid #e8e9ef;border-radius:16px;
-      box-shadow:0 10px 28px rgba(0,0,0,.06);
-      padding:14px;
-    }
-    .card h2{margin:0 0 10px;font-size:18px}
+    body{font-family:Segoe UI,Tahoma,Arial,sans-serif;background:#f2f4f8;margin:0;padding:0}
+    .wrap{max-width:980px;margin:24px auto;padding:16px}
+    .card{background:#fff;border-radius:16px;padding:16px;border:1px solid #e7e7e7;box-shadow:0 8px 24px rgba(0,0,0,.06);margin-bottom:14px}
+    h1{margin:0 0 10px 0;color:#34495e}
+    .row{display:flex;gap:12px;flex-wrap:wrap}
+    .col{flex:1;min-width:220px}
     label{display:block;font-weight:700;margin:10px 0 6px}
-    input,select{
-      width:100%;padding:10px 12px;border-radius:12px;border:1px solid #dfe3f0;
-      outline:none;
-    }
-    button{
-      width:100%;margin-top:12px;padding:12px 14px;border:0;border-radius:12px;
-      font-weight:900;cursor:pointer;
-      background:#4f67ff;color:#fff;
-    }
-    button.secondary{background:#19a974}
-    .msg{
-      display:none;
-      margin:12px 0 0;
-      padding:10px 12px;border-radius:12px;font-weight:800;
-      border:1px solid transparent;
-    }
-    .msg.ok{background:#eaffef;border-color:#bfe9c8;color:#115c22}
-    .msg.err{background:#ffecec;border-color:#f1b9b9;color:#7b1010}
-    .list{margin-top:12px;display:flex;flex-direction:column;gap:8px}
-    .item{
-      border:1px solid #eceef7;border-radius:12px;padding:10px 12px;
-      display:flex;justify-content:space-between;align-items:center;gap:10px;
-    }
-    .item .meta{color:#666;font-size:12px;font-weight:700}
-    .dangerBtn{
-      background:#e44;color:#fff;border:0;border-radius:10px;padding:8px 10px;
-      font-weight:900;cursor:pointer;white-space:nowrap;
-    }
+    input,select{width:100%;padding:10px 12px;border:1px solid #d9d9d9;border-radius:10px;font-size:15px}
+    button{cursor:pointer;border:0;border-radius:12px;padding:10px 14px;font-size:15px;font-weight:700}
+    .btn{background:#4b6cb7;color:#fff}
+    .btn2{background:#6c757d;color:#fff}
+    .btnDanger{background:#dc3545;color:#fff}
+    .muted{opacity:.75}
+    .pill{display:inline-flex;gap:8px;align-items:center;background:#f6f7fb;border:1px solid #e7e7e7;border-radius:999px;padding:6px 10px;margin:6px 6px 0 0}
+    .small{font-size:12px}
+    .list{margin-top:10px}
+    .hr{height:1px;background:#eee;margin:14px 0}
+    .msg{margin-top:10px;padding:10px 12px;border-radius:12px;display:none}
+    .ok{background:#e8fff0;border:1px solid #b6f2c6;color:#1c7c3a}
+    .err{background:#ffecec;border:1px solid #ffb9b9;color:#b30000}
   </style>
 </head>
 <body>
   <div class="wrap">
-    <div class="top">
-     <a class="back" href="./index.html"
-   onclick="try{localStorage.setItem('afterBranchSetup','1')}catch(e){}">
-  ← חזרה למערכת
-</a>
-      <div>
-        <h1>הקמת סניף – מחלקות ועובדים</h1>
-        <div class="hint">הנתונים נשמרים תחת <code>branches/&lt;branchKey&gt;/org</code></div>
+    <div class="card">
+      <div style="display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap;">
+        <h1>🏗️ הקמת מחלקות ועובדים</h1>
+        <div>
+          <button class="btn2" onclick="backToMain()">⬅️ חזרה</button>
+        </div>
       </div>
-      <div></div>
+      <div class="muted small">
+        מסך זה מיועד לסניפים חדשים בלבד. הוא כותב לנתיבים:
+        <code>branches/&lt;branchKey&gt;/org/departments</code>,
+        <code>branches/&lt;branchKey&gt;/employees</code>,
+        <code>branches/&lt;branchKey&gt;/displayNames</code>
+      </div>
+      <div id="msg" class="msg"></div>
     </div>
 
-    <div id="msg" class="msg"></div>
+    <div class="card">
+      <h2 style="margin:0 0 8px 0;">1) יצירת מחלקה</h2>
+      <div class="row">
+        <div class="col">
+          <label>שם מחלקה</label>
+          <input id="deptName" type="text" placeholder='לדוגמה: "מחסן" / "קו לבן"' />
+        </div>
+        <div class="col" style="display:flex;align-items:end;">
+          <button class="btn" style="width:100%;" onclick="createDepartment()">➕ צור מחלקה</button>
+        </div>
+      </div>
+      <div id="deptList" class="list"></div>
+    </div>
 
-    <div class="grid">
-      <div class="card">
-        <h2>➕ הוספת עובד</h2>
-
-        <label for="empUser">שם משתמש (אנגלית/מספרים)</label>
-        <input id="empUser" placeholder="לדוגמה: AVI1" />
-
-        <label for="empName">שם לתצוגה (עברית)</label>
-        <input id="empName" placeholder="לדוגמה: אבי" />
-
-        <label for="empPass">סיסמה</label>
-        <input id="empPass" placeholder="לדוגמה: 1234" />
-
-        <label for="empDept">שיוך למחלקה</label>
-        <select id="empDept"></select>
-
-        <button id="addEmpBtn" class="secondary" type="button">הוסף עובד</button>
-
-        <div class="list" id="empList"></div>
+    <div class="card">
+      <h2 style="margin:0 0 8px 0;">2) הוספת עובד ושיוך למחלקה</h2>
+      <div class="row">
+        <div class="col">
+          <label>מחלקה</label>
+          <select id="deptSelect"></select>
+        </div>
+        <div class="col">
+          <label>שם עובד (מזהה / username)</label>
+          <input id="empKey" type="text" placeholder='לדוגמה: "OR" / "אור"' />
+          <div class="muted small">זה המפתח שנשמר בדאטה. מומלץ בלי רווחים.</div>
+        </div>
+        <div class="col">
+          <label>שם תצוגה</label>
+          <input id="empDisplay" type="text" placeholder='לדוגמה: "אור כהן"' />
+        </div>
+      </div>
+      <div class="row">
+        <div class="col" style="display:flex;gap:10px;align-items:end;">
+          <button class="btn" style="flex:1" onclick="addEmployee()">➕ הוסף עובד למחלקה</button>
+          <button class="btn2" style="flex:1" onclick="reloadFromDB()">🔄 רענן נתונים</button>
+        </div>
       </div>
 
-      <div class="card">
-        <h2>➕ הוספת מחלקה</h2>
+      <div class="hr"></div>
 
-        <label for="deptName">שם מחלקה</label>
-        <input id="deptName" placeholder="לדוגמה: מחסן / קו לבן / קו קופות" />
+      <h3 style="margin:0 0 8px 0;">תצוגה מקדימה</h3>
+      <div id="preview" class="list"></div>
+    </div>
 
-        <button id="addDeptBtn" type="button">הוסף מחלקה</button>
-
-        <div class="list" id="deptList"></div>
+    <div class="card">
+      <h2 style="margin:0 0 8px 0;">3) סיום</h2>
+      <div class="muted">בסיום, חזור למסך הראשי והתחבר כמנהל. הנתונים ייטענו אוטומטית מהסניף.</div>
+      <div style="margin-top:10px;">
+        <button class="btn" onclick="finishSetup()">✅ סיימתי – חזור להתחברות מנהל</button>
       </div>
     </div>
   </div>
 
-  <script src="./js/branch-setup.js" defer></script>
+<script>
+  // ---------- helpers ----------
+  function showMsg(text, ok=true){
+    const el = document.getElementById('msg');
+    el.style.display = 'block';
+    el.className = 'msg ' + (ok ? 'ok' : 'err');
+    el.textContent = text;
+  }
+  function clearMsg(){ const el=document.getElementById('msg'); el.style.display='none'; el.textContent=''; }
+
+  const branchKey = localStorage.getItem('currentBranchKey');
+  if (!branchKey) {
+    showMsg("אין currentBranchKey בלוקאל סטורג'. המסך מיועד לסניפים חדשים בלבד.", false);
+  }
+
+  function baseRef(path){ return firebase.database().ref(`branches/${branchKey}/${path}`); }
+
+  let DEPTS = {};          // {deptName: {empKey:true}}
+  let DISPLAY = {};        // {empKey: "שם תצוגה"}
+  let EMPLOYEES = {};      // {empKey:true}
+
+  async function reloadFromDB(){
+    clearMsg();
+    if (!branchKey) return;
+
+    try{
+      const [dSnap, eSnap, nSnap] = await Promise.all([
+        baseRef('org/departments').once('value'),
+        baseRef('employees').once('value'),
+        baseRef('displayNames').once('value'),
+      ]);
+
+      DEPTS = dSnap.val() || {};
+      EMPLOYEES = eSnap.val() || {};
+      DISPLAY = nSnap.val() || {};
+
+      renderDepts();
+      renderPreview();
+      showMsg("נתונים נטענו בהצלחה ✅", true);
+    }catch(err){
+      console.error(err);
+      showMsg("שגיאה בטעינה: " + (err?.message || err), false);
+    }
+  }
+
+  function renderDepts(){
+    const list = document.getElementById('deptList');
+    const sel = document.getElementById('deptSelect');
+    list.innerHTML = '';
+    sel.innerHTML = '';
+
+    const deptNames = Object.keys(DEPTS || {});
+    if (deptNames.length === 0){
+      list.innerHTML = '<div class="muted">אין מחלקות עדיין</div>';
+      sel.innerHTML = '<option value="">-- אין מחלקות --</option>';
+      return;
+    }
+
+    deptNames.forEach(name=>{
+      const pill = document.createElement('div');
+      pill.className='pill';
+      pill.innerHTML = `<strong>${name}</strong> <span class="muted small">(${Object.keys(DEPTS[name]||{}).length} עובדים)</span>
+                        <button class="btnDanger small" style="padding:6px 10px;border-radius:10px;" onclick="deleteDept('${name.replace(/'/g,"\'")}')">מחק</button>`;
+      list.appendChild(pill);
+
+      const opt=document.createElement('option');
+      opt.value=name; opt.textContent=name;
+      sel.appendChild(opt);
+    });
+  }
+
+  function renderPreview(){
+    const box = document.getElementById('preview');
+    box.innerHTML = '';
+    const deptNames = Object.keys(DEPTS || {});
+    if (deptNames.length === 0){
+      box.innerHTML = '<div class="muted">תיצור מחלקה ותוסיף עובדים כדי לראות כאן תצוגה</div>';
+      return;
+    }
+
+    deptNames.forEach(dept=>{
+      const wrap=document.createElement('div');
+      wrap.className='card';
+      wrap.style.margin='10px 0';
+      wrap.style.padding='12px';
+      wrap.innerHTML = `<div style="font-weight:800;color:#4b6cb7;margin-bottom:8px;">🏢 ${dept}</div>`;
+      const emps = Object.keys(DEPTS[dept]||{});
+      if (emps.length===0){
+        wrap.innerHTML += `<div class="muted">אין עובדים במחלקה</div>`;
+      }else{
+        emps.forEach(k=>{
+          const disp = DISPLAY[k] || k;
+          const row=document.createElement('div');
+          row.className='pill';
+          row.innerHTML = `<span>${disp}</span>
+                           <span class="muted small">(${k})</span>
+                           <button class="btnDanger small" style="padding:6px 10px;border-radius:10px;" onclick="removeEmpFromDept('${dept.replace(/'/g,"\'")}','${k.replace(/'/g,"\'")}')">הסר</button>`;
+          wrap.appendChild(row);
+        });
+      }
+      box.appendChild(wrap);
+    });
+  }
+
+  async function createDepartment(){
+    clearMsg();
+    const name = (document.getElementById('deptName').value || '').trim();
+    if (!name){ showMsg("חייב למלא שם מחלקה", false); return; }
+    if (!branchKey) return;
+
+    try{
+      // ניצור מחלקה כ-אובייקט ריק (כדי שהמפתח יופיע)
+      await baseRef(`org/departments/${name}`).set(DEPTS[name] || {});
+      document.getElementById('deptName').value='';
+      await reloadFromDB();
+      showMsg(`מחלקה "${name}" נוצרה ✅`, true);
+    }catch(err){
+      console.error(err);
+      showMsg("שגיאה ביצירת מחלקה: " + (err?.message || err), false);
+    }
+  }
+
+  async function deleteDept(name){
+    if (!confirm(`למחוק את המחלקה "${name}"?`)) return;
+    clearMsg();
+    try{
+      await baseRef(`org/departments/${name}`).remove();
+      await reloadFromDB();
+      showMsg(`המחלקה "${name}" נמחקה ✅`, true);
+    }catch(err){
+      console.error(err);
+      showMsg("שגיאה במחיקה: " + (err?.message || err), false);
+    }
+  }
+
+  async function addEmployee(){
+    clearMsg();
+    const dept = document.getElementById('deptSelect').value;
+    const key = (document.getElementById('empKey').value || '').trim();
+    const disp = (document.getElementById('empDisplay').value || '').trim();
+
+    if (!dept){ showMsg("בחר מחלקה", false); return; }
+    if (!key){ showMsg("חייב למלא שם עובד (מזהה)", false); return; }
+    if (key === 'name'){ showMsg('המזהה "name" לא חוקי (זה מה שגרם לבאג אצלך). תבחר מזהה אחר.', false); return; }
+
+    try{
+      const updates = {};
+      // רישום עובד ברשימת עובדים של הסניף
+      updates[`employees/${key}`] = true;
+      // שיוך עובד למחלקה
+      updates[`org/departments/${dept}/${key}`] = true;
+      // שם תצוגה
+      if (disp) updates[`displayNames/${key}`] = disp;
+
+      await baseRef('').update(updates);
+
+      document.getElementById('empKey').value='';
+      document.getElementById('empDisplay').value='';
+      await reloadFromDB();
+      showMsg("העובד נוסף ✅", true);
+    }catch(err){
+      console.error(err);
+      showMsg("שגיאה בהוספת עובד: " + (err?.message || err), false);
+    }
+  }
+
+  async function removeEmpFromDept(dept, key){
+    if (!confirm(`להסיר את ${DISPLAY[key] || key} מהמחלקה "${dept}"?`)) return;
+    clearMsg();
+    try{
+      await baseRef(`org/departments/${dept}/${key}`).remove();
+      await reloadFromDB();
+      showMsg("הוסר מהמחלקה ✅", true);
+    }catch(err){
+      console.error(err);
+      showMsg("שגיאה בהסרה: " + (err?.message || err), false);
+    }
+  }
+
+  function backToMain(){
+    window.location.href = "./index.html";
+  }
+
+  function finishSetup(){
+    localStorage.setItem('openManagerAfterSetup','1');
+    window.location.href = "./index.html";
+  }
+
+  // init
+  reloadFromDB();
+</script>
 </body>
 </html>
