@@ -248,5 +248,19 @@ window.firebaseConfig = {
 </div>
 
   <script src="./js/app.js"></script>
+  <script>
+    // After returning from branch-setup, open the manager login panel automatically
+    (function() {
+      try {
+        if (localStorage.getItem('openManagerAfterSetup') === '1') {
+          localStorage.removeItem('openManagerAfterSetup');
+          // showLoginForm is defined in app.js
+          if (typeof window.showLoginForm === 'function') {
+            window.showLoginForm('manager');
+          }
+        }
+      } catch (e) {}
+    })();
+  </script>
 </body>
 </html>
