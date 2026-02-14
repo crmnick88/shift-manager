@@ -219,7 +219,9 @@
         showMsg('לא מחובר. חזור ונסה שוב דרך "כניסת מנהל".', 'err');
         return;
       }
-      const key = getBranchKeySafe();
+      let key = getBranchKeySafe();
+      // firebase.js may populate currentBranchKey asynchronously; always fall back to auth.uid
+      if (!key && user && user.uid) key = user.uid;
       if (!key) {
         showMsg('לא נמצא branchKey (UID). ודא שנכנסת כמנהל.', 'err');
         return;
