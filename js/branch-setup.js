@@ -53,12 +53,21 @@
   }
 
   function ref(path) {
-    // NEVER fall back to root-level /org/* for new branches.
-    // If branchKey isn't ready yet, fall back to auth.currentUser.uid.
-    const k = getBranchKeySafe() || (auth && auth.currentUser ? auth.currentUser.uid : null);
-    if (!k) throw new Error('Missing branch key/uid (not authenticated yet)');
-    if (String(k).toUpperCase() === 'HAIFA') return db.ref(path); // keep HAIFA legacy out of this flow
-    return db.ref(`branches/${k}/${path}`);
+    const k = getBranchKeySafe();
+    // HAIFA legacy stays on root to avoid breaking existing data
+    if (k && String(k).toUpperCase() === 'HAIFA') return db.ref(path);
+
+    // For new managers, ALWAYS scope under branches/<uid>/
+    const uid =
+      k ||
+      (auth && auth.currentUser && auth.currentUser.uid ? auth.currentUser.uid : null) ||
+      (typeof localStorage !== 'undefined' ? localStorage.getItem('currentBranchKey') : null);
+
+    if (!uid) {
+      // Do not allow accidental root access like "/org/..."
+      throw new Error('Branch UID not ready yet');
+    }
+    return db.ref(`branches/${uid}/${path}`);
   }
 
   function safeKey(s) {
@@ -236,6 +245,13 @@
       // wire buttons
       el('addDeptBtn').addEventListener('click', addDepartment);
       el('addEmpBtn').addEventListener('click', addEmployee);
+
+      const back = document.getElementById('backToSystem');
+      if (back) {
+        back.addEventListener('click', () => {
+          try { localStorage.setItem('afterBranchSetup', '1'); } catch(e) {}
+        });
+      }
 
       await loadOrg();
       unsub();
