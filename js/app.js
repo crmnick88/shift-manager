@@ -305,67 +305,55 @@ async function approveCurrentSchedule(){
 // DYNAMIC BRANCH OVERRIDE
 // =============================
 
-
-// =============================
-// DYNAMIC BRANCH OVERRIDE (safe)
-// =============================
-// For HAIFA (legacy) we keep the hard-coded DEPARTMENTS/USERS.
-// For new branches we load departments/employees from:
-//   branches/<branchKey>/org/departments
-//   branches/<branchKey>/org/employees
-//
-// Important: we DO NOT trust localStorage.currentBranchKey for deciding branch here,
-// because it may remain from a previous session and break HAIFA.
-// We rely on window.getBranchKey()/window.BRANCH_KEY (resolved by firebase.js).
 (function initDynamicBranchData() {
-  try {
-    const branchKey = __getBranchKeySafe();
-    if (!branchKey || __isHaifaLegacy()) {
-      window.__branchDataReady = Promise.resolve();
-      return;
-    }
+  const branchKey = localStorage.getItem("currentBranchKey");
 
-    console.log("Loading dynamic branch data for:", branchKey);
-    const basePath = `branches/${branchKey}/org`;
-
-    const pDepartments = firebase.database()
-      .ref(`${basePath}/departments`)
-      .once("value")
-      .then(snap => {
-        const data = snap.val();
-        // Normalize: keep whatever shape is stored; getDeptEmployees() can handle array/object.
-        Object.keys(DEPARTMENTS).forEach(k => delete DEPARTMENTS[k]);
-        if (data && typeof data === 'object') {
-          Object.assign(DEPARTMENTS, data);
-          console.log("Departments loaded from branch");
-        } else {
-          console.log("No departments yet (new branch)");
-        }
-      })
-      .catch(err => console.warn("Failed loading departments:", err));
-
-    const pEmployees = firebase.database()
-      .ref(`${basePath}/employees`)
-      .once("value")
-      .then(snap => {
-        const data = snap.val();
-        Object.keys(USERS).forEach(k => delete USERS[k]);
-        if (data && typeof data === 'object') {
-          Object.assign(USERS, data);
-          console.log("Employees loaded from branch");
-        } else {
-          console.log("No employees yet (new branch)");
-        }
-      })
-      .catch(err => console.warn("Failed loading employees:", err));
-
-    window.__branchDataReady = Promise.all([pDepartments, pEmployees]);
-  } catch (e) {
-    console.warn("initDynamicBranchData failed:", e);
-    window.__branchDataReady = Promise.resolve();
+  // חיפה (הישן): לא טוענים נתונים דינמיים. אם נשאר ערך ישן ב-localStorage—ננקה.
+  if (!branchKey || branchKey === "HAIFA") {
+    if (branchKey === "HAIFA") localStorage.removeItem("currentBranchKey");
+    return;
   }
+
+  console.log("Loading dynamic branch data for:", branchKey);
+
+  const basePath = `branches/${branchKey}/org`;
+
+  // טען מחלקות
+  firebase.database()
+    .ref(`${basePath}/departments`)
+    .once("value")
+    .then(snapshot => {
+      const data = snapshot.val();
+      if (data) {
+        Object.keys(DEPARTMENTS).forEach(k => delete DEPARTMENTS[k]);
+        Object.assign(DEPARTMENTS, data);
+        console.log("Departments loaded from branch");
+      } else {
+        // אין נתונים → סניף חדש → ריק
+        Object.keys(DEPARTMENTS).forEach(k => delete DEPARTMENTS[k]);
+        console.log("No departments yet (new branch)");
+      }
+    });
+
+  // טען עובדים
+  firebase.database()
+    .ref(`${basePath}/employees`)
+    .once("value")
+    .then(snapshot => {
+      const data = snapshot.val();
+      if (data) {
+        Object.keys(USERS).forEach(k => delete USERS[k]);
+        Object.assign(USERS, data);
+        console.log("Employees loaded from branch");
+      } else {
+        Object.keys(USERS).forEach(k => delete USERS[k]);
+        console.log("No employees yet (new branch)");
+      }
+    });
+
 })();
-// ======== נציגות שירות: הפעלה/כיבוי עובד "שירות" (SHIROT) ========
+
+  // ======== נציגות שירות: הפעלה/כיבוי עובד "שירות" (SHIROT) ========
   const SHIROT_TOGGLE_KEY = 'shirotActive';
   function isShirotActive() {
     const v = localStorage.getItem(SHIROT_TOGGLE_KEY);
@@ -378,30 +366,29 @@ async function approveCurrentSchedule(){
   const val = DEPARTMENTS[dept];
   let list = [];
 
-  // חיפה – מערך
+  // חיפה – מערך (לדוגמה: ['AVI','MOHAMAD'])
   if (Array.isArray(val)) {
     list = val.slice();
   }
-  // סניף חדש – אובייקט (למשל { AVI: true, MOHAMAD: true })
+  // סניף חדש – אובייקט (לדוגמה: {AVI:true, MOHAMAD:true})
   else if (val && typeof val === "object") {
     list = Object.keys(val);
   }
 
-// נציגות שירות – כיבוי עובד "שירות" (SHIROT)
-if (dept === 'נציגות שירות' && !isShirotActive()) {
-    list = list.filter(e => e !== 'ELIYA');
-}
-return list;
-
-
-    // קו לבן: כיבוי "אליה"
-    if (dept === 'מחלקת קו לבן' && !isEliyaActive()) {
-      return list.filter(e => e !== 'ELIYA');
-    }
-
-    return list;
+  // נציגות שירות – כיבוי SHIROT
+  if (dept === 'נציגות שירות' && typeof isShirotActive === "function" && !isShirotActive()) {
+    list = list.filter(e => e !== 'SHIROT');
   }
-  function getDeptSizeForRules(dept) {
+
+  // קו לבן – כיבוי ELIYA
+  if (dept === 'מחלקת קו לבן' && typeof isEliyaActive === "function" && !isEliyaActive()) {
+    list = list.filter(e => e !== 'ELIYA');
+  }
+
+  return list;
+}
+
+function getDeptSizeForRules(dept) {
     return getDeptEmployees(dept).length;
   }
 
@@ -2242,15 +2229,7 @@ if ("serviceWorker" in navigator) {
     // =======================
 // 🔁 Restore login after refresh
 // =======================
-document.addEventListener('DOMContentLoaded', async () => {
-// Ensure branch data (departments/employees) is loaded BEFORE we build UI / load constraints.
-try {
-  if (window.__branchDataReady) await window.__branchDataReady;
-} catch (e) {
-  console.warn("Branch data load wait failed:", e);
-}
-
-
+document.addEventListener('DOMContentLoaded', () => {
   // ✅ If we just finished branch setup, continue to the branch manager portal
   try {
     if (localStorage.getItem('afterBranchSetup') === '1') {
