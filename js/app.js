@@ -1,42 +1,4 @@
 
-
-// ===== Compatibility helpers (Stage2) =====
-// Returns array of employee ids that belong to a department.
-// Works with the legacy HAIFA structures (DEPARTMENTS/USERS) and with future branch-scoped org structures.
-function getDeptEmployees(deptName) {
-  try {
-    // If there is a map dept -> employees already prepared, use it
-    if (window.__deptEmployees && window.__deptEmployees[deptName]) return window.__deptEmployees[deptName];
-
-    // Legacy: DEPARTMENTS is a map of department name -> array of usernames OR object containing employees
-    if (typeof DEPARTMENTS !== "undefined" && DEPARTMENTS && DEPARTMENTS[deptName]) {
-      const v = DEPARTMENTS[deptName];
-      if (Array.isArray(v)) return v.slice();
-      if (v && typeof v === "object") {
-        if (Array.isArray(v.employees)) return v.employees.slice();
-        if (Array.isArray(v.users)) return v.users.slice();
-      }
-    }
-
-    // If USERS has dept field
-    if (typeof USERS !== "undefined" && USERS) {
-      const out = [];
-      for (const [uid, u] of Object.entries(USERS)) {
-        if (u && (u.dept === deptName || u.department === deptName)) out.push(uid);
-      }
-      if (out.length) return out;
-    }
-  } catch (e) {}
-  return [];
-}
-
-// Dept "size for rules" used by scheduling heuristics.
-function getDeptSizeForRules(deptName) {
-  const emps = getDeptEmployees(deptName);
-  return Array.isArray(emps) ? emps.length : 0;
-}
-
-
 // ===== Branch-scoped paths (multi-tenant) =====
 // For the legacy HAIFA branch, we keep using the old root-level paths so nothing breaks.
 function __getBranchKeySafe() {
@@ -236,47 +198,6 @@ let currentEmployee = '';
     if(b) b.style.display = v ? 'inline-block' : 'none';
   }
 
-
-  // =======================
-  // 🏗️ Branch setup page button (for non-HAIFA managers)
-  // =======================
-  function openBranchSetupPage() {
-    if (__isHaifaLegacy()) {
-      showMessage('ℹ️ סניף חיפה הוא סניף לגאסי כרגע (הקמה דרך המסך הזה כבויה).', 'error');
-      return;
-    }
-    // Navigate to dedicated page (easier debugging)
-    window.location.href = './branch-setup.html';
-  }
-
-  function ensureBranchSetupButton() {
-    try {
-      const sec = document.getElementById('manager-section');
-      if (!sec) return;
-
-      // Avoid duplicates
-      if (document.getElementById('open-branch-setup-btn')) return;
-
-      const btn = document.createElement('button');
-      btn.id = 'open-branch-setup-btn';
-      btn.textContent = 'הקמת סניף';
-      btn.style.margin = '8px 0 14px 0';
-      btn.style.padding = '10px 14px';
-      btn.style.border = 'none';
-      btn.style.borderRadius = '10px';
-      btn.style.cursor = 'pointer';
-      btn.style.fontWeight = '700';
-      btn.style.background = '#2f6fed';
-      btn.style.color = '#fff';
-      btn.onclick = openBranchSetupPage;
-
-      // Put at top of manager section
-      sec.insertBefore(btn, sec.firstChild);
-    } catch (e) {
-      console.warn('ensureBranchSetupButton error', e);
-    }
-  }
-
 async function approveCurrentSchedule(){
   if(!currentSchedule) return;
 
@@ -355,11 +276,9 @@ async function approveCurrentSchedule(){
   showMessage(`📥 נטען הסידור המאושר האחרון (${k})`, 'success');
 }
 
-  // =======================
-  // 🏢 ORGANIZATION (Departments & Employees)
-  // =======================
-  // HAIFA = legacy hardcoded (kept as-is)
-  const LEGACY_USERS = {
+
+
+  const USERS = {
     'ILAY': 'ILAY',
     'ROVEN': 'ROVEN',
     'HAI': 'HAI',
@@ -374,7 +293,7 @@ async function approveCurrentSchedule(){
     'MOHAMAD': 'MOHAMAD'
   };
 
-  const LEGACY_DEPARTMENTS = {
+  const DEPARTMENTS = {
     'מחלקת מיחשוב': ['ILAY', 'ROVEN'],
     'מחלקת קטנים': ['HAI', 'NATALI'],
     'מחלקת מחסנאים': ['AVI', 'MOHAMAD'],
@@ -382,7 +301,96 @@ async function approveCurrentSchedule(){
     'נציגות שירות': ['LIOR', 'AMANI', 'SHIROT']
   };
 
-  const LEGACY_DISPLAY_NAMES = {
+  // ======== נציגות שירות: הפעלה/כיבוי עובד "שירות" (SHIROT) ========
+  const SHIROT_TOGGLE_KEY = 'shirotActive';
+  function isShirotActive() {
+    const v = localStorage.getItem(SHIROT_TOGGLE_KEY);
+    return v === null ? true : v === 'true';
+  }
+  function setShirotActive(v) {
+    localStorage.setItem(SHIROT_TOGGLE_KEY, v ? 'true' : 'false');
+  }
+  function getDeptEmployees(dept) {
+    const list = (DEPARTMENTS[dept] || []).slice();
+
+    // נציגות שירות: כיבוי "שירות"
+    if (dept === 'נציגות שירות' && !isShirotActive()) {
+      return list.filter(e => e !== 'SHIROT');
+    }
+
+    // קו לבן: כיבוי "אליה"
+    if (dept === 'מחלקת קו לבן' && !isEliyaActive()) {
+      return list.filter(e => e !== 'ELIYA');
+    }
+
+    return list;
+  }
+  function getDeptSizeForRules(dept) {
+    return getDeptEmployees(dept).length;
+  }
+
+
+  
+
+  // ======== קו לבן: הפעלה/כיבוי עובד "אליה" (ELIYA) ========
+  const ELIYA_TOGGLE_KEY = 'eliyaActive';
+  function isEliyaActive() {
+    const v = localStorage.getItem(ELIYA_TOGGLE_KEY);
+    return v === null ? true : v === 'true';
+  }
+  function setEliyaActive(v) {
+    localStorage.setItem(ELIYA_TOGGLE_KEY, v ? 'true' : 'false');
+  }
+function initShirotToggleUI() {
+    const el = document.getElementById('shirot-active-toggle');
+    if (!el) return;
+
+    el.checked = isShirotActive();
+
+    el.onchange = async () => {
+      setShirotActive(el.checked);
+
+      // רענון תצוגה בהתאם למצב (לא נוגעים בלוגיקת משתמשים/סיסמאות)
+      try { await await loadAllConstraints(); } catch(e) {}
+      try { if (currentSchedule) displaySchedule(currentSchedule); } catch(e) {}
+
+      showMessage(
+        el.checked
+          ? '✅ "שירות" פעיל: נציגות שירות מתנהגת כמו 3 עובדים'
+          : '⚠️ "שירות" לא פעיל: נציגות שירות מתנהגת כמו 2 עובדים',
+        'success'
+      );
+    };
+  }
+
+
+  
+
+  function initEliyaToggleUI() {
+    const el = document.getElementById('eliya-active-toggle');
+    if (!el) return;
+
+    el.checked = isEliyaActive();
+
+    el.onchange = async () => {
+      setEliyaActive(el.checked);
+
+      // רענון תצוגה בהתאם למצב (לא נוגעים בלוגיקת משתמשים/סיסמאות)
+      try { await loadAllConstraints(); } catch(e) {}
+      try { if (currentSchedule) displaySchedule(currentSchedule); } catch(e) {}
+
+      showMessage(
+        el.checked
+          ? '✅ "אליה" פעיל: קו לבן מתנהג כמו 3 עובדים'
+          : '⚠️ "אליה" לא פעיל: קו לבן מתנהג כמו 2 עובדים (בלי אמצע)',
+        'success'
+      );
+    };
+  }
+
+
+  // מיפוי שמות תצוגה בעברית (רק לתצוגה בטבלה!)
+  const DISPLAY_NAMES = {
     'ILAY': 'עילאי',
     'ROVEN': 'ראובן',
     'HAI': 'חי',
@@ -397,99 +405,7 @@ async function approveCurrentSchedule(){
     'SHIROT': 'שירות'
   };
 
-  // ✅ Runtime (dynamic for non-HAIFA branches)
-  let USERS = { ...LEGACY_USERS };
-  let DEPARTMENTS = JSON.parse(JSON.stringify(LEGACY_DEPARTMENTS));
-  let DISPLAY_NAMES = { ...LEGACY_DISPLAY_NAMES };
-
-  
-  // ✅ Helpers
-  function getDeptEmployees(deptName) {
-    const v = (DEPARTMENTS || {})[deptName];
-    if (!v) return [];
-    if (Array.isArray(v)) return v.filter(Boolean);
-    // support shape: { employees: [...] }
-    if (typeof v === 'object' && Array.isArray(v.employees)) return v.employees.filter(Boolean);
-    // support shape: { ILAY:true, ... }
-    if (typeof v === 'object') return Object.keys(v).filter(k => v[k]);
-    return [];
-  }
-
-// Firebase-safe key (no . # $ [ ] /)
-  function toSafeKey(s) {
-    return String(s || '')
-      .trim()
-      .replace(/[.#$\[\]\/]/g, '_')
-      .replace(/\s+/g, ' ')
-      .replace(/%/g, '_');
-  }
-
-  function applyLegacyHaifaOrg() {
-    USERS = { ...LEGACY_USERS };
-    DEPARTMENTS = JSON.parse(JSON.stringify(LEGACY_DEPARTMENTS));
-    DISPLAY_NAMES = { ...LEGACY_DISPLAY_NAMES };
-  }
-
-  // Loads branch org from DB (for non-HAIFA). Schema:
-  // branches/<branchKey>/org/departments/<deptId> = { name }
-  // branches/<branchKey>/org/employees/<empId> = { username, displayName, password, deptId }
-  async function loadBranchOrgFromDB() {
-    try {
-      if (__isHaifaLegacy()) {
-        applyLegacyHaifaOrg();
-        return true;
-      }
-
-      // Non-HAIFA: load org
-      const [depsSnap, empsSnap] = await Promise.all([
-        __ref('org/departments').once('value'),
-        __ref('org/employees').once('value')
-      ]);
-
-      const deps = depsSnap.val() || {};
-      const emps = empsSnap.val() || {};
-
-      // Build maps
-      USERS = {};
-      DISPLAY_NAMES = {};
-      DEPARTMENTS = {};
-
-      const deptNameById = {};
-      for (const [deptId, d] of Object.entries(deps)) {
-        const name = (d && typeof d === 'object' && d.name) ? String(d.name) : String(deptId);
-        deptNameById[deptId] = name;
-        DEPARTMENTS[name] = [];
-      }
-
-      for (const [empId, e] of Object.entries(emps)) {
-        if (!e || typeof e !== 'object') continue;
-        const username = String(e.username || empId).trim().toUpperCase();
-        const displayName = String(e.displayName || username).trim();
-        const password = String(e.password || '').trim();
-        const deptId = String(e.deptId || '').trim();
-
-        if (!username) continue;
-
-        if (password) USERS[username] = password;
-        DISPLAY_NAMES[username] = displayName;
-
-        const deptName = deptNameById[deptId] || (deptId ? String(deptId) : null);
-        if (deptName) {
-          if (!DEPARTMENTS[deptName]) DEPARTMENTS[deptName] = [];
-          if (!DEPARTMENTS[deptName].includes(username)) DEPARTMENTS[deptName].push(username);
-        }
-      }
-
-      return true;
-    } catch (e) {
-      console.warn('loadBranchOrgFromDB failed:', e);
-      return false;
-    }
-  }
-
-  // ---- Manager credentials (legacy: only for HAIFA local manager; for Firebase-auth managers we ignore this) ----
   const MANAGER = { username: 'SAGI', password: '241188' };
-
 
 
   // ======== התאמת אפשרויות אילוץ לפי מחלקה ========
@@ -630,13 +546,8 @@ async function loginEmployee() {
 
       hideAll();
       document.getElementById('manager-section').classList.add('active');
-       if (!__isHaifaLegacy()) {
-         ensureBranchSetupButton();
-         await loadBranchOrgFromDB();
-       }
-
-      if (typeof initShirotToggleUI === 'function') if (typeof initShirotToggleUI === 'function') initShirotToggleUI();
-      if (typeof initEliyaToggleUI === 'function') if (typeof initEliyaToggleUI === 'function') initEliyaToggleUI();
+      initShirotToggleUI();
+      initEliyaToggleUI();
       loadAllConstraints();
       showMessage('התחברת בהצלחה', 'success');
       initPushNotifications();
@@ -2265,8 +2176,8 @@ document.addEventListener('DOMContentLoaded', () => {
   if (saved === 'MANAGER') {
     hideAll();
     document.getElementById('manager-section').classList.add('active');
-    if (typeof initShirotToggleUI === 'function') initShirotToggleUI();
-      if (typeof initEliyaToggleUI === 'function') initEliyaToggleUI();
+    initShirotToggleUI();
+      initEliyaToggleUI();
     loadAllConstraints();
   } else {
     hideAll();
