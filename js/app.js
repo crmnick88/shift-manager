@@ -361,24 +361,24 @@ async function approveCurrentSchedule(){
   }
  function getDeptEmployees(dept) {
   const val = DEPARTMENTS[dept];
+  let list = [];
 
   // חיפה – מערך
   if (Array.isArray(val)) {
-    return val.slice();
+    list = val.slice();
   }
-
   // סניף חדש – אובייקט
-  if (val && typeof val === "object") {
-    return Object.keys(val);
+  else if (val && typeof val === "object") {
+    list = Object.keys(val);
   }
 
-  return [];
-}
+  // נציגות שירות – כיבוי SHIROT
+  if (dept === 'נציגות שירות' && !isShirotActive()) {
+    return list.filter(e => e !== 'SHIROT');
+  }
 
-    // נציגות שירות: כיבוי "שירות"
-    if (dept === 'נציגות שירות' && !isShirotActive()) {
-      return list.filter(e => e !== 'SHIROT');
-    }
+  return list;
+}
 
     // קו לבן: כיבוי "אליה"
     if (dept === 'מחלקת קו לבן' && !isEliyaActive()) {
