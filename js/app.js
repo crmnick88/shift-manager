@@ -387,16 +387,11 @@ async function approveCurrentSchedule(){
     list = Object.keys(val);
   }
 
-  // נציגות שירות – כיבוי עובד "שירות" (SHIROT)
-  if (dept === 'נציגות שירות' && !isShirotActive()) {
-    list = list.filte
-
-()) {
+// נציגות שירות – כיבוי עובד "שירות" (SHIROT)
+if (dept === 'נציגות שירות' && !isShirotActive()) {
     list = list.filter(e => e !== 'ELIYA');
-  }
-
-  return list;
 }
+return list;
 
 
     // קו לבן: כיבוי "אליה"
