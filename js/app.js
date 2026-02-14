@@ -513,6 +513,7 @@ async function loginEmployee() {
 
       await waitForBranchReady(6000);
       await loadEmployeeConstraints();
+      try { localStorage.removeItem('allowBranchManagerInIndex'); } catch(e) {}
       showMessage('התחברת בהצלחה', 'success');
           initPushNotifications();
 } else {
@@ -542,10 +543,18 @@ async function loginEmployee() {
 
 
       
-      // 🔀 New branch managers: stay in manager dashboard inside index.html (no separate portal)
-        console.warn("Redirect check failed:", e);
-      }
-
+      // 🔀 If this is NOT the legacy HAIFA manager, default behavior is to go to manager-portal.
+// However, right after Branch Setup we allow continuing inside index.html manager UI.
+try {
+  const cPath = (typeof window.getConstraintsPath === "function") ? window.getConstraintsPath() : "";
+  const allowInIndex = (localStorage.getItem('allowBranchManagerInIndex') === '1');
+  if (cPath && /^branches\//.test(cPath) && !allowInIndex) {
+    window.location.href = "./manager-portal.html";
+    return;
+  }
+} catch (e) {
+  console.warn("Redirect check failed:", e);
+}
 currentEmployee = 'MANAGER';
       localStorage.setItem('currentEmployee', currentEmployee);
 
@@ -554,6 +563,7 @@ currentEmployee = 'MANAGER';
       initShirotToggleUI();
       initEliyaToggleUI();
       loadAllConstraints();
+      try { localStorage.removeItem('allowBranchManagerInIndex'); } catch(e) {}
       showMessage('התחברת בהצלחה', 'success');
       initPushNotifications();
     };
@@ -2169,58 +2179,6 @@ if ("serviceWorker" in navigator) {
 // 🔁 Restore login after refresh
 // =======================
 document.addEventListener('DOMContentLoaded', () => {
-  // If we returned from branch setup, prefer continuing as manager (not back to login chooser)
-  const afterSetup =
-    localStorage.getItem('openManagerAfterSetup') === '1' ||
-    localStorage.getItem('afterBranchSetup') === '1';
-
-  if (afterSetup) {
-    try { localStorage.removeItem('openManagerAfterSetup'); } catch (e) {}
-    try { localStorage.removeItem('afterBranchSetup'); } catch (e) {}
-
-    // If already authenticated, go straight to the manager dashboard inside index.html
-    try {
-      const u = (window.auth && window.auth.currentUser) ? window.auth.currentUser : null;
-      if (u && u.uid) {
-        // Ensure branch path is ready
-        try {
-          if (typeof window.loadSystemSubscription === "function") await window.loadSystemSubscription();
-          if (typeof window.resolveConstraintsBasePath === "function") await window.resolveConstraintsBasePath();
-          if (typeof window.waitForBranchReady === "function") await window.waitForBranchReady(6000);
-        } catch (e) {
-          console.warn("Branch init wait failed:", e);
-        }
-
-        currentEmployee = 'MANAGER';
-        localStorage.setItem('currentEmployee', currentEmployee);
-
-        hideAll();
-        document.getElementById('manager-section').classList.add('active');
-        initShirotToggleUI();
-        initEliyaToggleUI();
-        loadAllConstraints();
-        showMessage('✅ ההקמה הושלמה — אפשר להתחיל לייצר סידור', 'success');
-        return;
-      }
-    } catch (e) {}
-
-    // Not authenticated -> open manager login form
-    if (typeof window.showLoginForm === 'function') {
-      window.showLoginForm('manager');
-      showMessage('✅ ההקמה הושלמה — התחבר כמנהל כדי להתחיל לייצר סידור', 'success');
-      return;
-    }
-  }
-    } catch (e) {}
-
-    // Otherwise, open manager login form
-    if (typeof window.showLoginForm === 'function') {
-      window.showLoginForm('manager');
-      showMessage('✅ ההקמה הושלמה — התחבר כמנהל כדי להתחיל לייצר סידור', 'success');
-      return;
-    }
-  }
-
   const saved = localStorage.getItem('currentEmployee');
 
   if (!saved) {
@@ -2234,7 +2192,7 @@ document.addEventListener('DOMContentLoaded', () => {
     hideAll();
     document.getElementById('manager-section').classList.add('active');
     initShirotToggleUI();
-    initEliyaToggleUI();
+      initEliyaToggleUI();
     loadAllConstraints();
   } else {
     hideAll();
@@ -2246,3 +2204,48 @@ document.addEventListener('DOMContentLoaded', () => {
 
   initPushNotifications();
 });
+
+
+// =======================
+// 🔁 Return from Branch Setup (new branches)
+// =======================
+function enterManagerDashboardAfterSetup() {
+  try {
+    currentEmployee = 'MANAGER';
+    localStorage.setItem('currentEmployee', currentEmployee);
+  } catch (e) {}
+
+  hideAll();
+  const ms = document.getElementById('manager-section');
+  if (ms) ms.classList.add('active');
+
+  try { initShirotToggleUI(); } catch (e) {}
+  try { initEliyaToggleUI(); } catch (e) {}
+  try { loadAllConstraints(); } catch (e) {}
+  try { showMessage('✅ ההקמה הושלמה – אפשר להתחיל לייצר סידור', 'success'); } catch (e) {}
+  try { initPushNotifications(); } catch (e) {}
+}
+
+document.addEventListener('DOMContentLoaded', () => {
+  try {
+    const afterSetup = localStorage.getItem('afterBranchSetup') === '1' || localStorage.getItem('openManagerAfterSetup') === '1';
+    if (!afterSetup) return;
+
+    localStorage.removeItem('afterBranchSetup');
+    localStorage.removeItem('openManagerAfterSetup');
+
+    // If already authenticated, go straight to manager dashboard (inside index.html)
+    const u = (window.auth && window.auth.currentUser) ? window.auth.currentUser : null;
+    if (u && u.uid) {
+      // Allow branch managers to use the main manager UI for this session
+      localStorage.setItem('allowBranchManagerInIndex', '1');
+      enterManagerDashboardAfterSetup();
+    } else {
+      // Not authed yet -> open manager login form (existing function)
+      if (typeof showLoginForm === 'function') showLoginForm('manager');
+    }
+  } catch (e) {
+    console.warn('afterBranchSetup handler failed', e);
+  }
+});
+
