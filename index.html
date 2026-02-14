@@ -12,21 +12,24 @@
   <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-database-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-auth-compat.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-messaging-compat.js"></script>
-<!-- Firebase Config + Init -->
+  <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-messaging-compat.js"></script>
+
+  <!-- Firebase Config + Init -->
   <script>
-window.firebaseConfig = {
-    apiKey: "AIzaSyD-uaQ2aO87kGxbcc-m8_9fzJ3uhPv2zvk",
-    authDomain: "shift-manager-c026e.firebaseapp.com",
-    databaseURL: "https://shift-manager-c026e-default-rtdb.europe-west1.firebasedatabase.app",
-    projectId: "shift-manager-c026e",
-    storageBucket: "shift-manager-c026e.firebasestorage.app",
-    messagingSenderId: "1091605398341",
-    appId: "1:1091605398341:web:cb6c14e7d832c3e8df342c"
-  };
-</script>
+    window.firebaseConfig = {
+      apiKey: "AIzaSyD-uaQ2aO87kGxbcc-m8_9fzJ3uhPv2zvk",
+      authDomain: "shift-manager-c026e.firebaseapp.com",
+      databaseURL: "https://shift-manager-c026e-default-rtdb.europe-west1.firebasedatabase.app",
+      projectId: "shift-manager-c026e",
+      storageBucket: "shift-manager-c026e.firebasestorage.app",
+      messagingSenderId: "1091605398341",
+      appId: "1:1091605398341:web:cb6c14e7d832c3e8df342c"
+    };
+  </script>
+
   <script src="./js/firebase.js"></script>
-<!-- SheetJS -->
+
+  <!-- SheetJS -->
   <script src="./xlsx.bundle.js"></script>
   <link rel="stylesheet" href="./style.css">
 </head>
@@ -149,6 +152,12 @@ window.firebaseConfig = {
       <button class="btn" onclick="openManualConstraints()" style="background:#6f42c1;">✍️ הזנת אילוצים ידנית</button>
 
       <button class="btn" onclick="resetAllConstraints()" style="background:#6c757d;">🧹 איפוס אילוצים לכל העובדים</button>
+
+      <!-- ✅ חדש: כפתור הקמת מחלקות/עובדים (מופיע רק לסניף חדש) -->
+      <button class="btn" id="setup-branch-btn" onclick="goToBranchSetup()" style="background:#4b6cb7; display:none;">
+        🏗️ הקמת מחלקות ועובדים
+      </button>
+
       <div style="display:flex; align-items:center; gap:10px; padding:10px 12px; border:2px solid #e0e0e0; border-radius:10px; background:#ffffff; width:100%; max-width:520px;">
         <label style="display:flex; align-items:center; gap:10px; cursor:pointer; font-weight:700;">
           <input type="checkbox" id="shirot-active-toggle" style="width:18px; height:18px;" />
@@ -156,6 +165,7 @@ window.firebaseConfig = {
         </label>
         <span style="font-size:12px; opacity:.8;">כיבוי = המחלקה תתנהג כמו 2 עובדים</span>
       </div>
+
       <div style="display:flex; align-items:center; gap:10px; padding:10px 12px; border:2px solid #e0e0e0; border-radius:10px; background:#ffffff; width:100%; max-width:520px;">
         <label style="display:flex; align-items:center; gap:10px; cursor:pointer; font-weight:700;">
           <input type="checkbox" id="eliya-active-toggle" style="width:18px; height:18px;" />
@@ -163,7 +173,6 @@ window.firebaseConfig = {
         </label>
         <span style="font-size:12px; opacity:.8;">כיבוי = קו לבן יתנהג כמו 2 עובדים (בלי אמצע)</span>
       </div>
-
     </div>
 
     <div id="all-constraints"></div>
@@ -248,19 +257,46 @@ window.firebaseConfig = {
 </div>
 
   <script src="./js/app.js"></script>
+
   <script>
     // After returning from branch-setup, open the manager login panel automatically
     (function() {
       try {
         if (localStorage.getItem('openManagerAfterSetup') === '1') {
           localStorage.removeItem('openManagerAfterSetup');
-          // showLoginForm is defined in app.js
           if (typeof window.showLoginForm === 'function') {
             window.showLoginForm('manager');
           }
         }
       } catch (e) {}
     })();
+
+    // ✅ חדש: הצגת כפתור "הקמת מחלקות ועובדים" רק לסניף חדש + ניווט ל-branch-setup
+    function goToBranchSetup() {
+      try {
+        const branchKey = localStorage.getItem("currentBranchKey");
+        if (!branchKey) {
+          alert("זה מיועד לסניפים חדשים בלבד. בסניף חיפה אין branchKey.");
+          return;
+        }
+        // ה-branch-setup קורא את currentBranchKey מה-localStorage, אז מספיק להפנות
+        window.location.href = "./branch-setup.html";
+      } catch (e) {
+        console.error(e);
+        alert("שגיאה בפתיחת מסך הקמה");
+      }
+    }
+
+    (function toggleSetupButton() {
+      try {
+        const btn = document.getElementById("setup-branch-btn");
+        if (!btn) return;
+        const branchKey = localStorage.getItem("currentBranchKey");
+        // מופיע רק אם זה סניף חדש
+        btn.style.display = branchKey ? "" : "none";
+      } catch (e) {}
+    })();
   </script>
+
 </body>
 </html>
