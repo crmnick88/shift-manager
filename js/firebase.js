@@ -46,7 +46,7 @@ async function ensureOwnBranchExists(uid) {
 
   await ref.set({
     managerUid: uid,
-    displayName: "סניף חדש",
+    displayName: "×¡× ×™×£ ×—×“×©",
     createdAt: Date.now(),
     subscription: null,
     departments: {},
@@ -118,7 +118,7 @@ async function loadSystemSubscription() {
     await ensureOwnBranchExists(uid);
   }
 
-  // 🔒 SAFETY NET – never allow null
+  // ðŸ”’ SAFETY NET â€“ never allow null
   if (!currentBranchKey) {
     currentBranchKey = uid;
   }
@@ -139,6 +139,16 @@ function constraintsRef(suffix = "") {
     : db.ref(constraintsBasePath);
 }
 
+
+function getExplicitBranchKey() {
+  try {
+    const v = localStorage.getItem("currentBranchKey");
+    return (v && String(v).trim()) ? String(v).trim() : null;
+  } catch (e) {
+    return null;
+  }
+}
+
 async function resolveConstraintsBasePath() {
   const u = auth.currentUser;
   if (!u) {
@@ -146,12 +156,10 @@ async function resolveConstraintsBasePath() {
     return;
   }
 
-  const bk =
-    (typeof window.getBranchKey === "function" && window.getBranchKey())
-      ? window.getBranchKey()
-      : null;
+    const bk = getExplicitBranchKey();
 
-  // 🔥 HAIFA + admins ALWAYS root
+
+  // ðŸ”¥ HAIFA + admins ALWAYS root
   if (
     isAdmin ||
     !bk ||
@@ -195,7 +203,7 @@ window.getConstraintsPath = getConstraintsPath;
 window.constraintsRef = constraintsRef;
 
 window.isAdmin = () => isAdmin;
-window.getBranchKey = () => currentBranchKey;
+window.getBranchKey = () => getExplicitBranchKey();
 
 window.currentBranchId = () => currentBranchId;
 window.currentBranchKey = () => currentBranchKey;
