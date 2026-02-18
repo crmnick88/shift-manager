@@ -36,7 +36,7 @@ async function __ensureConstraintsReady() {
     try {
       const admin = (typeof window.isAdmin === 'function') ? window.isAdmin() : false;
       const p = (typeof window.getConstraintsPath === 'function') ? window.getConstraintsPath() : 'constraints';
-      if (admin || __isHaifaLegacy() || (p && p !== 'constraints')) return true;
+      if (admin || (p && p !== 'constraints')) return true;
     } catch (e) {}
 
     if (Date.now() - start > 5000) return false;
@@ -470,6 +470,25 @@ function getDeptSizeForRules(dept) {
   function setEliyaActive(v) {
     localStorage.setItem(ELIYA_TOGGLE_KEY, v ? 'true' : 'false');
   }
+
+// =============================
+// ✅ HAIFA TOGGLES SYNC (shared across devices)
+// =============================
+async function loadHaifaToggleSettings() {
+  try {
+    // Only meaningful in HAIFA legacy (root paths)
+    const [s1, s2] = await Promise.all([
+      db.ref("settings/shirotActive").once("value"),
+      db.ref("settings/eliyaActive").once("value")
+    ]);
+    const sh = s1.val();
+    const el = s2.val();
+    if (typeof sh === "boolean") localStorage.setItem("shirotActive", sh ? "true" : "false");
+    if (typeof el === "boolean") localStorage.setItem("eliyaActive", el ? "true" : "false");
+  } catch (e) {
+    // ignore (no permission / not set yet)
+  }
+}
 function initShirotToggleUI() {
     const el = document.getElementById('shirot-active-toggle');
     if (!el) return;
@@ -617,32 +636,30 @@ if (branchKey && cPath && String(cPath).startsWith(`branches/${branchKey}/constr
 async function loginEmployee() {
     const username = document.getElementById('emp-username').value.trim().toUpperCase();
     const password = document.getElementById('emp-password').value.trim();
-// אם המשתמש כבר במצב חיפה-legacy (למשל אחרי רענון) נוודא שאין branchKey דינמי
-     if (isHaifaLegacyMode()) { try { localStorage.removeItem("currentBranchKey"); } catch(e) {} }
+
+    if (!username || !password) return showMessage
+
+     // אם המשתמש כבר במצב חיפה-legacy (למשל אחרי רענון) נוודא שאין branchKey דינמי
+     if (isHaifaLegacyMode()) { try { localStorage.removeItem(\"currentBranchKey\"); } catch(e) {} }
 
      if (!username || !password) return showMessage('אנא הזן שם משתמש וסיסמה', 'error');
 
     if (USERS[username] && USERS[username] === password) {
       currentEmployee = username;
-
-      // ✅ HAIFA legacy: employees must use root-level constraints so the Haifa manager sees them
-      try {
-        setHaifaLegacyMode(true);
-        localStorage.removeItem("currentBranchKey");
-        window.isAdmin = () => true;        // treat as legacy admin for constraints path readiness
-        window.getBranchKey = () => "HAIFA";
-        if (typeof window.loadSystemSubscription === "function") await window.loadSystemSubscription();
-        if (typeof window.resolveConstraintsBasePath === "function") await window.resolveConstraintsBasePath();
-      } catch (e) {
-        console.warn("HAIFA legacy init (employee) failed:", e);
-      }
       localStorage.setItem('currentEmployee', currentEmployee);
+
+      // ✅ Haifa employees are legacy: force HAIFA context on this device
+      try { setHaifaLegacyMode(true); } catch(e) {}
+      try { localStorage.removeItem("currentBranchKey"); } catch(e) {}
+
 
 
       hideAll();
       document.getElementById('employee-section').classList.add('active');
       document.getElementById('employee-welcome').textContent = `שלום ${DISPLAY_NAMES[username] || username}! 👋`;
 
+      // ✅ pull HAIFA shared toggles (eliya/shirot) so constraint options match manager
+      await loadHaifaToggleSettings();
       applyConstraintOptions(currentEmployee);
 
       await waitForBranchReady(6000);
