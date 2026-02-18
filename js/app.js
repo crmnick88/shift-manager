@@ -36,8 +36,7 @@ async function __ensureConstraintsReady() {
     try {
       const admin = (typeof window.isAdmin === 'function') ? window.isAdmin() : false;
       const p = (typeof window.getConstraintsPath === 'function') ? window.getConstraintsPath() : 'constraints';
-      const k = (typeof window.getBranchKey === 'function') ? window.getBranchKey() : null;
-    if (admin || (p && p !== 'constraints') || (!k && p === 'constraints')) return true;
+      if (admin || (p && p !== 'constraints')) return true;
     } catch (e) {}
 
     if (Date.now() - start > 5000) return false;
@@ -296,6 +295,20 @@ const USERS = {
     'MOHAMAD': 'MOHAMAD'
   };
 
+  // =============================
+  // HAIFA LEGACY MODE FLAG
+  // =============================
+  function setHaifaLegacyMode(on) {
+    try {
+      if (on) localStorage.setItem("haifaLegacy", "1");
+      else localStorage.removeItem("haifaLegacy");
+    } catch (e) {}
+  }
+  function isHaifaLegacyMode() {
+    try { return localStorage.getItem("haifaLegacy") === "1"; } catch (e) { return false; }
+  }
+
+
   const DEPARTMENTS = {
     'מחלקת מיחשוב': ['ILAY', 'ROVEN'],
     'מחלקת קטנים': ['HAI', 'NATALI'],
@@ -328,9 +341,10 @@ const USERS = {
 (function initDynamicBranchData() {
   const branchKey = localStorage.getItem("currentBranchKey");
 
-  // חיפה (הישן): לא טוענים נתונים דינמיים. אם נשאר ערך ישן ב-localStorage—ננקה.
-  if (!branchKey || branchKey === "HAIFA") {
-    if (branchKey === "HAIFA") localStorage.removeItem("currentBranchKey");
+  // חיפה (legacy): לא טוענים נתונים דינמיים.
+  // אם נשאר ערך ישן ב-localStorage או שסומן מצב legacy—ננקה ונצא.
+  if (isHaifaLegacyMode() || !branchKey || branchKey === "HAIFA") {
+    try { localStorage.removeItem("currentBranchKey"); } catch (e) {}
     return;
   }
 
@@ -590,7 +604,7 @@ async function waitForBranchReady(timeoutMs = 5000) {
 
       // Admins keep legacy root path; non-admins must have branchKey and scoped constraints path.
     if (isAdminFn) return true;
-if (!branchKey && cPath === "constraints") return true; // ✅ HAIFA legacy
+if (cPath === "constraints") return true; // ✅ HAIFA legacy
 if (branchKey && cPath && String(cPath).startsWith(`branches/${branchKey}/constraints`)) return true;
     } catch (e) {}
 
@@ -604,13 +618,16 @@ async function loginEmployee() {
     const username = document.getElementById('emp-username').value.trim().toUpperCase();
     const password = document.getElementById('emp-password').value.trim();
 
-    if (!username || !password) return showMessage('אנא הזן שם משתמש וסיסמה', 'error');
+    if (!username || !password) return showMessage
+
+     // אם המשתמש כבר במצב חיפה-legacy (למשל אחרי רענון) נוודא שאין branchKey דינמי
+     if (isHaifaLegacyMode()) { try { localStorage.removeItem(\"currentBranchKey\"); } catch(e) {} }
+
+     if (!username || !password) return showMessage('אנא הזן שם משתמש וסיסמה', 'error');
 
     if (USERS[username] && USERS[username] === password) {
       currentEmployee = username;
       localStorage.setItem('currentEmployee', currentEmployee);
-      // ✅ HAIFA legacy: ensure employees always use root /constraints
-      try { localStorage.removeItem("currentBranchKey"); } catch(e) {}
 
 
       hideAll();
@@ -646,8 +663,8 @@ const HAIFA_MANAGER_UID = "LRHfwBSAqYV9cxrcko9KfCafJOD3";
 
 if (uid === HAIFA_MANAGER_UID) {
   // 🔒 חיפה – מצב legacy מוחלט
+  setHaifaLegacyMode(true);
   localStorage.removeItem("currentBranchKey");
-
   // 🔴 סנכרון מלא עם firebase.js
   window.isAdmin = () => true;
   window.getBranchKey = () => "HAIFA";
@@ -655,6 +672,7 @@ if (uid === HAIFA_MANAGER_UID) {
   console.log("HAIFA manager forced to legacy admin mode");
 } else {
   // סניפים חדשים – branch רגיל
+  setHaifaLegacyMode(false);
   localStorage.setItem("currentBranchKey", uid);
 }
       
@@ -673,8 +691,6 @@ if (uid === HAIFA_MANAGER_UID) {
 
 currentEmployee = 'MANAGER';
       localStorage.setItem('currentEmployee', currentEmployee);
-      // ✅ HAIFA legacy: ensure employees always use root /constraints
-      try { localStorage.removeItem("currentBranchKey"); } catch(e) {}
 
       hideAll();
       document.getElementById('manager-section').classList.add('active');
