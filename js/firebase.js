@@ -138,7 +138,20 @@ async function loadSystemSubscription() {
 let constraintsBasePath = "constraints";
 
 function getConstraintsPath() {
-  return constraintsBasePath;
+  const branch = localStorage.getItem("branch");
+
+  // 🔒 סניף חיפה – תמיד legacy
+  if (branch === "HAIFA") {
+    return "constraints";
+  }
+
+  // 🏢 סניפים חדשים
+  if (branch) {
+    return `branches/${branch}/constraints`;
+  }
+
+  // ברירת מחדל (בטיחות)
+  return "constraints";
 }
 
 function constraintsRef(suffix = "") {
