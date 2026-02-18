@@ -588,8 +588,9 @@ async function waitForBranchReady(timeoutMs = 5000) {
       const cPath = (typeof window.getConstraintsPath === "function") ? window.getConstraintsPath() : "constraints";
 
       // Admins keep legacy root path; non-admins must have branchKey and scoped constraints path.
-      if (isAdminFn) return true;
-      if (branchKey && cPath && String(cPath).startsWith(`branches/${branchKey}/constraints`)) return true;
+    if (isAdminFn) return true;
+if (cPath === "constraints") return true; // ✅ HAIFA legacy
+if (branchKey && cPath && String(cPath).startsWith(`branches/${branchKey}/constraints`)) return true;
     } catch (e) {}
 
     // small delay
