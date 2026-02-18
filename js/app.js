@@ -641,13 +641,17 @@ const uid = auth.currentUser?.uid;
 const HAIFA_MANAGER_UID = "LRHfwBSAqYV9cxrcko9KfCafJOD3";
 
 if (uid === HAIFA_MANAGER_UID) {
-  // חיפה (legacy)
+  // 🔒 חיפה – מצב legacy מוחלט
   localStorage.removeItem("currentBranchKey");
-  console.log("HAIFA manager detected – using legacy data");
+
+  // 🔴 סנכרון מלא עם firebase.js
+  window.isAdmin = () => true;
+  window.getBranchKey = () => "HAIFA";
+
+  console.log("HAIFA manager forced to legacy admin mode");
 } else {
-  // סניף חדש
+  // סניפים חדשים – branch רגיל
   localStorage.setItem("currentBranchKey", uid);
-  console.log("New branch manager detected – branchKey set to", uid);
 }
       
       // ✅ Ensure branch + constraints path resolved before loading data
