@@ -30,6 +30,12 @@ function isPermissionDenied(err) {
   );
 }
 
+
+function isHaifaLegacyMode() {
+  try { return localStorage.getItem("haifaLegacy") === "1"; } catch (e) { return false; }
+}
+
+
 // =========================
 // Ensure own branch (non-admin)
 // =========================
@@ -83,6 +89,14 @@ async function tryResolveLegacyHaifa(uid) {
 async function loadSystemSubscription() {
   const uid = currentBranchId;
   if (!uid) return;
+
+  // ✅ HAIFA legacy mode (employees + manager): force legacy key so constraints stay in root
+  if (isHaifaLegacyMode()) {
+    currentBranchKey = "HAIFA";
+    systemSubscription = null;
+    isAdmin = true;
+    return;
+  }
 
   // 0) HAIFA legacy
   if (await tryResolveLegacyHaifa(uid)) {
@@ -140,6 +154,12 @@ function constraintsRef(suffix = "") {
 }
 
 async function resolveConstraintsBasePath() {
+  // ✅ HAIFA legacy mode (employees + manager): always use root constraints
+  if (isHaifaLegacyMode()) {
+    constraintsBasePath = "constraints";
+    return;
+  }
+
   const u = auth.currentUser;
   if (!u) {
     constraintsBasePath = "constraints";
