@@ -14,12 +14,8 @@ const auth = firebase.auth();
 // =========================
 // GLOBAL BRANCH STATE
 // =========================
-let currentBranchId = null;   // manager UID (auth.uid)
-let currentBranchKey = null;  // branch key (e.g. "HAIFA" or new UID)
-
-// =========================
-// SYSTEM SUBSCRIPTION (READ ONLY)
-// =========================
+let currentBranchId = null;   // auth.uid
+let currentBranchKey = null;  // "HAIFA" or branch UID
 let systemSubscription = null;
 let isAdmin = false;
 
@@ -27,19 +23,181 @@ let isAdmin = false;
 // Helpers
 // =========================
 function isPermissionDenied(err) {
-  return !!err && (err.code === "PERMISSION_DENIED" || err.code === "permission_denied" || String(err).includes("permission_denied"));
+  return !!err && (
+    err.code === "PERMISSION_DENIED" ||
+    err.code === "permission_denied" ||
+    String(err).includes("permission_denied")
+  );
 }
 
+// =========================
+// Branch bootstrap (non-admin)
+// =========================
 async function ensureOwnBranchExists(uid) {
-  const ownBranchRef = db.ref(`branches/${uid}`);
+  const ref = db.ref(`branches/${uid}`);
+  const snap = await ref.once("value");
 
-  // Read is allowed for the owner (rules: auth.uid === $branchId)
-  const snap = await ownBranchRef.once("value");
   if (snap.exists()) {
     const data = snap.val() || {};
     currentBranchKey = uid;
     systemSubscription = data.subscription || null;
-    return true;
+    return;
+  }
+
+  await ref.set({
+    managerUid: uid,
+    displayName: "סניף חדש",
+    createdAt: Date.now(),
+    subscription: null,
+    departments: {},
+    employees: {}
+  });
+
+  currentBranchKey = uid;
+  systemSubscription = null;
+}
+
+// =========================
+// Legacy HAIFA resolver
+// =========================
+async function tryResolveLegacyHaifa(uid) {
+  try {
+    const snap = await db.ref("branches/HAIFA").once("value");
+    if (!snap.exists()) return false;
+
+    const data = snap.val() || {};
+    if (data.managerUid === uid) {
+      currentBranchKey = "HAIFA";
+      systemSubscription = data.subscription || null;
+      isAdmin = true; // behave as admin for constraints
+      console.log("✔ Resolved legacy HAIFA for manager:", uid);
+      return true;
+    }
+  } catch (_) {}
+  return false;
+}
+
+// =========================
+// Load system subscription
+// =========================
+async function loadSystemSubscription() {
+  const uid = currentBranchId;
+  if (!uid) return;
+
+  // 0) HAIFA legacy
+  if (await tryResolveLegacyHaifa(uid)) return;
+
+  // 1) Admin scan
+  try {
+    const snap = await db.ref("branches").once("value");
+    isAdmin = true;
+
+    let found = false;
+    snap.forEach(branchSnap => {
+      const data = branchSnap.val();
+      if (data && data.managerUid === uid) {
+        found = true;
+        currentBranchKey = branchSnap.key;
+        systemSubscription = data.subscription || null;
+      }
+    });
+
+    if (!found) {
+      currentBranchKey = uid;
+      await ensureOwnBranchExists(uid);
+    }
+
+    return;
+  } catch (e) {
+    if (!isPermissionDenied(e)) {
+      console.error("Unexpected branches read error:", e);
+    }
+    isAdmin = false;
+  }
+
+  // 2) Non-admin
+  await ensureOwnBranchExists(uid);
+}
+
+// =========================
+// CONSTRAINTS PATH (FIXED)
+// =========================
+let constraintsBasePath = "constraints";
+
+function getConstraintsPath() {
+  return constraintsBasePath;
+}
+
+function constraintsRef(suffix = "") {
+  return suffix
+    ? db.ref(`${constraintsBasePath}/${suffix}`)
+    : db.ref(constraintsBasePath);
+}
+
+/**
+ * 🔥 CRITICAL FIX
+ * - HAIFA (manager + employees) ALWAYS use root /constraints
+ * - Only non-HAIFA branches use branches/{branchKey}/constraints
+ */
+async function resolveConstraintsBasePath() {
+  const u = auth.currentUser;
+  if (!u) {
+    constraintsBasePath = "constraints";
+    return;
+  }
+
+  const branchKey =
+    (typeof window.getBranchKey === "function" && window.getBranchKey())
+      ? window.getBranchKey()
+      : null;
+
+  // FORCE HAIFA + anonymous HAIFA employees to legacy root
+  if (
+    isAdmin ||
+    !branchKey ||
+    String(branchKey).toUpperCase() === "HAIFA"
+  ) {
+    constraintsBasePath = "constraints";
+    console.log("📌 Constraints path = /constraints");
+    return;
+  }
+
+  constraintsBasePath = `branches/${branchKey}/constraints`;
+  console.log("📌 Constraints path =", constraintsBasePath);
+}
+
+// =========================
+// AUTH STATE
+// =========================
+auth.onAuthStateChanged(async (user) => {
+  if (!user) {
+    await auth.signInAnonymously();
+    return;
+  }
+
+  currentBranchId = user.uid;
+  console.log("AUTH UID:", currentBranchId);
+
+  await loadSystemSubscription();
+  await resolveConstraintsBasePath();
+});
+
+// =========================
+// EXPORTS
+// =========================
+window.db = db;
+window.auth = auth;
+
+window.getConstraintsPath = getConstraintsPath;
+window.constraintsRef = constraintsRef;
+window.resolveConstraintsBasePath = resolveConstraintsBasePath;
+
+window.isAdmin = () => isAdmin;
+window.getBranchKey = () => currentBranchKey;
+
+window.currentBranchId = () => currentBranchId;
+window.currentBranchKey = () => currentBranchKey;
+window.getSystemSubscription = () => systemSubscription;    return true;
   }
 
   // Create (write is allowed for the owner)
