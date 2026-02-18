@@ -36,7 +36,7 @@ async function __ensureConstraintsReady() {
     try {
       const admin = (typeof window.isAdmin === 'function') ? window.isAdmin() : false;
       const p = (typeof window.getConstraintsPath === 'function') ? window.getConstraintsPath() : 'constraints';
-      if (admin || (p && p !== 'constraints')) return true;
+      if (admin || __isHaifaLegacy() || (p && p !== 'constraints')) return true;
     } catch (e) {}
 
     if (Date.now() - start > 5000) return false;
@@ -617,16 +617,25 @@ if (branchKey && cPath && String(cPath).startsWith(`branches/${branchKey}/constr
 async function loginEmployee() {
     const username = document.getElementById('emp-username').value.trim().toUpperCase();
     const password = document.getElementById('emp-password').value.trim();
-
-    if (!username || !password) return showMessage
-
-     // אם המשתמש כבר במצב חיפה-legacy (למשל אחרי רענון) נוודא שאין branchKey דינמי
-     if (isHaifaLegacyMode()) { try { localStorage.removeItem(\"currentBranchKey\"); } catch(e) {} }
+// אם המשתמש כבר במצב חיפה-legacy (למשל אחרי רענון) נוודא שאין branchKey דינמי
+     if (isHaifaLegacyMode()) { try { localStorage.removeItem("currentBranchKey"); } catch(e) {} }
 
      if (!username || !password) return showMessage('אנא הזן שם משתמש וסיסמה', 'error');
 
     if (USERS[username] && USERS[username] === password) {
       currentEmployee = username;
+
+      // ✅ HAIFA legacy: employees must use root-level constraints so the Haifa manager sees them
+      try {
+        setHaifaLegacyMode(true);
+        localStorage.removeItem("currentBranchKey");
+        window.isAdmin = () => true;        // treat as legacy admin for constraints path readiness
+        window.getBranchKey = () => "HAIFA";
+        if (typeof window.loadSystemSubscription === "function") await window.loadSystemSubscription();
+        if (typeof window.resolveConstraintsBasePath === "function") await window.resolveConstraintsBasePath();
+      } catch (e) {
+        console.warn("HAIFA legacy init (employee) failed:", e);
+      }
       localStorage.setItem('currentEmployee', currentEmployee);
 
 
