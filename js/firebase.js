@@ -19,6 +19,14 @@ let currentBranchKey = null;   // "HAIFA" or branch uid
 let systemSubscription = null;
 let isAdmin = false;
 
+
+// =========================
+// HAIFA LEGACY MODE (client flag)
+// =========================
+const HAIFA_LEGACY_FLAG_KEY = "haifaLegacy";
+function isHaifaLegacyModeClient() {
+  try { return localStorage.getItem(HAIFA_LEGACY_FLAG_KEY) === "1"; } catch (e) { return false; }
+}
 // =========================
 // Helpers
 // =========================
@@ -29,12 +37,6 @@ function isPermissionDenied(err) {
     String(err).includes("permission_denied")
   );
 }
-
-
-function isHaifaLegacyMode() {
-  try { return localStorage.getItem("haifaLegacy") === "1"; } catch (e) { return false; }
-}
-
 
 // =========================
 // Ensure own branch (non-admin)
@@ -89,14 +91,6 @@ async function tryResolveLegacyHaifa(uid) {
 async function loadSystemSubscription() {
   const uid = currentBranchId;
   if (!uid) return;
-
-  // ✅ HAIFA legacy mode (employees + manager): force legacy key so constraints stay in root
-  if (isHaifaLegacyMode()) {
-    currentBranchKey = "HAIFA";
-    systemSubscription = null;
-    isAdmin = true;
-    return;
-  }
 
   // 0) HAIFA legacy
   if (await tryResolveLegacyHaifa(uid)) {
@@ -154,12 +148,6 @@ function constraintsRef(suffix = "") {
 }
 
 async function resolveConstraintsBasePath() {
-  // ✅ HAIFA legacy mode (employees + manager): always use root constraints
-  if (isHaifaLegacyMode()) {
-    constraintsBasePath = "constraints";
-    return;
-  }
-
   const u = auth.currentUser;
   if (!u) {
     constraintsBasePath = "constraints";
@@ -198,7 +186,16 @@ auth.onAuthStateChanged(async (user) => {
   currentBranchId = user.uid;
   console.log("AUTH UID:", currentBranchId);
 
-  await loadSystemSubscription();
+  
+  // ✅ If this browser/device is in HAIFA legacy mode, force legacy paths for EVERYONE (manager + employees)
+  if (isHaifaLegacyModeClient()) {
+    currentBranchKey = "HAIFA";
+    isAdmin = true;
+    constraintsBasePath = "constraints";
+    console.log("HAIFA legacy mode enabled (client) -> forcing /constraints");
+    return;
+  }
+await loadSystemSubscription();
   await resolveConstraintsBasePath();
 });
 
