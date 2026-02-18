@@ -637,12 +637,10 @@ async function loginEmployee() {
     const username = document.getElementById('emp-username').value.trim().toUpperCase();
     const password = document.getElementById('emp-password').value.trim();
 
-    if (!username || !password) return showMessage
+    // אם המשתמש כבר במצב חיפה-legacy (למשל אחרי רענון) נוודא שאין branchKey דינמי
+    if (isHaifaLegacyMode()) { try { localStorage.removeItem("currentBranchKey"); } catch(e) {} }
 
-     // אם המשתמש כבר במצב חיפה-legacy (למשל אחרי רענון) נוודא שאין branchKey דינמי
-     if (isHaifaLegacyMode()) { try { localStorage.removeItem(\"currentBranchKey\"); } catch(e) {} }
-
-     if (!username || !password) return showMessage('אנא הזן שם משתמש וסיסמה', 'error');
+    if (!username || !password) return showMessage('אנא הזן שם משתמש וסיסמה', 'error');
 
     if (USERS[username] && USERS[username] === password) {
       currentEmployee = username;
