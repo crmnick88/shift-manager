@@ -36,7 +36,9 @@ async function __ensureConstraintsReady() {
     try {
       const admin = (typeof window.isAdmin === 'function') ? window.isAdmin() : false;
       const p = (typeof window.getConstraintsPath === 'function') ? window.getConstraintsPath() : 'constraints';
-      if (admin || (p && p !== 'constraints')) return true;
+      const k = (typeof window.getBranchKey === 'function') ? window.getBranchKey() : null;
+      // ✅ Ready if admin, OR we have scoped path, OR we are in legacy mode (no branchKey)
+      if (admin || (p && p !== 'constraints') || (!k && p === 'constraints')) return true;
     } catch (e) {}
 
     if (Date.now() - start > 5000) return false;
