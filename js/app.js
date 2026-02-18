@@ -37,8 +37,7 @@ async function __ensureConstraintsReady() {
       const admin = (typeof window.isAdmin === 'function') ? window.isAdmin() : false;
       const p = (typeof window.getConstraintsPath === 'function') ? window.getConstraintsPath() : 'constraints';
       const k = (typeof window.getBranchKey === 'function') ? window.getBranchKey() : null;
-      // ✅ Ready if admin, OR we have scoped path, OR we are in legacy mode (no branchKey)
-      if (admin || (p && p !== 'constraints') || (!k && p === 'constraints')) return true;
+    if (admin || (p && p !== 'constraints') || (!k && p === 'constraints')) return true;
     } catch (e) {}
 
     if (Date.now() - start > 5000) return false;
@@ -591,7 +590,7 @@ async function waitForBranchReady(timeoutMs = 5000) {
 
       // Admins keep legacy root path; non-admins must have branchKey and scoped constraints path.
     if (isAdminFn) return true;
-if (cPath === "constraints") return true; // ✅ HAIFA legacy
+if (!branchKey && cPath === "constraints") return true; // ✅ HAIFA legacy
 if (branchKey && cPath && String(cPath).startsWith(`branches/${branchKey}/constraints`)) return true;
     } catch (e) {}
 
@@ -610,6 +609,8 @@ async function loginEmployee() {
     if (USERS[username] && USERS[username] === password) {
       currentEmployee = username;
       localStorage.setItem('currentEmployee', currentEmployee);
+      // ✅ HAIFA legacy: ensure employees always use root /constraints
+      try { localStorage.removeItem("currentBranchKey"); } catch(e) {}
 
 
       hideAll();
@@ -672,6 +673,8 @@ if (uid === HAIFA_MANAGER_UID) {
 
 currentEmployee = 'MANAGER';
       localStorage.setItem('currentEmployee', currentEmployee);
+      // ✅ HAIFA legacy: ensure employees always use root /constraints
+      try { localStorage.removeItem("currentBranchKey"); } catch(e) {}
 
       hideAll();
       document.getElementById('manager-section').classList.add('active');
@@ -2364,4 +2367,3 @@ document.addEventListener('DOMContentLoaded', () => {
 
   initPushNotifications();
 });
-
