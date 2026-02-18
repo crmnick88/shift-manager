@@ -2364,3 +2364,4 @@ document.addEventListener('DOMContentLoaded', () => {
 
   initPushNotifications();
 });
+
