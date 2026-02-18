@@ -650,6 +650,8 @@ async function loginEmployee() {
       try { setHaifaLegacyMode(true); } catch(e) {}
       try { localStorage.removeItem("currentBranchKey"); } catch(e) {}
 
+      // 🔒 זיהוי חד-משמעי: עובד שייך לסניף חיפה
+      localStorage.setItem("branch", "HAIFA");
 
 
       hideAll();
