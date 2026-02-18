@@ -140,6 +140,8 @@ function constraintsRef(suffix = "") {
 }
 
 
+// âœ… Explicit branch key comes ONLY from localStorage (tenant mode).
+// If not present -> legacy mode (HAIFA) should use root /constraints.
 function getExplicitBranchKey() {
   try {
     const v = localStorage.getItem("currentBranchKey");
@@ -156,8 +158,10 @@ async function resolveConstraintsBasePath() {
     return;
   }
 
-    const bk = getExplicitBranchKey();
-
+  const bk =
+    (typeof window.getBranchKey === "function" && window.getBranchKey())
+      ? window.getBranchKey()
+      : null;
 
   // ðŸ”¥ HAIFA + admins ALWAYS root
   if (
