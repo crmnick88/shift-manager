@@ -690,6 +690,8 @@ const HAIFA_MANAGER_UID = "LRHfwBSAqYV9cxrcko9KfCafJOD3";
 if (uid === HAIFA_MANAGER_UID) {
   // 🔒 חיפה – מצב legacy מוחלט
   setHaifaLegacyMode(true);
+  // 🔒 זיהוי חד-משמעי: מנהל שייך לסניף חיפה
+localStorage.setItem("branch", "HAIFA");
   localStorage.removeItem("currentBranchKey");
   // 🔴 סנכרון מלא עם firebase.js
   window.isAdmin = () => true;
